@@ -30,7 +30,10 @@ serve(async (req) => {
       serveUrl,
       composition: compositionId,
       codec,
-      inputProps: { code },
+      inputProps: {
+        type: "payload",
+        payload: JSON.stringify({ code }),
+      },
       imageFormat: "jpeg",
       maxRetries: 1,
       privacy: "public",
