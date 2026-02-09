@@ -25,6 +25,7 @@ serve(async (req) => {
     // Build the progress check payload
     const payload = {
       type: "status",
+      version: "4.0.420",
       renderId,
       bucketName,
       logLevel: "warn",
