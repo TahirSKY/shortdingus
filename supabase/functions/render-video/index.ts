@@ -43,7 +43,7 @@ serve(async (req) => {
       chromiumOptions: {},
       scale: 1,
       everyNthFrame: 1,
-      concurrencyPerLambda: 1,
+      
       downloadBehavior: { type: "play-in-browser" },
       muted: false,
       overwrite: true,
