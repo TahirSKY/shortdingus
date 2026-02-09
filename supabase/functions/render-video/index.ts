@@ -39,6 +39,7 @@ serve(async (req) => {
       privacy: "public",
       logLevel: "warn",
       timeoutInMilliseconds: 120000,
+      framesPerLambda: 20,
       chromiumOptions: {},
       scale: 1,
       everyNthFrame: 1,
@@ -53,6 +54,14 @@ serve(async (req) => {
       forceWidth: null,
       rendererFunctionName: null,
       forceBucketName: null,
+      frameRange: null,
+      envVariables: {},
+      numberOfGifLoops: null,
+      jpegQuality: 80,
+      offthreadVideoCacheSizeInBytes: null,
+      deleteAfter: null,
+      colorSpace: "default",
+      preferLossless: false,
     };
 
     // Invoke AWS Lambda directly using AWS REST API
