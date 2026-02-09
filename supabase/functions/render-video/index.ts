@@ -45,7 +45,7 @@ serve(async (req) => {
       timeoutInMilliseconds: 120000,
       frameRange: null,
       framesPerLambda: null,
-      concurrencyPerLambda: null,
+      concurrency: 1,
       everyNthFrame: 1,
       muted: false,
       overwrite: true,
