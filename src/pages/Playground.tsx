@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -6,6 +6,8 @@ import CodeEditor from "@/components/CodeEditor";
 import PreviewPanel from "@/components/PreviewPanel";
 import RenderControls from "@/components/RenderControls";
 import { parseMultiFileCode } from "@/lib/code-parser";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Playground = () => {
   const [code, setCode] = useState(() => {
@@ -20,28 +22,79 @@ const Playground = () => {
   const [renderProgress, setRenderProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [error] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const parsedFiles = useMemo(() => parseMultiFileCode(code), [code]);
 
-  const handleRender = () => {
-    // TODO: Connect to Supabase Edge Function for Lambda rendering
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const handleRender = useCallback(async () => {
     setIsRendering(true);
     setRenderProgress(0);
     setDownloadUrl(null);
 
-    // Simulated progress for now
-    const interval = setInterval(() => {
-      setRenderProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsRendering(false);
-          setDownloadUrl("#");
-          return 100;
-        }
-        return prev + 5;
+    try {
+      // 1. Trigger the render
+      const { data, error: renderError } = await supabase.functions.invoke("render-video", {
+        body: { code },
       });
-    }, 300);
-  };
+
+      if (renderError || data?.error) {
+        throw new Error(data?.error || renderError?.message || "Failed to start render");
+      }
+
+      const { renderId, bucketName } = data;
+      if (!renderId || !bucketName) {
+        throw new Error("Invalid response from render service");
+      }
+
+      toast.success("Render started! Tracking progress...");
+
+      // 2. Poll for progress
+      pollRef.current = setInterval(async () => {
+        try {
+          const { data: progress, error: progressError } = await supabase.functions.invoke(
+            "check-render-progress",
+            { body: { renderId, bucketName } }
+          );
+
+          if (progressError || progress?.error) {
+            console.error("Progress check error:", progress?.error || progressError);
+            return;
+          }
+
+          if (progress?.fatalErrorEncountered) {
+            stopPolling();
+            setIsRendering(false);
+            toast.error("Render failed: " + (progress.errors?.[0]?.message || "Unknown error"));
+            return;
+          }
+
+          const pct = Math.round((progress?.overallProgress ?? 0) * 100);
+          setRenderProgress(pct);
+
+          if (progress?.done && progress?.outputFile) {
+            stopPolling();
+            setIsRendering(false);
+            setRenderProgress(100);
+            setDownloadUrl(progress.outputFile);
+            toast.success("Render complete! Click to download.");
+          }
+        } catch (err) {
+          console.error("Error polling progress:", err);
+        }
+      }, 2000);
+    } catch (err: any) {
+      console.error("Render error:", err);
+      setIsRendering(false);
+      toast.error(err.message || "Failed to start render");
+    }
+  }, [code, stopPolling]);
 
   return (
     <div className="h-screen flex flex-col bg-background">
