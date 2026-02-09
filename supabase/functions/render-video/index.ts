@@ -38,6 +38,21 @@ serve(async (req) => {
       maxRetries: 1,
       privacy: "public",
       logLevel: "warn",
+      timeoutInMilliseconds: 120000,
+      chromiumOptions: {},
+      scale: 1,
+      everyNthFrame: 1,
+      concurrencyPerLambda: 1,
+      downloadBehavior: { type: "play-in-browser" },
+      muted: false,
+      overwrite: true,
+      audioBitrate: null,
+      videoBitrate: null,
+      webhook: null,
+      forceHeight: null,
+      forceWidth: null,
+      rendererFunctionName: null,
+      forceBucketName: null,
     };
 
     // Invoke AWS Lambda directly using AWS REST API
