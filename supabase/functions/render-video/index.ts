@@ -39,8 +39,7 @@ serve(async (req) => {
       privacy: "public",
       logLevel: "warn",
       timeoutInMilliseconds: 120000,
-      framesPerLambda: null,
-      concurrency: null,
+      framesPerLambda: 20,
     };
 
     // Invoke AWS Lambda directly using AWS REST API
