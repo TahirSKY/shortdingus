@@ -27,7 +27,9 @@ serve(async (req) => {
     const payload = {
       type: "start",
       version: "4.0.420",
+      region,
       serveUrl,
+      functionName,
       composition: compositionId,
       codec,
       inputProps: {
@@ -39,7 +41,6 @@ serve(async (req) => {
       privacy: "public",
       logLevel: "warn",
       timeoutInMilliseconds: 120000,
-      framesPerLambda: 20,
     };
 
     // Invoke AWS Lambda directly using AWS REST API
