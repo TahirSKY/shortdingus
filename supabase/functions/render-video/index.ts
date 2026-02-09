@@ -24,6 +24,8 @@ serve(async (req) => {
     }
 
     // Build the payload that Remotion Lambda expects
+    // IMPORTANT: Fields like frameRange must be explicitly null, not omitted,
+    // because Remotion checks `!== null` (undefined would pass that check and crash)
     const payload = {
       type: "start",
       version: "4.0.420",
@@ -41,6 +43,33 @@ serve(async (req) => {
       privacy: "public",
       logLevel: "warn",
       timeoutInMilliseconds: 120000,
+      frameRange: null,
+      framesPerLambda: null,
+      concurrencyPerLambda: null,
+      everyNthFrame: 1,
+      muted: false,
+      overwrite: true,
+      audioBitrate: null,
+      videoBitrate: null,
+      encodingBufferSize: null,
+      encodingMaxRate: null,
+      webhook: null,
+      forceHeight: null,
+      forceWidth: null,
+      rendererFunctionName: null,
+      forceBucketName: null,
+      audioCodec: null,
+      deleteAfter: null,
+      colorSpace: "default",
+      preferLossless: false,
+      offthreadVideoCacheSizeInBytes: null,
+      multiProcessOnLinux: true,
+      bezelColor: null,
+      x264Preset: null,
+      jpegQuality: 80,
+      scale: 1,
+      numberOfGifLoops: null,
+      outName: null,
     };
 
     // Invoke AWS Lambda directly using AWS REST API
