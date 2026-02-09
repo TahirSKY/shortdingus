@@ -26,6 +26,7 @@ serve(async (req) => {
     // Build the payload that Remotion Lambda expects
     const payload = {
       type: "start",
+      version: "4.0.420",
       serveUrl,
       composition: compositionId,
       codec,
@@ -100,8 +101,18 @@ serve(async (req) => {
       throw new Error(`Lambda invocation failed: ${lambdaResponse.status}`);
     }
 
-    const result = await lambdaResponse.json();
+    let result = await lambdaResponse.json();
     console.log('Lambda response:', JSON.stringify(result));
+
+    // Lambda may return a stringified JSON body
+    if (typeof result === 'string') {
+      result = JSON.parse(result);
+    }
+
+    // Check for Remotion errors in the response
+    if (result.type === 'error') {
+      throw new Error(result.message || 'Remotion Lambda returned an error');
+    }
 
     // Remotion Lambda returns { renderId, bucketName } on success
     return new Response(JSON.stringify(result), {
