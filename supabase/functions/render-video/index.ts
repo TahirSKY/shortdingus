@@ -11,7 +11,28 @@ serve(async (req) => {
   }
 
   try {
-    const { code, compositionId = 'MyVideo', codec = 'h264' } = await req.json();
+    const { code: rawCode, compositionId = 'MyVideo', codec = 'h264' } = await req.json();
+
+    // Parse multi-file format and extract only the component code (exclude Root.tsx)
+    const FILE_MARKER = /^\/\/\s*---\s*file:\s*(.+?)\s*---\s*$/;
+    const lines = rawCode.split('\n');
+    const files: { name: string; content: string }[] = [];
+    let current: { name: string; content: string } | null = null;
+
+    for (const line of lines) {
+      const m = line.match(FILE_MARKER);
+      if (m) {
+        if (current) files.push(current);
+        current = { name: m[1].trim(), content: '' };
+      } else if (current) {
+        current.content += line + '\n';
+      }
+    }
+    if (current) files.push(current);
+
+    // Use the first non-Root file, or fall back to the raw code
+    const componentFile = files.find(f => !f.name.toLowerCase().includes('root'));
+    const code = componentFile ? componentFile.content.trim() : rawCode;
 
     const region = Deno.env.get('AWS_REGION') || 'us-east-1';
     const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID')!;
