@@ -88,7 +88,7 @@ const Playground = () => {
         } catch (err) {
           console.error("Error polling progress:", err);
         }
-      }, 2000);
+      }, 5000);
     } catch (err: any) {
       console.error("Render error:", err);
       setIsRendering(false);

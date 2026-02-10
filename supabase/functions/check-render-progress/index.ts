@@ -85,6 +85,11 @@ serve(async (req) => {
     if (!lambdaResponse.ok) {
       const errorText = await lambdaResponse.text();
       console.error('Lambda invocation failed:', lambdaResponse.status, errorText);
+      if (lambdaResponse.status === 429) {
+        return new Response(JSON.stringify({ throttled: true, overallProgress: 0 }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       throw new Error(`Lambda invocation failed: ${lambdaResponse.status}`);
     }
 
