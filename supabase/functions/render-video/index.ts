@@ -34,6 +34,27 @@ serve(async (req) => {
     const componentFile = files.find(f => !f.name.toLowerCase().includes('root'));
     const code = componentFile ? componentFile.content.trim() : rawCode;
 
+    // Parse video properties from Root.tsx if present
+    const rootFile = files.find(f => f.name.toLowerCase().includes('root'));
+    let width = 1920;
+    let height = 1080;
+    let fps = 30;
+    let durationInFrames = 150; // 5s default
+
+    if (rootFile) {
+      const rootContent = rootFile.content;
+      const widthMatch = rootContent.match(/width[=:]\s*\{?\s*(\d+)/);
+      const heightMatch = rootContent.match(/height[=:]\s*\{?\s*(\d+)/);
+      const fpsMatch = rootContent.match(/fps[=:]\s*\{?\s*(\d+)/);
+      const durationMatch = rootContent.match(/durationInFrames[=:]\s*\{?\s*(\d+)/);
+      if (widthMatch) width = parseInt(widthMatch[1]);
+      if (heightMatch) height = parseInt(heightMatch[1]);
+      if (fpsMatch) fps = parseInt(fpsMatch[1]);
+      if (durationMatch) durationInFrames = parseInt(durationMatch[1]);
+    }
+
+    console.log('Video properties:', { width, height, fps, durationInFrames });
+
     const region = Deno.env.get('AWS_REGION') || 'us-east-1';
     const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID')!;
     const secretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY')!;
@@ -56,7 +77,7 @@ serve(async (req) => {
       codec,
       inputProps: {
         type: "payload",
-        payload: JSON.stringify({ code }),
+        payload: JSON.stringify({ code, width, height, fps, durationInFrames }),
       },
       rendererFunctionName: null,
       framesPerLambda: null,
