@@ -34,20 +34,66 @@ serve(async (req) => {
     const componentFile = files.find(f => !f.name.toLowerCase().includes('root'));
     const code = componentFile ? componentFile.content.trim() : rawCode;
 
-    // Parse embedded __REMOTION_CONFIG__ from the component code
-    const parseEmbeddedConfig = (src: string): Record<string, unknown> => {
-      const match = src.match(/__REMOTION_CONFIG__\s*({[\s\S]*?})/);
-      if (!match) return {};
-      try {
-        const parsed = JSON.parse(match[1]);
-        return parsed && typeof parsed === 'object' ? parsed : {};
-      } catch {
-        return {};
+    // Extract video config from the component code using multiple strategies
+    const extractConfig = (src: string): Record<string, unknown> => {
+      const config: Record<string, unknown> = {};
+
+      // Strategy 1: /*__REMOTION_CONFIG__ {"format":"tiktok",...} */
+      const commentMatch = src.match(/__REMOTION_CONFIG__\s*({[\s\S]*?})/);
+      if (commentMatch) {
+        try {
+          const parsed = JSON.parse(commentMatch[1]);
+          if (parsed && typeof parsed === 'object') Object.assign(config, parsed);
+        } catch { /* ignore */ }
       }
+
+      // Strategy 2: export const compositionConfig = { ... }
+      const configBlockMatch = src.match(/compositionConfig\s*=\s*({[\s\S]*?});/);
+      if (configBlockMatch) {
+        try {
+          // Convert JS object literal to JSON (handle unquoted keys, trailing commas)
+          const jsonish = configBlockMatch[1]
+            .replace(/'/g, '"')
+            .replace(/(\w+)\s*:/g, '"$1":')
+            .replace(/,\s*}/g, '}')
+            .replace(/,\s*]/g, ']');
+          const parsed = JSON.parse(jsonish);
+          if (parsed && typeof parsed === 'object') {
+            // Only assign keys we haven't already set from __REMOTION_CONFIG__
+            for (const [k, v] of Object.entries(parsed)) {
+              if (config[k] === undefined) config[k] = v;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to parse compositionConfig:', e);
+        }
+      }
+
+      // Strategy 3: individual property patterns like durationInSeconds: 25, width: 1080
+      if (config.durationInSeconds === undefined && config.durationInFrames === undefined) {
+        const durSecsMatch = src.match(/durationInSeconds\s*[:=]\s*(\d+(?:\.\d+)?)/);
+        const durFramesMatch = src.match(/durationInFrames\s*[:=]\s*(\d+)/);
+        if (durSecsMatch) config.durationInSeconds = Number(durSecsMatch[1]);
+        else if (durFramesMatch) config.durationInFrames = Number(durFramesMatch[1]);
+      }
+      if (config.fps === undefined) {
+        const fpsMatch = src.match(/\bfps\s*[:=]\s*(\d+)/);
+        if (fpsMatch) config.fps = Number(fpsMatch[1]);
+      }
+      if (config.width === undefined) {
+        const widthMatch = src.match(/\bwidth\s*[:=]\s*(\d+)/);
+        if (widthMatch) config.width = Number(widthMatch[1]);
+      }
+      if (config.height === undefined) {
+        const heightMatch = src.match(/\bheight\s*[:=]\s*(\d+)/);
+        if (heightMatch) config.height = Number(heightMatch[1]);
+      }
+
+      return config;
     };
 
-    const config = parseEmbeddedConfig(code);
-    console.log('Parsed __REMOTION_CONFIG__:', config);
+    const config = extractConfig(code);
+    console.log('Extracted config:', config);
 
     // Build inputProps — pass through everything, let calculateMetadata resolve defaults
     const inputPropsData: Record<string, unknown> = { code };
