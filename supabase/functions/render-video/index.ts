@@ -102,7 +102,20 @@ serve(async (req) => {
         inputPropsData[key] = config[key];
       }
     }
+    // Calculate total frames to determine optimal framesPerLambda
+    // With AWS concurrency limit of 10, we need to keep total chunks ≤ 8
+    // (leaving 2 for the main orchestrator + encoding)
+    const MAX_CONCURRENT_LAMBDAS = 8;
+    const cfgFps = Number(config.fps) || 30;
+    const cfgDurationSecs = Number(config.durationInSeconds) || 5;
+    const cfgDurationFrames = config.durationInFrames 
+      ? Number(config.durationInFrames) 
+      : Math.ceil(cfgDurationSecs * cfgFps);
+    const framesPerLambda = Math.max(20, Math.ceil(cfgDurationFrames / MAX_CONCURRENT_LAMBDAS));
+
     console.log('inputProps sent to Lambda:', inputPropsData);
+    console.log('Calculated framesPerLambda:', framesPerLambda, 'for', cfgDurationFrames, 'total frames');
+
     const region = Deno.env.get('AWS_REGION') || 'us-east-1';
     const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID')!;
     const secretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY')!;
@@ -114,7 +127,6 @@ serve(async (req) => {
     }
 
     // Build the payload matching exactly what the Remotion SDK sends
-    // (from renderMediaOnLambdaOptionalToRequired + makeLambdaRenderMediaPayload)
     const payload = {
       type: "start",
       version: "4.0.420",
@@ -128,8 +140,8 @@ serve(async (req) => {
         payload: JSON.stringify(inputPropsData),
       },
       rendererFunctionName: null,
-      framesPerLambda: null,
-      concurrency: null,
+      framesPerLambda,
+      concurrency: MAX_CONCURRENT_LAMBDAS,
       imageFormat: "jpeg",
       crf: null,
       envVariables: {},
