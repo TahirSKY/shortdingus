@@ -1,77 +1,57 @@
 
 
-# 🎬 Remotion Code Playground
+## Problem
 
-A playful, colorful web app where users paste Remotion code and instantly see a live preview, with the ability to download rendered videos via AWS Lambda.
+The edge function (`render-video`) uses regex to parse hardcoded values from the user's `Root.tsx`. But the new `Root.tsx` no longer contains hardcoded dimensions -- it uses `calculateMetadata` to dynamically resolve them from `inputProps`. Since the regex finds nothing, every render defaults to 1920x1080 at 5 seconds.
 
----
+## Solution
 
-## Page 1: Landing Page
-A vibrant, eye-catching landing page with:
-- Bold headline explaining what the tool does ("Paste code. See video. Download.")
-- Animated hero section with playful gradients and colors
-- A prominent "Try it now" button leading to the playground
-- Brief feature highlights (instant preview, one-click download, no setup needed)
+Update the edge function to work **with** the new `Root.tsx` architecture instead of against it. The edge function should:
 
-## Page 2: The Playground (Main Feature)
-A split-screen editor experience:
+1. Parse the `__REMOTION_CONFIG__` JSON header from the component code (e.g., `/*__REMOTION_CONFIG__ {"format":"tiktok","durationInSeconds":12} */`)
+2. Send all supported props (`format`, `durationInSeconds`, `durationInFrames`, `fps`, `width`, `height`) through to Lambda's `inputProps`
+3. Let the `calculateMetadata` function on the Lambda side handle resolution and defaults
 
-### Left Panel — Code Editor
-- A large text area / code editor where users paste their entire Remotion project code in one block
-- Support for multi-file format using markers like `// --- file: MyComp.tsx ---` to separate files
-- The app auto-detects and parses multiple files from a single paste
-- Syntax highlighting for a polished feel
-- A few example templates users can load with one click (e.g., "Hello World animation", "Counter", "Logo reveal")
+## Changes
 
-### Right Panel — Live Preview
-- Uses Remotion's `@remotion/player` component to render a live, playable video preview directly in the browser
-- The code is transpiled in real-time using `@babel/standalone` (Remotion's official approach for dynamic compilation)
-- Play/pause controls, frame scrubbing, and a timeline
-- Error display if the code has issues
+### File: `supabase/functions/render-video/index.ts`
 
-### Download Section
-- A "Render & Download" button that triggers server-side rendering via Remotion Lambda on AWS
-- A progress indicator showing render status
-- Once complete, a download link for the MP4 file
+Replace the regex-based Root.tsx parsing (lines 37-56) with:
 
-## Page 3: Examples Gallery
-- A collection of pre-built Remotion code examples users can browse
-- Each example shows a thumbnail preview and description
-- One-click to load any example into the playground
+1. A `parseEmbeddedConfig` function that extracts `__REMOTION_CONFIG__` JSON from the component code string (mirroring the same logic in the S3 bundle's Root.tsx)
+2. Build `inputProps` payload including `code` plus any config found (`format`, `durationInSeconds`, `durationInFrames`, `fps`, `width`, `height`)
+3. Remove the old regex parsing entirely -- the Lambda's `calculateMetadata` handles all dimension/duration logic now
 
----
+```text
+Before (what gets sent to Lambda):
+  { code, width: 1920, height: 1080, fps: 30, durationInFrames: 150 }
+  (always defaults because regex finds nothing)
 
-## Backend (Lovable Cloud)
+After (what gets sent to Lambda):
+  { code, format: "tiktok", durationInSeconds: 12, fps: 30 }
+  (parsed from __REMOTION_CONFIG__ in user's code, calculateMetadata resolves the rest)
+```
 
-### Edge Function: Render Video
-- Receives the user's code and render settings
-- Calls Remotion Lambda's `renderMediaOnLambda()` API with AWS credentials (stored securely as secrets)
-- Returns render progress and final download URL
+### How users control video settings
 
-### Edge Function: Check Render Progress
-- Polls `getRenderProgress()` to track rendering status
-- Returns progress percentage and completion status
+Users embed a config comment in their component code:
 
-### Secrets Management
-- AWS Access Key ID, Secret Access Key, and region stored securely as Lovable Cloud secrets
-- Remotion Lambda function name and serve URL stored as secrets
+```
+/*__REMOTION_CONFIG__ {"format":"tiktok","durationInSeconds":12,"fps":30} */
+```
 
----
+Or they can specify explicit dimensions:
 
-## Required Setup Outside Lovable (One-Time, Guided)
-Before the download feature works, you'll need to:
-1. Install Remotion CLI on your computer
-2. Deploy a Remotion Lambda function to AWS
-3. Deploy a Remotion site bundle to S3 that can accept dynamic code via input props
-4. Provide the function name and serve URL to the app
+```
+/*__REMOTION_CONFIG__ {"width":1080,"height":1920,"durationInFrames":360} */
+```
 
-I'll walk you through each step when we get there — it's a one-time setup.
+If no config is found, the Lambda's `calculateMetadata` defaults apply (YouTube 1920x1080, 5 seconds, 30fps).
 
----
+## Technical Details
 
-## Design Style
-- **Playful & colorful** — bold gradients (purple to pink to orange), rounded corners, fun micro-interactions
-- Vibrant accent colors against a dark code editor background
-- Smooth transitions and hover effects
-- Emoji/icon usage for personality
+- Only the `render-video` edge function needs to change
+- No frontend changes required
+- The S3 bundle (Root.tsx + calculateMetadata) already handles all the resolution logic correctly
+- The edge function just needs to pass through the right props instead of trying to pre-resolve them
 
