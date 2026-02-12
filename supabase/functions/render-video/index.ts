@@ -34,27 +34,29 @@ serve(async (req) => {
     const componentFile = files.find(f => !f.name.toLowerCase().includes('root'));
     const code = componentFile ? componentFile.content.trim() : rawCode;
 
-    // Parse video properties from Root.tsx if present
-    const rootFile = files.find(f => f.name.toLowerCase().includes('root'));
-    let width = 1920;
-    let height = 1080;
-    let fps = 30;
-    let durationInFrames = 150; // 5s default
+    // Parse embedded __REMOTION_CONFIG__ from the component code
+    const parseEmbeddedConfig = (src: string): Record<string, unknown> => {
+      const match = src.match(/__REMOTION_CONFIG__\s*({[\s\S]*?})/);
+      if (!match) return {};
+      try {
+        const parsed = JSON.parse(match[1]);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    };
 
-    if (rootFile) {
-      const rootContent = rootFile.content;
-      const widthMatch = rootContent.match(/width[=:]\s*\{?\s*(\d+)/);
-      const heightMatch = rootContent.match(/height[=:]\s*\{?\s*(\d+)/);
-      const fpsMatch = rootContent.match(/fps[=:]\s*\{?\s*(\d+)/);
-      const durationMatch = rootContent.match(/durationInFrames[=:]\s*\{?\s*(\d+)/);
-      if (widthMatch) width = parseInt(widthMatch[1]);
-      if (heightMatch) height = parseInt(heightMatch[1]);
-      if (fpsMatch) fps = parseInt(fpsMatch[1]);
-      if (durationMatch) durationInFrames = parseInt(durationMatch[1]);
+    const config = parseEmbeddedConfig(code);
+    console.log('Parsed __REMOTION_CONFIG__:', config);
+
+    // Build inputProps — pass through everything, let calculateMetadata resolve defaults
+    const inputPropsData: Record<string, unknown> = { code };
+    for (const key of ['format', 'durationInSeconds', 'durationInFrames', 'fps', 'width', 'height']) {
+      if (config[key] !== undefined) {
+        inputPropsData[key] = config[key];
+      }
     }
-
-    console.log('Video properties:', { width, height, fps, durationInFrames });
-
+    console.log('inputProps sent to Lambda:', inputPropsData);
     const region = Deno.env.get('AWS_REGION') || 'us-east-1';
     const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID')!;
     const secretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY')!;
@@ -77,7 +79,7 @@ serve(async (req) => {
       codec,
       inputProps: {
         type: "payload",
-        payload: JSON.stringify({ code, width, height, fps, durationInFrames }),
+        payload: JSON.stringify(inputPropsData),
       },
       rendererFunctionName: null,
       framesPerLambda: null,
