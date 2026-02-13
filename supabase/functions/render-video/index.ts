@@ -74,7 +74,7 @@ function prepareCodeForLambda(raw: string): string {
 
   // Single-file mode (no markers)
   if (files.length === 0) {
-    return ensureDefaultExport(raw);
+    return ensureClassicJsx(ensureDefaultExport(raw));
   }
 
   // Multi-file mode: drop Root.tsx since Lambda has its own
@@ -105,6 +105,12 @@ function prepareCodeForLambda(raw: string): string {
     }
   }
 
+  // Apply classic JSX pragma to all scene files
+  for (const f of sceneFiles) {
+    const content = f.lines.join("\n");
+    f.lines = ensureClassicJsx(content).split("\n");
+  }
+
   // If only one scene file remains, send without markers (single-file mode for Lambda)
   if (sceneFiles.length === 1) {
     return sceneFiles[0].lines.join("\n").trim();
@@ -121,6 +127,29 @@ function ensureDefaultExport(code: string): string {
   const m = code.match(/export\s+(?:const|function|class)\s+([A-Z]\w*)/);
   if (m) return code + `\n\nexport default ${m[1]};`;
   return code;
+}
+
+/**
+ * Ensure Babel uses classic JSX runtime (React.createElement) not automatic (jsx-runtime).
+ * The Lambda bundle's manual require() doesn't map react/jsx-runtime, so automatic fails.
+ * Also ensure `import React` is present since classic runtime needs it in scope.
+ */
+function ensureClassicJsx(code: string): string {
+  let result = code;
+
+  // Add classic pragma if not present
+  if (!result.includes("@jsxRuntime")) {
+    result = `/** @jsxRuntime classic */\n` + result;
+  }
+
+  // Ensure React is imported (classic runtime needs React in scope for createElement)
+  if (!/import\s+React[\s,{]/.test(result) && !/const\s+React\s*=/.test(result)) {
+    // Insert after the pragma line
+    const pragmaEnd = result.indexOf("\n");
+    result = result.slice(0, pragmaEnd + 1) + `import React from "react";\n` + result.slice(pragmaEnd + 1);
+  }
+
+  return result;
 }
 
 Deno.serve(async (req) => {
