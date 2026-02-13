@@ -61,7 +61,12 @@ Deno.serve(async (req) => {
       region: region as any,
     });
 
-    return json(progress);
+    const result: Record<string, unknown> = { ...progress };
+    if (progress.fatalErrorEncountered) {
+      result.fatal = true;
+    }
+
+    return json(result);
   } catch (err) {
     console.error("[check-render-progress] Error:", err);
     return json({ error: (err as Error).message ?? String(err) }, 500);

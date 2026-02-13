@@ -45,6 +45,7 @@ const Playground = () => {
         body: {
           code,
           format: format.label.toLowerCase(),
+          debug: true,
         },
       });
 
@@ -72,11 +73,18 @@ const Playground = () => {
             return;
           }
 
-          if (progress?.fatalErrorEncountered) {
+          if (progress?.fatalErrorEncountered || progress?.fatal) {
             stopPolling();
             setIsRendering(false);
-            toast.error("Render failed: " + (progress.errors?.[0]?.message || "Unknown error"));
+            const errMsg = progress.errors?.[0]?.message || progress.errors?.[0]?.stack || "Unknown error";
+            toast.error("Render failed: " + errMsg);
+            console.error("[render] Fatal error details:", JSON.stringify(progress.errors));
             return;
+          }
+
+          // Surface non-fatal errors array if present
+          if (progress?.errors?.length > 0) {
+            console.warn("[render] Non-fatal errors:", progress.errors);
           }
 
           const pct = Math.round((progress?.overallProgress ?? 0) * 100);

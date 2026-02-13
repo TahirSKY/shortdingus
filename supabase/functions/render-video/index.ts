@@ -62,19 +62,11 @@ Deno.serve(async (req) => {
     const compositionId: string = String(body.compositionId ?? "MyVideo");
     const codec: string = String(body.codec ?? "h264");
     const debug: boolean = Boolean(body.debug);
-    const extraInputProps =
-      body.inputProps && typeof body.inputProps === "object" ? body.inputProps : {};
-
-    // Dimensions from format (Lambda's calculateMetadata will also receive these)
-    const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.youtube;
-
     // Pass raw code untouched — Lambda handles evaluation via evaluateCode / calculateMetadata
     const inputProps: Record<string, unknown> = {
       code,
       format,
-      width: dims.width,
-      height: dims.height,
-      ...extraInputProps,
+      debug,
     };
 
     const region = Deno.env.get("AWS_REGION") ?? "us-east-1";
@@ -97,20 +89,26 @@ Deno.serve(async (req) => {
     const logLevel = debug ? "verbose" : "info";
 
     console.log(
-      `[render-video] composition=${compositionId} format=${format} ` +
-        `dims=${dims.width}x${dims.height} concurrency=${concurrency} codec=${codec}`,
+      `[render-video] composition=${compositionId} format=${format} concurrency=${concurrency} codec=${codec} debug=${debug}`,
     );
 
-    const response = await renderMediaOnLambda({
+    const renderParams: Record<string, unknown> = {
       serveUrl,
       composition: compositionId,
-      codec: codec as any,
-      region: region as any,
+      codec,
+      region,
       functionName,
       inputProps,
       concurrency,
-      logLevel: logLevel as any,
-    });
+      logLevel,
+    };
+
+    // dumpBrowserLogs captures Chrome console output for debugging evaluateCode issues
+    if (debug) {
+      (renderParams as any).dumpBrowserLogs = true;
+    }
+
+    const response = await renderMediaOnLambda(renderParams as any);
 
     return json({
       renderId: response.renderId,
