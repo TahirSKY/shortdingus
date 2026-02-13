@@ -8,6 +8,7 @@ import RenderControls from "@/components/RenderControls";
 import { parseMultiFileCode } from "@/lib/code-parser";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { VideoFormat } from "@/components/FormatSelector";
 
 const Playground = () => {
   const [code, setCode] = useState(() => {
@@ -33,15 +34,19 @@ const Playground = () => {
     }
   }, []);
 
-  const handleRender = useCallback(async () => {
+  const handleRender = useCallback(async (format: VideoFormat) => {
     setIsRendering(true);
     setRenderProgress(0);
     setDownloadUrl(null);
 
     try {
-      // 1. Trigger the render
+      // 1. Trigger the render with explicit format dimensions
       const { data, error: renderError } = await supabase.functions.invoke("render-video", {
-        body: { code },
+        body: {
+          code,
+          width: format.width,
+          height: format.height,
+        },
       });
 
       if (renderError || data?.error) {
