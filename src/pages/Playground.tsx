@@ -44,8 +44,7 @@ const Playground = () => {
       const { data, error: renderError } = await supabase.functions.invoke("render-video", {
         body: {
           code,
-          width: format.width,
-          height: format.height,
+          format: format.label.toLowerCase(),
         },
       });
 
