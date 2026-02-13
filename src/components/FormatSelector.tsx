@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Monitor, Smartphone, Square } from "lucide-react";
+import { Monitor, Smartphone, Square, Sparkles } from "lucide-react";
+import type { DetectedConfig } from "@/lib/detect-config";
 
 export interface VideoFormat {
   label: string;
@@ -36,12 +37,39 @@ interface FormatSelectorProps {
   open: boolean;
   onClose: () => void;
   onSelect: (settings: RenderSettings) => void;
+  detectedConfig?: DetectedConfig;
 }
 
-const FormatSelector = ({ open, onClose, onSelect }: FormatSelectorProps) => {
+const FormatSelector = ({ open, onClose, onSelect, detectedConfig }: FormatSelectorProps) => {
   const [selected, setSelected] = useState<number>(0);
   const [duration, setDuration] = useState("10");
   const [fps, setFps] = useState("30");
+  const [hasDetected, setHasDetected] = useState(false);
+
+  // Pre-fill from detected config when dialog opens
+  useEffect(() => {
+    if (!open) {
+      setHasDetected(false);
+      return;
+    }
+    if (detectedConfig) {
+      const detected = Object.keys(detectedConfig).length > 0;
+      setHasDetected(detected);
+      if (detectedConfig.durationInSeconds) {
+        setDuration(String(detectedConfig.durationInSeconds));
+      }
+      if (detectedConfig.fps) {
+        setFps(String(detectedConfig.fps));
+      }
+      // Auto-select format based on detected dimensions
+      if (detectedConfig.width && detectedConfig.height) {
+        const ratio = detectedConfig.width / detectedConfig.height;
+        if (ratio < 0.8) setSelected(1); // TikTok (portrait)
+        else if (ratio > 1.2) setSelected(0); // YouTube (landscape)
+        else setSelected(2); // Square
+      }
+    }
+  }, [open, detectedConfig]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -68,6 +96,12 @@ const FormatSelector = ({ open, onClose, onSelect }: FormatSelectorProps) => {
             </button>
           ))}
         </div>
+        {hasDetected && (
+          <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 rounded-md px-2.5 py-1.5 mb-1">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Auto-detected from your code</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 pb-2">
           <div className="space-y-1.5">
