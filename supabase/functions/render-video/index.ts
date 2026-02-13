@@ -19,11 +19,40 @@ const FILE_MARKER = /^\/\/\s*---\s*file:\s*(.+?)\s*---\s*$/;
  * 2. export const compositionConfig = {...};
  * 3. Individual patterns like durationInSeconds: 25
  */
-const extractConfig = (src: string): Record<string, unknown> => {
+/**
+ * Extract the Root.tsx content from multi-file code.
+ */
+const extractRootFile = (rawCode: string): string | null => {
+  const lines = rawCode.split("\n");
+  let current: { name: string; content: string } | null = null;
+  const files: { name: string; content: string }[] = [];
+
+  for (const line of lines) {
+    const m = line.match(FILE_MARKER);
+    if (m) {
+      if (current) files.push(current);
+      current = { name: m[1].trim(), content: "" };
+      continue;
+    }
+    if (current) current.content += line + "\n";
+  }
+  if (current) files.push(current);
+
+  const rootFile = files.find((f) => f.name.toLowerCase().includes("root"));
+  return rootFile ? rootFile.content : null;
+};
+
+/**
+ * Extract video config using multiple strategies:
+ * 1. /*__REMOTION_CONFIG__ {...} *​/ comment anywhere in the code
+ * 2. export const compositionConfig = {...};
+ * 3. <Composition> JSX attributes from Root.tsx (durationInFrames={120} fps={30} etc.)
+ */
+const extractConfig = (rawCode: string): Record<string, unknown> => {
   const config: Record<string, unknown> = {};
 
   // Strategy 1: __REMOTION_CONFIG__ JSON comment
-  const commentMatch = src.match(/__REMOTION_CONFIG__\s*({[\s\S]*?})/);
+  const commentMatch = rawCode.match(/__REMOTION_CONFIG__\s*({[\s\S]*?})/);
   if (commentMatch) {
     try {
       const parsed = JSON.parse(commentMatch[1]);
@@ -32,7 +61,7 @@ const extractConfig = (src: string): Record<string, unknown> => {
   }
 
   // Strategy 2: compositionConfig object literal
-  const configBlockMatch = src.match(/compositionConfig\s*=\s*({[\s\S]*?});/);
+  const configBlockMatch = rawCode.match(/compositionConfig\s*=\s*({[\s\S]*?});/);
   if (configBlockMatch) {
     try {
       const jsonish = configBlockMatch[1]
@@ -49,18 +78,32 @@ const extractConfig = (src: string): Record<string, unknown> => {
     } catch { /* ignore */ }
   }
 
-  // Strategy 3: individual property patterns
-  const patterns: [string, RegExp][] = [
-    ["durationInSeconds", /durationInSeconds\s*[:=]\s*(\d+(?:\.\d+)?)/],
-    ["durationInFrames", /durationInFrames\s*[:=]\s*(\d+)/],
-    ["fps", /fps\s*[:=]\s*(\d+)/],
-    ["width", /width\s*[:=]\s*(\d+)/],
-    ["height", /height\s*[:=]\s*(\d+)/],
-  ];
-  for (const [key, re] of patterns) {
-    if (config[key] === undefined) {
-      const m = src.match(re);
-      if (m) config[key] = Number(m[1]);
+  // Strategy 3: Parse <Composition> JSX attributes from Root.tsx only
+  // This avoids matching CSS style properties like "height: 16"
+  const rootCode = extractRootFile(rawCode);
+  if (rootCode) {
+    // Find the <Composition ... /> tag
+    const compositionMatch = rootCode.match(/<Composition[\s\S]*?\/>/);
+    if (compositionMatch) {
+      const tag = compositionMatch[0];
+      // Match JSX attributes: name={number} or name="string"
+      const jsxPatterns: [string, RegExp][] = [
+        ["durationInFrames", /durationInFrames=\{(\d+)\}/],
+        ["fps", /fps=\{(\d+)\}/],
+        ["width", /width=\{(\d+)\}/],
+        ["height", /height=\{(\d+)\}/],
+      ];
+      for (const [key, re] of jsxPatterns) {
+        if (config[key] === undefined) {
+          const m = tag.match(re);
+          if (m) config[key] = Number(m[1]);
+        }
+      }
+      // Also extract the composition id
+      const idMatch = tag.match(/id="([^"]+)"/);
+      if (idMatch && config["compositionId"] === undefined) {
+        config["compositionId"] = idMatch[1];
+      }
     }
   }
 
@@ -105,7 +148,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const compositionId = String(body.compositionId ?? "MyVideo");
     const codec = String(body.codec ?? "h264");
     const extraInputProps =
       body.inputProps && typeof body.inputProps === "object"
@@ -114,6 +156,7 @@ Deno.serve(async (req) => {
 
     const code = pickComponentCode(rawCode);
     const config = extractConfig(rawCode); // extract from FULL code including Root.tsx
+    const compositionId = String(body.compositionId ?? config["compositionId"] ?? "MyVideo");
 
     console.log("Extracted config:", JSON.stringify(config));
 
