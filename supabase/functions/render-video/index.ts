@@ -169,6 +169,8 @@ Deno.serve(async (req) => {
     const compositionId: string = String(body.compositionId ?? "MyVideo");
     const codec: string = String(body.codec ?? "h264");
     const debug: boolean = Boolean(body.debug);
+    const durationInSeconds: number = clamp(Number(body.durationInSeconds) || 10, 1, 300);
+    const fps: number = clamp(Number(body.fps) || 30, 1, 120);
 
     // Prepare code for Lambda's pickEntryFile contract (strip Root.tsx, ensure export default)
     const code = prepareCodeForLambda(rawCode);
@@ -176,6 +178,8 @@ Deno.serve(async (req) => {
     const inputProps: Record<string, unknown> = {
       code,
       format,
+      durationInSeconds,
+      fps,
       debug,
     };
 

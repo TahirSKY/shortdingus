@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Download, Loader2, CheckCircle2 } from "lucide-react";
-import FormatSelector, { type VideoFormat } from "@/components/FormatSelector";
+import FormatSelector, { type RenderSettings } from "@/components/FormatSelector";
 
 interface RenderControlsProps {
   hasCode: boolean;
   isRendering: boolean;
   renderProgress: number;
   downloadUrl: string | null;
-  onRender: (format: VideoFormat) => void;
+  onRender: (settings: RenderSettings) => void;
 }
 
 const RenderControls = ({
