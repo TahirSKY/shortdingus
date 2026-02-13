@@ -8,12 +8,6 @@
  *
  * POST body:
  *   { renderId: string, bucketName: string, debug?: boolean }
- *
- * curl example:
- *   curl -X POST 'https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/check-render-progress' \
- *     -H 'Content-Type: application/json' \
- *     -H 'Authorization: Bearer <ANON_KEY>' \
- *     -d '{"renderId":"abc123","bucketName":"remotionlambda-useast1-abc"}'
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getRenderProgress } from "npm:@remotion/lambda-client@4.0.420";
@@ -30,6 +24,31 @@ function json(data: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+/** Retry getRenderProgress with exponential backoff on 429 errors */
+async function getProgressWithRetry(
+  params: { renderId: string; bucketName: string; functionName: string; region: string },
+  maxRetries = 3
+) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await getRenderProgress(params as any);
+    } catch (err: any) {
+      const is429 = err?.name === "TooManyRequestsException" ||
+        err?.$metadata?.httpStatusCode === 429 ||
+        err?.message?.includes("Rate Exceeded");
+
+      if (is429 && attempt < maxRetries) {
+        // Exponential backoff: 2s, 4s, 8s
+        const delay = Math.pow(2, attempt + 1) * 1000;
+        console.warn(`[check-render-progress] 429 rate limit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 Deno.serve(async (req) => {
@@ -54,15 +73,15 @@ Deno.serve(async (req) => {
       return json({ error: "Missing REMOTION_LAMBDA_FUNCTION_NAME env var." }, 500);
     }
 
-    const progress = await getRenderProgress({
+    const progress = await getProgressWithRetry({
       renderId,
       bucketName,
       functionName,
-      region: region as any,
+      region,
     });
 
-    const result: Record<string, unknown> = { ...progress };
-    if (progress.fatalErrorEncountered) {
+    const result: Record<string, unknown> = { ...(progress ?? {}) };
+    if (progress?.fatalErrorEncountered) {
       result.fatal = true;
     }
 
