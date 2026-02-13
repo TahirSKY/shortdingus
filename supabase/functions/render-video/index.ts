@@ -220,15 +220,15 @@ Deno.serve(async (req) => {
     // Remotion v4 throws if both are set.
     // With AWS concurrency limit of 10, we need chunks ≤ 8 (leave room for orchestrator).
     // We calculate framesPerLambda based on estimated total frames.
-    // With 120s Lambda timeout, keep chunks small (~60-80 frames max)
-    // to avoid timeout on complex animations. AWS concurrency limit is 10.
-    const MAX_FRAMES_PER_CHUNK = 75;
+    // CRITICAL: Keep total Lambda invocations low to avoid AWS concurrency limits.
+    // With concurrency limit of 10, use at most 4 renderer chunks (+ 1 orchestrator = 5 total).
+    const MAX_CHUNKS = 4;
     const cfgFps = Number(config.fps) || 30;
     const cfgDurationFrames = config.durationInFrames
       ? Number(config.durationInFrames)
       : Math.ceil((Number(config.durationInSeconds) || 5) * cfgFps);
 
-    const framesPerLambda = Math.min(MAX_FRAMES_PER_CHUNK, Math.max(20, Math.ceil(cfgDurationFrames / 8)));
+    const framesPerLambda = Math.max(30, Math.ceil(cfgDurationFrames / MAX_CHUNKS));
 
     console.log(`Rendering: ${cfgDurationFrames} frames, framesPerLambda: ${framesPerLambda}`);
 
