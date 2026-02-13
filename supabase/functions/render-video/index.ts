@@ -145,7 +145,18 @@ const pickComponentCode = (rawCode: string): string => {
         return /\{\s*\}/.test(cleaned) ? '' : cleaned;
       })
     .trim();
-  return stripped || rawCode.trim();
+  const result = stripped || rawCode.trim();
+
+  // Ensure there's a default export so Lambda can find the component
+  if (!/export\s+default\b/.test(result)) {
+    const componentNames = [...result.matchAll(/(?:const|function)\s+([A-Z][A-Za-z0-9]*)/g)]
+      .map(m => m[1]);
+    if (componentNames.length > 0) {
+      const lastComponent = componentNames[componentNames.length - 1];
+      return result + `\n\nexport default ${lastComponent};`;
+    }
+  }
+  return result;
 };
 
 Deno.serve(async (req) => {
