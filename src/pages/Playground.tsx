@@ -6,6 +6,7 @@ import CodeEditor from "@/components/CodeEditor";
 import PreviewPanel from "@/components/PreviewPanel";
 import RenderControls from "@/components/RenderControls";
 import { parseMultiFileCode } from "@/lib/code-parser";
+import { detectConfig } from "@/lib/detect-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { RenderSettings } from "@/components/FormatSelector";
@@ -26,6 +27,7 @@ const Playground = () => {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const parsedFiles = useMemo(() => parseMultiFileCode(code), [code]);
+  const detectedConfig = useMemo(() => detectConfig(code), [code]);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -149,6 +151,7 @@ const Playground = () => {
         renderProgress={renderProgress}
         downloadUrl={downloadUrl}
         onRender={handleRender}
+        detectedConfig={detectedConfig}
       />
     </div>
   );

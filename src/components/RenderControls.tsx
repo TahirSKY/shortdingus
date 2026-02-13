@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Download, Loader2, CheckCircle2 } from "lucide-react";
 import FormatSelector, { type RenderSettings } from "@/components/FormatSelector";
+import type { DetectedConfig } from "@/lib/detect-config";
 
 interface RenderControlsProps {
   hasCode: boolean;
@@ -10,6 +11,7 @@ interface RenderControlsProps {
   renderProgress: number;
   downloadUrl: string | null;
   onRender: (settings: RenderSettings) => void;
+  detectedConfig?: DetectedConfig;
 }
 
 const RenderControls = ({
@@ -18,6 +20,7 @@ const RenderControls = ({
   renderProgress,
   downloadUrl,
   onRender,
+  detectedConfig,
 }: RenderControlsProps) => {
   const [showFormat, setShowFormat] = useState(false);
 
@@ -57,6 +60,7 @@ const RenderControls = ({
           setShowFormat(false);
           onRender(format);
         }}
+        detectedConfig={detectedConfig}
       />
 
       {isRendering && (
