@@ -1,13 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-import {
-  renderMediaOnLambda,
-} from "npm:@remotion/lambda-client@4.0.420";
+import { renderMediaOnLambda } from "npm:@remotion/lambda-client@4.0.420";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -57,7 +54,9 @@ const extractConfig = (rawCode: string): Record<string, unknown> => {
     try {
       const parsed = JSON.parse(commentMatch[1]);
       if (parsed && typeof parsed === "object") Object.assign(config, parsed);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Strategy 2: compositionConfig object literal
@@ -75,7 +74,9 @@ const extractConfig = (rawCode: string): Record<string, unknown> => {
           if (config[k] === undefined) config[k] = v;
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Strategy 3: Parse <Composition> JSX attributes from Root.tsx only
@@ -126,9 +127,7 @@ const pickComponentCode = (rawCode: string): string => {
   }
   if (current) files.push(current);
 
-  const componentFile = files.find(
-    (f) => !f.name.toLowerCase().includes("root")
-  );
+  const componentFile = files.find((f) => !f.name.toLowerCase().includes("root"));
   return (componentFile ? componentFile.content : rawCode).trim();
 };
 
@@ -149,14 +148,11 @@ Deno.serve(async (req) => {
     }
 
     const codec = String(body.codec ?? "h264");
-    const extraInputProps =
-      body.inputProps && typeof body.inputProps === "object"
-        ? body.inputProps
-        : {};
+    const extraInputProps = body.inputProps && typeof body.inputProps === "object" ? body.inputProps : {};
 
     const code = pickComponentCode(rawCode);
     const config = extractConfig(rawCode); // extract from FULL code including Root.tsx
-    const compositionId = String(body.compositionId ?? config["compositionId"] ?? "MyVideo");
+    const compositionId = "MyVideo";
 
     console.log("Extracted config:", JSON.stringify(config));
 
@@ -170,14 +166,7 @@ Deno.serve(async (req) => {
     if (body.height) config["height"] = Number(body.height);
 
     // Forward any extracted config keys
-    for (const key of [
-      "format",
-      "durationInSeconds",
-      "durationInFrames",
-      "fps",
-      "width",
-      "height",
-    ]) {
+    for (const key of ["format", "durationInSeconds", "durationInFrames", "fps", "width", "height"]) {
       if (config[key] !== undefined) inputProps[key] = config[key];
     }
 
@@ -190,13 +179,12 @@ Deno.serve(async (req) => {
     if (!functionName || !serveUrl) {
       return new Response(
         JSON.stringify({
-          error:
-            "Missing REMOTION_LAMBDA_FUNCTION_NAME or REMOTION_SERVE_URL env vars.",
+          error: "Missing REMOTION_LAMBDA_FUNCTION_NAME or REMOTION_SERVE_URL env vars.",
         }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -210,14 +198,9 @@ Deno.serve(async (req) => {
       ? Number(config.durationInFrames)
       : Math.ceil((Number(config.durationInSeconds) || 5) * cfgFps);
 
-    const framesPerLambda = Math.max(
-      20,
-      Math.ceil(cfgDurationFrames / MAX_LAMBDAS)
-    );
+    const framesPerLambda = Math.max(20, Math.ceil(cfgDurationFrames / MAX_LAMBDAS));
 
-    console.log(
-      `Rendering: ${cfgDurationFrames} frames, framesPerLambda: ${framesPerLambda}`
-    );
+    console.log(`Rendering: ${cfgDurationFrames} frames, framesPerLambda: ${framesPerLambda}`);
 
     const response = await renderMediaOnLambda({
       serveUrl,
@@ -234,12 +217,9 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error(err);
-    return new Response(
-      JSON.stringify({ error: (err as Error).message ?? String(err) }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ error: (err as Error).message ?? String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
