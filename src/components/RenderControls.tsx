@@ -1,13 +1,15 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Download, Loader2, CheckCircle2 } from "lucide-react";
+import FormatSelector, { type VideoFormat } from "@/components/FormatSelector";
 
 interface RenderControlsProps {
   hasCode: boolean;
   isRendering: boolean;
   renderProgress: number;
   downloadUrl: string | null;
-  onRender: () => void;
+  onRender: (format: VideoFormat) => void;
 }
 
 const RenderControls = ({
@@ -17,6 +19,8 @@ const RenderControls = ({
   downloadUrl,
   onRender,
 }: RenderControlsProps) => {
+  const [showFormat, setShowFormat] = useState(false);
+
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-t border-border bg-card/50">
       {downloadUrl ? (
@@ -28,7 +32,7 @@ const RenderControls = ({
         </Button>
       ) : (
         <Button
-          onClick={onRender}
+          onClick={() => setShowFormat(true)}
           disabled={!hasCode || isRendering}
           className="bg-gradient-primary hover:opacity-90 border-0 disabled:opacity-40"
         >
@@ -45,6 +49,15 @@ const RenderControls = ({
           )}
         </Button>
       )}
+
+      <FormatSelector
+        open={showFormat}
+        onClose={() => setShowFormat(false)}
+        onSelect={(format) => {
+          setShowFormat(false);
+          onRender(format);
+        }}
+      />
 
       {isRendering && (
         <div className="flex-1 flex items-center gap-3">

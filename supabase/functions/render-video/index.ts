@@ -165,6 +165,10 @@ Deno.serve(async (req) => {
       code,
       ...extraInputProps,
     };
+    // Body-level width/height (from format selector) take priority over extracted config
+    if (body.width) config["width"] = Number(body.width);
+    if (body.height) config["height"] = Number(body.height);
+
     // Forward any extracted config keys
     for (const key of [
       "format",
