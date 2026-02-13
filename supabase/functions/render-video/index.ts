@@ -79,13 +79,11 @@ const extractConfig = (rawCode: string): Record<string, unknown> => {
     }
   }
 
-  // Strategy 3: Parse <Composition> JSX attributes from Root.tsx only
-  // This avoids matching CSS style properties like "height: 16"
-  const rootCode = extractRootFile(rawCode);
-  if (rootCode) {
-    // Find the <Composition ... /> tag
-    const compositionMatch = rootCode.match(/<Composition[\s\S]*?\/>/);
-    if (compositionMatch) {
+  // Strategy 3: Parse <Composition> JSX attributes
+  // Try Root.tsx first, fall back to searching entire code for single-file pastes
+  const searchCode = extractRootFile(rawCode) ?? rawCode;
+  const compositionMatch = searchCode.match(/<Composition[\s\S]*?\/>/);
+  if (compositionMatch) {
       const tag = compositionMatch[0];
       // Match JSX attributes: name={number} or name="string"
       const jsxPatterns: [string, RegExp][] = [
@@ -105,7 +103,6 @@ const extractConfig = (rawCode: string): Record<string, unknown> => {
       if (idMatch && config["compositionId"] === undefined) {
         config["compositionId"] = idMatch[1];
       }
-    }
   }
 
   return config;
@@ -128,7 +125,27 @@ const pickComponentCode = (rawCode: string): string => {
   if (current) files.push(current);
 
   const componentFile = files.find((f) => !f.name.toLowerCase().includes("root"));
-  return (componentFile ? componentFile.content : rawCode).trim();
+  if (componentFile) return componentFile.content.trim();
+
+  // Single-file paste (no markers): strip Root/Composition boilerplate
+  // so Lambda only receives the renderable scene component
+  const stripped = rawCode
+    .replace(/export\s+const\s+RemotionRoot[\s\S]*?^\};?/m, '')
+    .replace(/registerRoot\(.*?\);?/g, '')
+    .replace(/<Composition[\s\S]*?\/>/g, '')
+    .replace(/import\s*\{[^}]*\bComposition\b[^}]*\}\s*from\s*['"]remotion['"];?/g,
+      (match) => {
+        const cleaned = match.replace(/,?\s*Composition\s*,?/, '').replace(/\{\s*,/, '{').replace(/,\s*\}/, '}');
+        // If only empty braces remain, remove the entire import
+        return /\{\s*\}/.test(cleaned) ? '' : cleaned;
+      })
+    .replace(/import\s*\{[^}]*\bregisterRoot\b[^}]*\}\s*from\s*['"]remotion['"];?/g,
+      (match) => {
+        const cleaned = match.replace(/,?\s*registerRoot\s*,?/, '').replace(/\{\s*,/, '{').replace(/,\s*\}/, '}');
+        return /\{\s*\}/.test(cleaned) ? '' : cleaned;
+      })
+    .trim();
+  return stripped || rawCode.trim();
 };
 
 Deno.serve(async (req) => {
