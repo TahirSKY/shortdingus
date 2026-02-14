@@ -1,130 +1,100 @@
 
 
-# Refactor: Deterministic Remotion Lambda Edge Functions
+# Image Library for LLM Video Generation
 
-## What's Wrong Today
+## Summary
+Add a new "Image Library" page where users can upload images (from URL or device), store them in Lovable Cloud storage, and get clean public URLs. The page provides a one-click "Copy for LLM" button so users can paste image references directly into their LLM prompts.
 
-The current edge functions have two major sources of fragility:
+## What Gets Built
 
-1. **render-video**: Contains ~150 lines of regex-based code parsing (`extractConfig`, `extractRootFile`, `pickComponentCode`) that tries to guess fps, duration, width, height from user code strings. It then manually computes `framesPerLambda` -- a value Remotion can calculate itself. This guessing frequently produces wrong chunk sizes, causing either AWS concurrency limit errors or Lambda timeouts.
+### 1. Storage Bucket (Database Migration)
+- Create a public `images` storage bucket
+- Add RLS policies allowing anonymous uploads, reads, and deletes (since no auth system exists in the app)
 
-2. **check-render-progress**: Implements a full manual AWS Signature V4 signing flow (~40 lines of crypto code) instead of using Remotion's official `getRenderProgress()` SDK function. This is brittle and unnecessary.
+### 2. Edge Function: `fetch-image`
+- Accepts a JSON body with `{ url: string }`
+- Fetches the image from the external URL server-side (avoids CORS)
+- Returns the image bytes and content type to the client
+- Needed for pasting URLs from sites like Zillow that block browser-side fetches
 
-Both problems have official SDK solutions that are simpler and documented for Deno/Supabase Edge Functions.
+### 3. New Page: `/images` -- `src/pages/ImageLibrary.tsx`
+**Top Section:**
+- Displays the base URL with a "Copy Base URL" button
+- Helper text explaining how LLMs can reconstruct full URLs
 
----
+**Input Section:**
+- Text input for external image URL
+- File upload / drag-and-drop area
+- Text input for image label (e.g., "kitchen", "master_bedroom")
+- "Add Image" button
+- Label sanitization: lowercase, spaces to underscores, strip special chars
+- Filename format: `{sanitized_label}_{6 random alphanumeric}.jpg`
 
-## What Changes
+**Image Grid:**
+- Cards showing thumbnail, label, filename
+- Download button (uses anchor tag with `download` attribute set to exact Supabase filename)
+- Copy URL button (copies full public URL)
+- Delete button (removes from storage)
 
-### A) `supabase/functions/render-video/index.ts` -- Full Rewrite
+**Bottom Section:**
+- "Copy for LLM" button that copies a formatted block containing the base URL and all filenames
 
-**Removed (~160 lines):**
-- `extractRootFile()` -- regex parsing of Root.tsx from code blob
-- `extractConfig()` -- 3 regex strategies to guess fps/duration/dimensions
-- `pickComponentCode()` -- stripping boilerplate, injecting default exports
-- Manual `framesPerLambda` calculation with `MAX_CHUNKS` logic
-- `FILE_MARKER` regex constant
+### 4. Routing Update (`App.tsx`)
+- Add `/images` route pointing to `ImageLibrary`
 
-**New behavior (~60 lines):**
-- Accept POST body: `{ code, format?, compositionId?, codec?, inputProps?, debug? }`
-- Build `inputProps = { code, format, ...extraInputProps }` -- pass raw code untouched to Lambda. The Lambda's `Root.tsx` `calculateMetadata` already handles dimensions via format and parses config from the code string. No need to duplicate that logic here.
-- Map format string to width/height and pass as inputProps so `calculateMetadata` on Lambda can use them
-- Call `renderMediaOnLambda()` from the official SDK with `concurrency` (not `framesPerLambda`) -- letting Remotion decide how to split frames
-- `concurrency` defaults to 4 (configurable via `MAX_CONCURRENCY` env var), clamped 1-200
-- Return structured JSON: `{ renderId, bucketName, region, compositionId, concurrency }`
-
-### B) `supabase/functions/check-render-progress/index.ts` -- Full Rewrite
-
-**Removed (~80 lines):**
-- Entire manual AWS SigV4 signing implementation (hmac, sha256, canonical request construction)
-- Manual Lambda REST API invocation via fetch
-- Custom throttle handling
-
-**New behavior (~30 lines):**
-- Accept POST body: `{ renderId, bucketName, debug? }`
-- Call `getRenderProgress()` from `npm:@remotion/lambda-client@4.0.420`
-- Return Remotion's progress object directly as JSON (includes `overallProgress`, `done`, `outputFile`, `fatalErrorEncountered`, `errors`, etc.)
-
-### C) `src/pages/Playground.tsx` -- Minor Update
-
-- Update `handleRender` to send `format` as a string (`"youtube"`, `"tiktok"`, `"square"`) instead of raw width/height, since the edge function and Lambda's `calculateMetadata` now handle dimension mapping
-- The response fields (`renderId`, `bucketName`) stay the same, so polling logic is unchanged
-
-### D) `supabase/config.toml` -- No Change Needed
-
-JWT verification is already disabled by default for these functions.
-
----
+### 5. Navigation Update (`Index.tsx`)
+- Add "Image Library" link to the landing page nav bar
 
 ## Technical Details
 
-### render-video/index.ts -- New Structure
+### Storage Path Structure
+```
+images/{sanitized_label}_{random6}.jpg
+```
+No user ID subfolder since the app has no authentication. All images go into a flat structure within the `images` bucket.
 
-```text
-Imports:
-  - renderMediaOnLambda from npm:@remotion/lambda-client@4.0.420
+### Edge Function: `fetch-image`
+- Located at `supabase/functions/fetch-image/index.ts`
+- CORS headers included
+- Validates the URL before fetching
+- Returns raw image bytes with appropriate content-type
+- Handles errors (invalid URL, fetch failure, non-image response)
 
-Constants:
-  - corsHeaders (with full Supabase header list)
-  - FORMAT_DIMENSIONS map: youtube->1920x1080, tiktok->1080x1920, square->1080x1080
+### Image Upload Flow
+1. **From URL**: Client calls `fetch-image` edge function -> gets image blob -> uploads to storage via Supabase JS client
+2. **From file**: Client reads file directly -> uploads to storage via Supabase JS client
+3. Both paths convert/store as `.jpg` and generate the clean filename
 
-Handler:
-  1. OPTIONS -> 200
-  2. Parse body { code, format?, compositionId?, codec?, inputProps?, debug? }
-  3. Validate code is non-empty
-  4. Read env: AWS_REGION, REMOTION_LAMBDA_FUNCTION_NAME, REMOTION_SERVE_URL, MAX_CONCURRENCY
-  5. Build inputProps = { code, format, width, height, ...extraInputProps }
-     - width/height come from FORMAT_DIMENSIONS[format] or default 1920x1080
-  6. concurrency = clamp(MAX_CONCURRENCY || 4, 1, 200)
-  7. Call renderMediaOnLambda({ serveUrl, composition, codec, region, functionName, inputProps, concurrency, logLevel })
-  8. Return { renderId, bucketName, region, compositionId, concurrency }
+### Copy for LLM Output Format
+```
+IMAGE BASE URL: https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/public/images/
+
+Uploaded images (download and upload these to this chat):
+- kitchen_a8f2k9.jpg
+- master_bedroom_k2m5n8.jpg
+
+To use in code: {BASE_URL} + filename
+Example: https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/public/images/kitchen_a8f2k9.jpg
 ```
 
-### check-render-progress/index.ts -- New Structure
+### Image Listing
+Since there's no database table tracking uploads, the page will list images by calling `supabase.storage.from('images').list()` directly. Each file's public URL is constructed from the known base URL pattern.
 
-```text
-Imports:
-  - getRenderProgress from npm:@remotion/lambda-client@4.0.420
-
-Handler:
-  1. OPTIONS -> 200
-  2. Parse body { renderId, bucketName, debug? }
-  3. Read env: AWS_REGION, REMOTION_LAMBDA_FUNCTION_NAME
-  4. Call getRenderProgress({ renderId, bucketName, functionName, region })
-  5. Return the full progress object as JSON
+### Config.toml Update
+Add JWT verification disabled for the `fetch-image` function:
+```toml
+[functions.fetch-image]
+verify_jwt = false
 ```
 
-### Playground.tsx -- Changes
+## Files to Create/Modify
 
-```text
-Current:  body: { code, width: format.width, height: format.height }
-New:      body: { code, format: format.label.toLowerCase() }
-```
-
-The rest of the polling logic (`renderId`, `bucketName`, `overallProgress`, `done`, `outputFile`, `fatalErrorEncountered`) remains identical since `getRenderProgress` returns the same shape as the manual Lambda invocation did.
-
----
-
-## Required Environment Variables (Already Configured)
-
-All five secrets are already set in the project:
-- `AWS_ACCESS_KEY_ID` -- used by SDK internally
-- `AWS_SECRET_ACCESS_KEY` -- used by SDK internally
-- `AWS_REGION` -- default "us-east-1"
-- `REMOTION_LAMBDA_FUNCTION_NAME` -- Lambda function name
-- `REMOTION_SERVE_URL` -- S3 bundle URL
-
-Optional new one:
-- `MAX_CONCURRENCY` -- not yet set, defaults to 4. Can be added later if needed.
-
----
-
-## Why This Fixes the Problems
-
-| Problem | Root Cause | Fix |
-|---------|-----------|-----|
-| Concurrency errors on short videos | `framesPerLambda` too small = too many chunks | Use `concurrency` instead; Remotion decides chunk size |
-| Timeouts on long videos | `framesPerLambda` too large = single chunk too slow | `concurrency` lets Remotion balance automatically |
-| "No component found" from code stripping | `pickComponentCode` mangled user code | Pass raw code untouched; Lambda handles evaluation |
-| Fragile progress checking | Manual SigV4 can silently fail | Official `getRenderProgress()` SDK call |
+| File | Action |
+|------|--------|
+| SQL migration (storage bucket + RLS) | Create |
+| `supabase/functions/fetch-image/index.ts` | Create |
+| `supabase/config.toml` | Modify (add function config) |
+| `src/pages/ImageLibrary.tsx` | Create |
+| `src/App.tsx` | Modify (add route) |
+| `src/pages/Index.tsx` | Modify (add nav link) |
 
