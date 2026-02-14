@@ -9,7 +9,7 @@ import { parseMultiFileCode } from "@/lib/code-parser";
 import { detectConfig } from "@/lib/detect-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { RenderSettings } from "@/components/FormatSelector";
+import type { RenderSettings, RenderMode } from "@/components/FormatSelector";
 
 const Playground = () => {
   const [code, setCode] = useState(() => {
@@ -23,6 +23,7 @@ const Playground = () => {
   const [isRendering, setIsRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [renderMode, setRenderMode] = useState<RenderMode>("video");
   const [error] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -40,7 +41,48 @@ const Playground = () => {
     setIsRendering(true);
     setRenderProgress(0);
     setDownloadUrl(null);
+    setRenderMode(settings.mode);
 
+    if (settings.mode === "poster") {
+      // Still render — single call, no polling needed
+      try {
+        const formatKey = settings.format.label.toLowerCase() === "portrait"
+          ? "poster_portrait"
+          : settings.format.label.toLowerCase() === "landscape"
+            ? "poster_landscape"
+            : settings.format.label.toLowerCase();
+
+        const { data, error: renderError } = await supabase.functions.invoke("render-still", {
+          body: {
+            code,
+            format: formatKey,
+            imageFormat: settings.imageFormat || "png",
+            frame: settings.frame || 0,
+            debug: true,
+          },
+        });
+
+        if (renderError || data?.error) {
+          throw new Error(data?.error || renderError?.message || "Failed to render poster");
+        }
+
+        if (!data?.url) {
+          throw new Error("No image URL returned from render");
+        }
+
+        setRenderProgress(100);
+        setDownloadUrl(data.url);
+        setIsRendering(false);
+        toast.success("Poster generated! Click to download.");
+      } catch (err: any) {
+        console.error("Poster render error:", err);
+        setIsRendering(false);
+        toast.error(err.message || "Failed to generate poster");
+      }
+      return;
+    }
+
+    // Video render — existing flow
     try {
       const { data, error: renderError } = await supabase.functions.invoke("render-video", {
         body: {
@@ -63,7 +105,6 @@ const Playground = () => {
 
       toast.success("Render started! Tracking progress...");
 
-      // 2. Poll for progress
       pollRef.current = setInterval(async () => {
         try {
           const { data: progress, error: progressError } = await supabase.functions.invoke(
@@ -85,7 +126,6 @@ const Playground = () => {
             return;
           }
 
-          // Surface non-fatal errors array if present
           if (progress?.errors?.length > 0) {
             console.warn("[render] Non-fatal errors:", progress.errors);
           }
@@ -152,6 +192,7 @@ const Playground = () => {
         downloadUrl={downloadUrl}
         onRender={handleRender}
         detectedConfig={detectedConfig}
+        renderMode={renderMode}
       />
     </div>
   );
