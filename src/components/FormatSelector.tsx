@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Monitor, Smartphone, Square, Sparkles } from "lucide-react";
+import { Monitor, Smartphone, Square, Sparkles, Image, RectangleVertical, RectangleHorizontal } from "lucide-react";
 import type { DetectedConfig } from "@/lib/detect-config";
+
+export type RenderMode = "video" | "poster";
 
 export interface VideoFormat {
   label: string;
@@ -22,15 +24,25 @@ export interface VideoFormat {
 }
 
 export interface RenderSettings {
+  mode: RenderMode;
   format: VideoFormat;
   durationInSeconds: number;
   fps: number;
+  imageFormat?: "png" | "jpeg";
+  frame?: number;
 }
 
-const FORMATS: VideoFormat[] = [
+const VIDEO_FORMATS: VideoFormat[] = [
   { label: "YouTube", width: 1920, height: 1080, icon: <Monitor className="w-5 h-5" />, aspect: "16:9" },
   { label: "TikTok", width: 1080, height: 1920, icon: <Smartphone className="w-5 h-5" />, aspect: "9:16" },
   { label: "Square", width: 1080, height: 1080, icon: <Square className="w-5 h-5" />, aspect: "1:1" },
+];
+
+const POSTER_FORMATS: VideoFormat[] = [
+  { label: "Portrait", width: 1080, height: 1536, icon: <RectangleVertical className="w-5 h-5" />, aspect: "2:3" },
+  { label: "Landscape", width: 1536, height: 1080, icon: <RectangleHorizontal className="w-5 h-5" />, aspect: "3:2" },
+  { label: "Square", width: 1080, height: 1080, icon: <Square className="w-5 h-5" />, aspect: "1:1" },
+  { label: "YouTube", width: 1920, height: 1080, icon: <Monitor className="w-5 h-5" />, aspect: "16:9" },
 ];
 
 interface FormatSelectorProps {
@@ -38,13 +50,31 @@ interface FormatSelectorProps {
   onClose: () => void;
   onSelect: (settings: RenderSettings) => void;
   detectedConfig?: DetectedConfig;
+  defaultMode?: RenderMode;
 }
 
-const FormatSelector = ({ open, onClose, onSelect, detectedConfig }: FormatSelectorProps) => {
+const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode = "video" }: FormatSelectorProps) => {
+  const [mode, setMode] = useState<RenderMode>(defaultMode);
   const [selected, setSelected] = useState<number>(0);
   const [duration, setDuration] = useState("10");
   const [fps, setFps] = useState("30");
+  const [imageFormat, setImageFormat] = useState<"png" | "jpeg">("png");
+  const [frame, setFrame] = useState("0");
   const [hasDetected, setHasDetected] = useState(false);
+
+  const formats = mode === "video" ? VIDEO_FORMATS : POSTER_FORMATS;
+
+  // Reset selection when mode changes
+  useEffect(() => {
+    setSelected(0);
+  }, [mode]);
+
+  // Sync mode with defaultMode when dialog opens
+  useEffect(() => {
+    if (open) {
+      setMode(defaultMode);
+    }
+  }, [open, defaultMode]);
 
   // Pre-fill from detected config when dialog opens
   useEffect(() => {
@@ -61,15 +91,14 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig }: FormatSelec
       if (detectedConfig.fps) {
         setFps(String(detectedConfig.fps));
       }
-      // Auto-select format based on detected dimensions
       if (detectedConfig.width && detectedConfig.height) {
         const ratio = detectedConfig.width / detectedConfig.height;
-        if (ratio < 0.8) setSelected(1); // TikTok (portrait)
-        else if (ratio > 1.2) setSelected(0); // YouTube (landscape)
-        else setSelected(2); // Square
+        if (ratio < 0.8) setSelected(mode === "video" ? 1 : 0);
+        else if (ratio > 1.2) setSelected(mode === "video" ? 0 : 1);
+        else setSelected(2);
       }
     }
-  }, [open, detectedConfig]);
+  }, [open, detectedConfig, mode]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -77,8 +106,38 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig }: FormatSelec
         <DialogHeader>
           <DialogTitle>Render Settings</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-3 gap-3 py-4">
-          {FORMATS.map((f, i) => (
+
+        {/* Mode Toggle */}
+        <div className="flex rounded-lg border border-border overflow-hidden">
+          <button
+            onClick={() => setMode("video")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors",
+              mode === "video"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Monitor className="w-4 h-4" />
+            Video
+          </button>
+          <button
+            onClick={() => setMode("poster")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors",
+              mode === "poster"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Image className="w-4 h-4" />
+            Poster
+          </button>
+        </div>
+
+        {/* Format Grid */}
+        <div className={cn("grid gap-3 py-2", formats.length <= 3 ? "grid-cols-3" : "grid-cols-4")}>
+          {formats.map((f, i) => (
             <button
               key={f.label}
               onClick={() => setSelected(i)}
@@ -96,6 +155,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig }: FormatSelec
             </button>
           ))}
         </div>
+
         {hasDetected && (
           <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/10 rounded-md px-2.5 py-1.5 mb-1">
             <Sparkles className="w-3.5 h-3.5" />
@@ -103,34 +163,83 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig }: FormatSelec
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4 pb-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="duration" className="text-xs text-muted-foreground">Duration (seconds)</Label>
-            <Input
-              id="duration"
-              type="number"
-              min="1"
-              max="300"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="h-9"
-            />
+        {mode === "video" ? (
+          /* Video settings */
+          <div className="grid grid-cols-2 gap-4 pb-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="duration" className="text-xs text-muted-foreground">Duration (seconds)</Label>
+              <Input
+                id="duration"
+                type="number"
+                min="1"
+                max="300"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fps" className="text-xs text-muted-foreground">FPS</Label>
+              <Input
+                id="fps"
+                type="number"
+                min="1"
+                max="120"
+                value={fps}
+                onChange={(e) => setFps(e.target.value)}
+                className="h-9"
+              />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="fps" className="text-xs text-muted-foreground">FPS</Label>
-            <Input
-              id="fps"
-              type="number"
-              min="1"
-              max="120"
-              value={fps}
-              onChange={(e) => setFps(e.target.value)}
-              className="h-9"
-            />
+        ) : (
+          /* Poster settings */
+          <div className="grid grid-cols-2 gap-4 pb-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="imageFormat" className="text-xs text-muted-foreground">Format</Label>
+              <div className="flex rounded-lg border border-border overflow-hidden h-9">
+                <button
+                  onClick={() => setImageFormat("png")}
+                  className={cn(
+                    "flex-1 text-sm font-medium transition-colors",
+                    imageFormat === "png"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground"
+                  )}
+                >
+                  PNG
+                </button>
+                <button
+                  onClick={() => setImageFormat("jpeg")}
+                  className={cn(
+                    "flex-1 text-sm font-medium transition-colors",
+                    imageFormat === "jpeg"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground"
+                  )}
+                >
+                  JPEG
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="frame" className="text-xs text-muted-foreground">Frame</Label>
+              <Input
+                id="frame"
+                type="number"
+                min="0"
+                value={frame}
+                onChange={(e) => setFrame(e.target.value)}
+                className="h-9"
+              />
+            </div>
           </div>
-        </div>
+        )}
+
         <p className="text-[11px] text-muted-foreground -mt-1">
-          Tip: Your code can override these via <code className="text-xs bg-muted px-1 rounded">{"/*__REMOTION_CONFIG__ {fps:60, durationInFrames:900} */"}</code>
+          {mode === "video"
+            ? <>Tip: Your code can override these via <code className="text-xs bg-muted px-1 rounded">{"/*__REMOTION_CONFIG__ {fps:60, durationInFrames:900} */"}</code></>
+            : <>Tip: Frame 0 = first frame. Use frame to pick which moment to capture from an animation.</>
+          }
         </p>
 
         <DialogFooter>
@@ -138,12 +247,15 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig }: FormatSelec
           <Button
             className="bg-gradient-primary hover:opacity-90 border-0"
             onClick={() => onSelect({
-              format: FORMATS[selected],
+              mode,
+              format: formats[selected],
               durationInSeconds: Math.max(1, Math.min(300, Number(duration) || 10)),
               fps: Math.max(1, Math.min(120, Number(fps) || 30)),
+              imageFormat: mode === "poster" ? imageFormat : undefined,
+              frame: mode === "poster" ? Math.max(0, Number(frame) || 0) : undefined,
             })}
           >
-            Start Render
+            {mode === "video" ? "Start Render" : "Generate Poster"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Download, Loader2, CheckCircle2 } from "lucide-react";
-import FormatSelector, { type RenderSettings } from "@/components/FormatSelector";
+import { Download, Loader2, CheckCircle2, Image } from "lucide-react";
+import FormatSelector, { type RenderSettings, type RenderMode } from "@/components/FormatSelector";
 import type { DetectedConfig } from "@/lib/detect-config";
 
 interface RenderControlsProps {
@@ -12,6 +12,7 @@ interface RenderControlsProps {
   downloadUrl: string | null;
   onRender: (settings: RenderSettings) => void;
   detectedConfig?: DetectedConfig;
+  renderMode?: RenderMode;
 }
 
 const RenderControls = ({
@@ -21,8 +22,13 @@ const RenderControls = ({
   downloadUrl,
   onRender,
   detectedConfig,
+  renderMode = "video",
 }: RenderControlsProps) => {
   const [showFormat, setShowFormat] = useState(false);
+  const [dialogMode, setDialogMode] = useState<RenderMode>("video");
+
+  const isImage = renderMode === "poster";
+  const fileExt = isImage ? "PNG" : "MP4";
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-t border-border bg-card/50">
@@ -30,37 +36,58 @@ const RenderControls = ({
         <Button asChild className="bg-gradient-primary hover:opacity-90 border-0 glow-primary">
           <a href={downloadUrl} download>
             <CheckCircle2 className="w-4 h-4 mr-2" />
-            Download MP4
+            Download {fileExt}
           </a>
         </Button>
       ) : (
-        <Button
-          onClick={() => setShowFormat(true)}
-          disabled={!hasCode || isRendering}
-          className="bg-gradient-primary hover:opacity-90 border-0 disabled:opacity-40"
-        >
-          {isRendering ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Rendering...
-            </>
-          ) : (
-            <>
-              <Download className="w-4 h-4 mr-2" />
-              Render & Download
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => { setDialogMode("video"); setShowFormat(true); }}
+            disabled={!hasCode || isRendering}
+            className="bg-gradient-primary hover:opacity-90 border-0 disabled:opacity-40"
+          >
+            {isRendering && renderMode === "video" ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Rendering...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                Render Video
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => { setDialogMode("poster"); setShowFormat(true); }}
+            disabled={!hasCode || isRendering}
+            className="disabled:opacity-40"
+          >
+            {isRendering && renderMode === "poster" ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Image className="w-4 h-4 mr-2" />
+                Poster
+              </>
+            )}
+          </Button>
+        </div>
       )}
 
       <FormatSelector
         open={showFormat}
         onClose={() => setShowFormat(false)}
-        onSelect={(format) => {
+        onSelect={(settings) => {
           setShowFormat(false);
-          onRender(format);
+          onRender(settings);
         }}
         detectedConfig={detectedConfig}
+        defaultMode={dialogMode}
       />
 
       {isRendering && (
