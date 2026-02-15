@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import CodeEditor from "@/components/CodeEditor";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import type { RenderSettings, RenderMode } from "@/components/FormatSelector";
 
 const Playground = () => {
+  const navigate = useNavigate();
   const [code, setCode] = useState(() => {
     const saved = sessionStorage.getItem("playground-code");
     if (saved) {
@@ -73,7 +74,8 @@ const Playground = () => {
         setRenderProgress(100);
         setDownloadUrl(data.url);
         setIsRendering(false);
-        toast.success("Poster generated! Click to download.");
+        toast.success("Poster generated!");
+        navigate(`/result?url=${encodeURIComponent(data.url)}&mode=poster`);
       } catch (err: any) {
         console.error("Poster render error:", err);
         setIsRendering(false);
@@ -138,7 +140,8 @@ const Playground = () => {
             setIsRendering(false);
             setRenderProgress(100);
             setDownloadUrl(progress.outputFile);
-            toast.success("Render complete! Click to download.");
+            toast.success("Render complete!");
+            navigate(`/result?url=${encodeURIComponent(progress.outputFile)}&mode=video`);
           }
         } catch (err) {
           console.error("Error polling progress:", err);
