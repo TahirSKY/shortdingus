@@ -1,5 +1,6 @@
+import { useState, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { ArrowLeft, Download, Sparkles } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const RenderResult = () => {
@@ -11,6 +12,28 @@ const RenderResult = () => {
   const isImage = mode === "poster";
   const fileExt = isImage ? "png" : "mp4";
   const fileName = `remotion-${mode}.${fileExt}`;
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = useCallback(async () => {
+    if (!url) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, "_blank");
+    } finally {
+      setDownloading(false);
+    }
+  }, [url, fileName]);
 
   if (!url) {
     return (
@@ -47,11 +70,13 @@ const RenderResult = () => {
           </div>
         </div>
 
-        <Button asChild className="bg-gradient-primary hover:opacity-90 border-0 glow-primary">
-          <a href={url} download={fileName}>
+        <Button onClick={handleDownload} disabled={downloading} className="bg-gradient-primary hover:opacity-90 border-0 glow-primary">
+          {downloading ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
             <Download className="w-4 h-4 mr-2" />
-            Download {fileExt.toUpperCase()}
-          </a>
+          )}
+          Download {fileExt.toUpperCase()}
         </Button>
       </div>
 
