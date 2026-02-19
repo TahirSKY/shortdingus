@@ -172,12 +172,19 @@ Deno.serve(async (req) => {
     const durationInSeconds: number = clamp(Number(body.durationInSeconds) || 10, 1, 300);
     const fps: number = clamp(Number(body.fps) || 30, 1, 120);
 
+    // Resolve dimensions: prefer explicit width/height from client, fall back to format presets
+    const formatDims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS["youtube"];
+    const width: number = clamp(Number(body.width) || formatDims.width, 1, 3840);
+    const height: number = clamp(Number(body.height) || formatDims.height, 1, 3840);
+
     // Prepare code for Lambda's pickEntryFile contract (strip Root.tsx, ensure export default)
     const code = prepareCodeForLambda(rawCode);
 
     const inputProps: Record<string, unknown> = {
       code,
       format,
+      width,
+      height,
       durationInSeconds,
       fps,
       debug,
