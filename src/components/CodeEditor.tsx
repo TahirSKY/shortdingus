@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { parseMultiFileCode, type ParsedFile } from "@/lib/code-parser";
 import { exampleTemplates } from "@/lib/example-templates";
 import { FileCode2, Sparkles, Trash2 } from "lucide-react";
+import LineNumberedEditor from "@/components/LineNumberedEditor";
 
 interface CodeEditorProps {
   code: string;
@@ -102,14 +101,13 @@ const CodeEditor = ({ code, onCodeChange, parsedFiles }: CodeEditorProps) => {
       )}
 
       {/* Code input */}
-      <ScrollArea className="flex-1">
-        <Textarea
+      <div className="flex-1 overflow-auto">
+        <LineNumberedEditor
           value={code}
-          onChange={(e) => onCodeChange(e.target.value)}
+          onChange={onCodeChange}
           placeholder={`Paste your Remotion code here...\n\nUse file markers to separate files:\n// --- file: MyVideo.tsx ---\n// your component code\n\n// --- file: Root.tsx ---\n// your root composition`}
-          className="h-full min-h-[500px] resize-none rounded-none border-0 bg-transparent font-mono text-sm focus-visible:ring-0 focus-visible:ring-offset-0 leading-relaxed"
         />
-      </ScrollArea>
+      </div>
     </div>
   );
 };
