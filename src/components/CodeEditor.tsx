@@ -33,6 +33,11 @@ const CodeEditor = ({ code, onCodeChange, parsedFiles }: CodeEditorProps) => {
               {parsedFiles.length} file{parsedFiles.length > 1 ? "s" : ""}
             </Badge>
           )}
+          {code && (
+            <Badge variant="outline" className="text-xs text-muted-foreground font-mono">
+              {code.split("\n").length} lines
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
