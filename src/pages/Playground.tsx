@@ -90,6 +90,8 @@ const Playground = () => {
         body: {
           code,
           format: settings.format.label.toLowerCase(),
+          width: settings.format.width,
+          height: settings.format.height,
           durationInSeconds: settings.durationInSeconds,
           fps: settings.fps,
           debug: true,
