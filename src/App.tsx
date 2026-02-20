@@ -8,6 +8,7 @@ import Playground from "./pages/Playground";
 import Examples from "./pages/Examples";
 import ImageLibrary from "./pages/ImageLibrary";
 import RenderResult from "./pages/RenderResult";
+import RendersLibrary from "./pages/RendersLibrary";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/examples" element={<Examples />} />
           <Route path="/images" element={<ImageLibrary />} />
           <Route path="/result" element={<RenderResult />} />
+          <Route path="/renders" element={<RendersLibrary />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
