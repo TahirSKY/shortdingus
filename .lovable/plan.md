@@ -1,100 +1,49 @@
 
 
-# Image Library for LLM Video Generation
+# Save Renders to Library with Notes
 
-## Summary
-Add a new "Image Library" page where users can upload images (from URL or device), store them in Lovable Cloud storage, and get clean public URLs. The page provides a one-click "Copy for LLM" button so users can paste image references directly into their LLM prompts.
+## Overview
+Add the ability to save rendered videos and posters to a persistent library, with optional notes for each item. This involves creating a database table to store render metadata and building UI for saving and browsing saved renders.
 
-## What Gets Built
+## How It Works
 
-### 1. Storage Bucket (Database Migration)
-- Create a public `images` storage bucket
-- Add RLS policies allowing anonymous uploads, reads, and deletes (since no auth system exists in the app)
+1. **After a render completes** (on the Result page), a new "Save to Library" button appears alongside the Download button
+2. Clicking it opens a small dialog where you can type a **title** and **notes** (e.g., "Client A kitchen flythrough - version 2")
+3. The render URL, type (video/poster), title, and notes are saved to the database
+4. A new **Renders Library** page (accessible from navigation) shows all saved renders in a grid/list with their notes, preview, and options to download or delete
 
-### 2. Edge Function: `fetch-image`
-- Accepts a JSON body with `{ url: string }`
-- Fetches the image from the external URL server-side (avoids CORS)
-- Returns the image bytes and content type to the client
-- Needed for pasting URLs from sites like Zillow that block browser-side fetches
+## Changes
 
-### 3. New Page: `/images` -- `src/pages/ImageLibrary.tsx`
-**Top Section:**
-- Displays the base URL with a "Copy Base URL" button
-- Helper text explaining how LLMs can reconstruct full URLs
+### 1. Database -- New `saved_renders` table
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid (PK) | Auto-generated |
+| title | text | User-provided label |
+| notes | text (nullable) | Free-form notes |
+| url | text | The render output URL |
+| mode | text | "video" or "poster" |
+| created_at | timestamptz | Auto-set |
 
-**Input Section:**
-- Text input for external image URL
-- File upload / drag-and-drop area
-- Text input for image label (e.g., "kitchen", "master_bedroom")
-- "Add Image" button
-- Label sanitization: lowercase, spaces to underscores, strip special chars
-- Filename format: `{sanitized_label}_{6 random alphanumeric}.jpg`
+No RLS restrictions (public table, no auth in this app).
 
-**Image Grid:**
-- Cards showing thumbnail, label, filename
-- Download button (uses anchor tag with `download` attribute set to exact Supabase filename)
-- Copy URL button (copies full public URL)
-- Delete button (removes from storage)
+### 2. RenderResult page -- Add "Save to Library" button
+- Add a "Save to Library" button next to the Download button in the top bar
+- Clicking it opens a Dialog with Title (required) and Notes (optional) fields
+- On save, inserts a row into `saved_renders` and shows a success toast
+- Button changes to "Saved" (disabled) after saving to prevent duplicates
 
-**Bottom Section:**
-- "Copy for LLM" button that copies a formatted block containing the base URL and all filenames
+### 3. New page -- Renders Library (`/renders`)
+- Grid of saved renders showing:
+  - Thumbnail (poster image or video element)
+  - Title, notes, mode badge, date
+  - Download and Delete buttons
+- Add route `/renders` to App.tsx
+- Add navigation link to the renders library from the main nav and existing pages
 
-### 4. Routing Update (`App.tsx`)
-- Add `/images` route pointing to `ImageLibrary`
+### Technical Details
 
-### 5. Navigation Update (`Index.tsx`)
-- Add "Image Library" link to the landing page nav bar
-
-## Technical Details
-
-### Storage Path Structure
-```
-images/{sanitized_label}_{random6}.jpg
-```
-No user ID subfolder since the app has no authentication. All images go into a flat structure within the `images` bucket.
-
-### Edge Function: `fetch-image`
-- Located at `supabase/functions/fetch-image/index.ts`
-- CORS headers included
-- Validates the URL before fetching
-- Returns raw image bytes with appropriate content-type
-- Handles errors (invalid URL, fetch failure, non-image response)
-
-### Image Upload Flow
-1. **From URL**: Client calls `fetch-image` edge function -> gets image blob -> uploads to storage via Supabase JS client
-2. **From file**: Client reads file directly -> uploads to storage via Supabase JS client
-3. Both paths convert/store as `.jpg` and generate the clean filename
-
-### Copy for LLM Output Format
-```
-IMAGE BASE URL: https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/public/images/
-
-Uploaded images (download and upload these to this chat):
-- kitchen_a8f2k9.jpg
-- master_bedroom_k2m5n8.jpg
-
-To use in code: {BASE_URL} + filename
-Example: https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/public/images/kitchen_a8f2k9.jpg
-```
-
-### Image Listing
-Since there's no database table tracking uploads, the page will list images by calling `supabase.storage.from('images').list()` directly. Each file's public URL is constructed from the known base URL pattern.
-
-### Config.toml Update
-Add JWT verification disabled for the `fetch-image` function:
-```toml
-[functions.fetch-image]
-verify_jwt = false
-```
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| SQL migration (storage bucket + RLS) | Create |
-| `supabase/functions/fetch-image/index.ts` | Create |
-| `supabase/config.toml` | Modify (add function config) |
-| `src/pages/ImageLibrary.tsx` | Create |
-| `src/App.tsx` | Modify (add route) |
-| `src/pages/Index.tsx` | Modify (add nav link) |
+- **Migration SQL**: Creates the `saved_renders` table with no RLS (public access)
+- **Components modified**: `src/pages/RenderResult.tsx` (save dialog), `src/App.tsx` (new route)
+- **Components created**: `src/pages/RendersLibrary.tsx` (library page)
+- **Data access**: Standard Supabase client queries (`insert`, `select`, `delete`) on `saved_renders`
 
