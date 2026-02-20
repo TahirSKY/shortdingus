@@ -37,6 +37,9 @@ const Index = () => {
           <Link to="/images" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Image Library
           </Link>
+          <Link to="/renders" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Renders
+          </Link>
           <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90 transition-opacity border-0">
             <Link to="/playground">Open Playground</Link>
           </Button>

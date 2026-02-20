@@ -1,7 +1,20 @@
 import { useState, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { ArrowLeft, Download, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Sparkles, BookmarkPlus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const RenderResult = () => {
   const location = useLocation();
@@ -13,6 +26,11 @@ const RenderResult = () => {
   const fileExt = isImage ? "png" : "mp4";
   const fileName = `remotion-${mode}.${fileExt}`;
   const [downloading, setDownloading] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
 
   const handleDownload = useCallback(async () => {
     if (!url) return;
@@ -34,6 +52,27 @@ const RenderResult = () => {
       setDownloading(false);
     }
   }, [url, fileName]);
+
+  const handleSave = async () => {
+    if (!url || !title.trim()) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("saved_renders" as any).insert({
+        title: title.trim(),
+        notes: notes.trim() || null,
+        url,
+        mode,
+      });
+      if (error) throw error;
+      toast({ title: "Saved to library!", description: "You can find it in the Renders Library." });
+      setSaved(true);
+      setSaveOpen(false);
+    } catch (e: any) {
+      toast({ title: "Failed to save", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!url) {
     return (
@@ -70,14 +109,28 @@ const RenderResult = () => {
           </div>
         </div>
 
-        <Button onClick={handleDownload} disabled={downloading} className="bg-gradient-primary hover:opacity-90 border-0 glow-primary">
-          {downloading ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4 mr-2" />
-          )}
-          Download {fileExt.toUpperCase()}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setSaveOpen(true)}
+            disabled={saved}
+          >
+            {saved ? (
+              <Check className="w-4 h-4 mr-2" />
+            ) : (
+              <BookmarkPlus className="w-4 h-4 mr-2" />
+            )}
+            {saved ? "Saved" : "Save to Library"}
+          </Button>
+          <Button onClick={handleDownload} disabled={downloading} className="bg-gradient-primary hover:opacity-90 border-0 glow-primary">
+            {downloading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            Download {fileExt.toUpperCase()}
+          </Button>
+        </div>
       </div>
 
       {/* Content preview */}
@@ -103,6 +156,46 @@ const RenderResult = () => {
           </p>
         </div>
       </div>
+
+      {/* Save Dialog */}
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save to Library</DialogTitle>
+            <DialogDescription>
+              Give this render a title and optional notes for future reference.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                placeholder="e.g. Client A flythrough v2"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Any extra details…"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || !title.trim()}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
