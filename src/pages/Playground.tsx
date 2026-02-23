@@ -60,6 +60,7 @@ const Playground = () => {
 
         for (let i = 0; i < totalPages; i++) {
           const frame = startFrame + i * frameInterval;
+          const requiredDuration = Math.ceil((frame + 1) / 30);
           setRenderProgress(Math.round(((i) / totalPages) * 100));
 
           const { data, error: renderError } = await supabase.functions.invoke("render-still", {
@@ -68,6 +69,7 @@ const Playground = () => {
               format: formatKey,
               imageFormat: settings.imageFormat || "png",
               frame,
+              durationInSeconds: requiredDuration,
               debug: true,
             },
           });
