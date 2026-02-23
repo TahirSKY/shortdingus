@@ -47,7 +47,12 @@ const Playground = () => {
     if (settings.mode === "poster") {
       const totalPages = settings.pages || 1;
       const startFrame = settings.frame || 0;
-      const frameInterval = 30; // 1 second at 30fps per page
+      // Calculate frame interval: if code has durationInFrames matching pages, use 1 frame per page
+      // Otherwise default to fps (1 second per page)
+      const totalFrames = detectedConfig?.durationInFrames;
+      const frameInterval = (totalFrames && totalPages > 1 && totalFrames <= totalPages * 2)
+        ? Math.max(1, Math.floor(totalFrames / totalPages))
+        : (detectedConfig?.fps || 30);
 
       try {
         const formatKey = settings.format.label.toLowerCase() === "portrait"

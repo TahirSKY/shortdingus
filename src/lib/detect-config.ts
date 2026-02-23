@@ -7,6 +7,7 @@
 export interface DetectedConfig {
   fps?: number;
   durationInSeconds?: number;
+  durationInFrames?: number;
   width?: number;
   height?: number;
 }
@@ -42,12 +43,13 @@ export function detectConfig(code: string): DetectedConfig {
     result.height = extractNumber(obj, "height");
     const dif = extractNumber(obj, "durationInFrames");
     const dis = extractNumber(obj, "durationInSeconds");
+    if (dif) result.durationInFrames = dif;
     if (dis) {
       result.durationInSeconds = dis;
     } else if (dif && result.fps) {
       result.durationInSeconds = Math.round(dif / result.fps);
     } else if (dif) {
-      result.durationInSeconds = Math.round(dif / 30); // assume 30fps default
+      result.durationInSeconds = Math.round(dif / 30);
     }
     return result;
   }
@@ -61,6 +63,7 @@ export function detectConfig(code: string): DetectedConfig {
     result.height = extractNumber(obj, "height");
     const dif = extractNumber(obj, "durationInFrames");
     const dis = extractNumber(obj, "durationInSeconds");
+    if (dif) result.durationInFrames = dif;
     if (dis) {
       result.durationInSeconds = dis;
     } else if (dif) {
@@ -75,6 +78,7 @@ export function detectConfig(code: string): DetectedConfig {
 
   const difMatch = code.match(/durationInFrames\s*[:=]\s*(\d+)/);
   if (difMatch) {
+    result.durationInFrames = Number(difMatch[1]);
     result.durationInSeconds = Math.round(Number(difMatch[1]) / (result.fps || 30));
   }
 
