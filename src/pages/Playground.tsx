@@ -45,7 +45,10 @@ const Playground = () => {
     setRenderMode(settings.mode);
 
     if (settings.mode === "poster") {
-      // Still render — single call, no polling needed
+      const totalPages = settings.pages || 1;
+      const startFrame = settings.frame || 0;
+      const frameInterval = 30; // 1 second at 30fps per page
+
       try {
         const formatKey = settings.format.label.toLowerCase() === "portrait"
           ? "poster_portrait"
@@ -53,29 +56,43 @@ const Playground = () => {
             ? "poster_landscape"
             : settings.format.label.toLowerCase();
 
-        const { data, error: renderError } = await supabase.functions.invoke("render-still", {
-          body: {
-            code,
-            format: formatKey,
-            imageFormat: settings.imageFormat || "png",
-            frame: settings.frame || 0,
-            debug: true,
-          },
-        });
+        const urls: string[] = [];
 
-        if (renderError || data?.error) {
-          throw new Error(data?.error || renderError?.message || "Failed to render poster");
-        }
+        for (let i = 0; i < totalPages; i++) {
+          const frame = startFrame + i * frameInterval;
+          setRenderProgress(Math.round(((i) / totalPages) * 100));
 
-        if (!data?.url) {
-          throw new Error("No image URL returned from render");
+          const { data, error: renderError } = await supabase.functions.invoke("render-still", {
+            body: {
+              code,
+              format: formatKey,
+              imageFormat: settings.imageFormat || "png",
+              frame,
+              debug: true,
+            },
+          });
+
+          if (renderError || data?.error) {
+            throw new Error(data?.error || renderError?.message || `Failed to render page ${i + 1}`);
+          }
+
+          if (!data?.url) {
+            throw new Error(`No image URL returned for page ${i + 1}`);
+          }
+
+          urls.push(data.url);
         }
 
         setRenderProgress(100);
-        setDownloadUrl(data.url);
+        setDownloadUrl(urls[0]);
         setIsRendering(false);
-        toast.success("Poster generated!");
-        navigate(`/result?url=${encodeURIComponent(data.url)}&mode=poster`);
+        toast.success(`${totalPages > 1 ? `${totalPages} pages` : "Poster"} generated!`);
+
+        if (totalPages > 1) {
+          navigate(`/result?urls=${encodeURIComponent(urls.join(","))}&mode=poster`);
+        } else {
+          navigate(`/result?url=${encodeURIComponent(urls[0])}&mode=poster`);
+        }
       } catch (err: any) {
         console.error("Poster render error:", err);
         setIsRendering(false);

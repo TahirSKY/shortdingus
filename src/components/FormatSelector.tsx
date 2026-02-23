@@ -30,6 +30,7 @@ export interface RenderSettings {
   fps: number;
   imageFormat?: "png" | "jpeg";
   frame?: number;
+  pages?: number;
 }
 
 const VIDEO_FORMATS: VideoFormat[] = [
@@ -60,6 +61,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
   const [fps, setFps] = useState("30");
   const [imageFormat, setImageFormat] = useState<"png" | "jpeg">("png");
   const [frame, setFrame] = useState("0");
+  const [pages, setPages] = useState("1");
   const [hasDetected, setHasDetected] = useState(false);
 
   const formats = mode === "video" ? VIDEO_FORMATS : POSTER_FORMATS;
@@ -193,7 +195,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
           </div>
         ) : (
           /* Poster settings */
-          <div className="grid grid-cols-2 gap-4 pb-2">
+          <div className="grid grid-cols-3 gap-4 pb-2">
             <div className="space-y-1.5">
               <Label htmlFor="imageFormat" className="text-xs text-muted-foreground">Format</Label>
               <div className="flex rounded-lg border border-border overflow-hidden h-9">
@@ -222,7 +224,19 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="frame" className="text-xs text-muted-foreground">Frame</Label>
+              <Label htmlFor="pages" className="text-xs text-muted-foreground">Pages</Label>
+              <Input
+                id="pages"
+                type="number"
+                min="1"
+                max="20"
+                value={pages}
+                onChange={(e) => setPages(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="frame" className="text-xs text-muted-foreground">{Number(pages) > 1 ? "Start Frame" : "Frame"}</Label>
               <Input
                 id="frame"
                 type="number"
@@ -238,7 +252,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
         <p className="text-[11px] text-muted-foreground -mt-1">
           {mode === "video"
             ? <>Tip: Your code can override these via <code className="text-xs bg-muted px-1 rounded">{"/*__REMOTION_CONFIG__ {fps:60, durationInFrames:900} */"}</code></>
-            : <>Tip: Frame 0 = first frame. Use frame to pick which moment to capture from an animation.</>
+            : <>Tip: For multi-page brochures, set Pages {'>'} 1. Each page captures a frame spaced 30 frames apart.</>
           }
         </p>
 
@@ -253,6 +267,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
               fps: Math.max(1, Math.min(120, Number(fps) || 30)),
               imageFormat: mode === "poster" ? imageFormat : undefined,
               frame: mode === "poster" ? Math.max(0, Number(frame) || 0) : undefined,
+              pages: mode === "poster" ? Math.max(1, Math.min(20, Number(pages) || 1)) : undefined,
             })}
           >
             {mode === "video" ? "Start Render" : "Generate Poster"}
