@@ -114,6 +114,45 @@ function ensureClassicJsx(code: string): string {
   return result;
 }
 
+/**
+ * Override durationInFrames in user code to ensure it covers the requested frame.
+ * This handles cases where users set a small durationInFrames (e.g., 5 for a 5-page brochure)
+ * but we need to render a higher frame number.
+ */
+function overrideDurationInFrames(code: string, requiredFrames: number): string {
+  // Match REMOTION_CONFIG comment pattern
+  const configMatch = code.match(/\/\*\s*REMOTION_CONFIG\s*\{([^}]+)\}\s*\*\//);
+  if (configMatch) {
+    const configBody = configMatch[1];
+    const difMatch = configBody.match(/durationInFrames\s*:\s*(\d+)/);
+    if (difMatch) {
+      const currentFrames = Number(difMatch[1]);
+      if (currentFrames < requiredFrames) {
+        const newConfig = configBody.replace(
+          /durationInFrames\s*:\s*\d+/,
+          `durationInFrames: ${requiredFrames}`
+        );
+        return code.replace(configMatch[0], `/* REMOTION_CONFIG {${newConfig}} */`);
+      }
+    }
+    return code;
+  }
+
+  // Match inline durationInFrames: N
+  const inlineMatch = code.match(/durationInFrames\s*[:=]\s*(\d+)/);
+  if (inlineMatch) {
+    const currentFrames = Number(inlineMatch[1]);
+    if (currentFrames < requiredFrames) {
+      return code.replace(
+        /durationInFrames\s*[:=]\s*\d+/,
+        inlineMatch[0].replace(String(currentFrames), String(requiredFrames))
+      );
+    }
+  }
+
+  return code;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -136,7 +175,10 @@ Deno.serve(async (req) => {
     const minDurationInSeconds: number = Math.max(1, Math.ceil((frame + 1) / 30));
     const durationInSeconds: number = Math.max(minDurationInSeconds, Number(body.durationInSeconds) || minDurationInSeconds);
 
-    const code = prepareCodeForLambda(rawCode);
+    // Override durationInFrames in user code to ensure enough frames exist for the requested frame
+    const requiredFrames = frame + 1;
+    const adjustedRawCode = overrideDurationInFrames(rawCode, requiredFrames);
+    const code = prepareCodeForLambda(adjustedRawCode);
 
     // Derive dimensions from format
     const dims = FORMAT_DIMENSIONS[format] || FORMAT_DIMENSIONS.poster_portrait;
