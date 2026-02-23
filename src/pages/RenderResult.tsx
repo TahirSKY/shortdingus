@@ -19,8 +19,18 @@ import { supabase } from "@/integrations/supabase/client";
 const RenderResult = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const url = params.get("url");
+  const singleUrl = params.get("url");
+  const multiUrls = params.get("urls");
   const mode = params.get("mode") || "video";
+
+  // Support both single and multi-page results
+  const urls: string[] = multiUrls
+    ? multiUrls.split(",").filter(Boolean)
+    : singleUrl
+      ? [singleUrl]
+      : [];
+  const url = urls[0] || null;
+  const isMultiPage = urls.length > 1;
 
   const isImage = mode === "poster";
   const fileExt = isImage ? "png" : "mp4";
@@ -33,25 +43,35 @@ const RenderResult = () => {
   const [notes, setNotes] = useState("");
 
   const handleDownload = useCallback(async () => {
-    if (!url) return;
+    if (urls.length === 0) return;
     setDownloading(true);
     try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      for (let i = 0; i < urls.length; i++) {
+        const pageUrl = urls[i];
+        const pageName = isMultiPage
+          ? `remotion-${mode}-page${i + 1}.${fileExt}`
+          : fileName;
+        const res = await fetch(pageUrl);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = pageName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+        // Small delay between downloads to avoid browser blocking
+        if (isMultiPage && i < urls.length - 1) {
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
     } catch {
-      window.open(url, "_blank");
+      if (url) window.open(url, "_blank");
     } finally {
       setDownloading(false);
     }
-  }, [url, fileName]);
+  }, [urls, url, fileName, fileExt, mode, isMultiPage]);
 
   const handleSave = async () => {
     if (!url || !title.trim()) return;
@@ -104,7 +124,7 @@ const RenderResult = () => {
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
             <span className="text-sm font-semibold text-foreground">
-              {isImage ? "Poster" : "Video"} Result
+              {isImage ? (isMultiPage ? `Poster (${urls.length} pages)` : "Poster") : "Video"} Result
             </span>
           </div>
         </div>
@@ -128,23 +148,38 @@ const RenderResult = () => {
             ) : (
               <Download className="w-4 h-4 mr-2" />
             )}
-            Download {fileExt.toUpperCase()}
+            {isMultiPage ? `Download All (${urls.length})` : `Download ${fileExt.toUpperCase()}`}
           </Button>
         </div>
       </div>
 
       {/* Content preview */}
       <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
-        <div className="max-w-4xl w-full flex flex-col items-center gap-6">
-          {isImage ? (
+        <div className="max-w-5xl w-full flex flex-col items-center gap-6">
+          {isMultiPage ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+              {urls.map((pageUrl, i) => (
+                <div key={i} className="relative group">
+                  <img
+                    src={pageUrl}
+                    alt={`Page ${i + 1}`}
+                    className="w-full rounded-lg border border-border shadow-md object-contain bg-muted/30"
+                  />
+                  <span className="absolute top-2 left-2 bg-background/80 text-foreground text-xs font-medium px-2 py-0.5 rounded">
+                    Page {i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : isImage ? (
             <img
-              src={url}
+              src={url!}
               alt="Rendered poster"
               className="max-w-full max-h-[75vh] rounded-lg border border-border shadow-lg object-contain"
             />
           ) : (
             <video
-              src={url}
+              src={url!}
               controls
               autoPlay
               className="max-w-full max-h-[75vh] rounded-lg border border-border shadow-lg"
@@ -152,7 +187,9 @@ const RenderResult = () => {
           )}
 
           <p className="text-xs text-muted-foreground">
-            Right-click the {isImage ? "image" : "video"} to save, or use the download button above.
+            {isMultiPage
+              ? "Click Download All to save all pages individually."
+              : `Right-click the ${isImage ? "image" : "video"} to save, or use the download button above.`}
           </p>
         </div>
       </div>
