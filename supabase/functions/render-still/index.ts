@@ -132,6 +132,9 @@ Deno.serve(async (req) => {
     const imageFormat: string = body.imageFormat === "jpeg" ? "jpeg" : "png";
     const frame: number = Math.max(0, Number(body.frame) || 0);
     const debug: boolean = Boolean(body.debug);
+    // Duration must be long enough to cover the requested frame
+    const minDurationInSeconds: number = Math.max(1, Math.ceil((frame + 1) / 30));
+    const durationInSeconds: number = Math.max(minDurationInSeconds, Number(body.durationInSeconds) || minDurationInSeconds);
 
     const code = prepareCodeForLambda(rawCode);
 
@@ -141,7 +144,7 @@ Deno.serve(async (req) => {
     const inputProps: Record<string, unknown> = {
       code,
       format,
-      durationInSeconds: 1,
+      durationInSeconds,
       fps: 30,
       debug,
     };
