@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import CodeEditor from "@/components/CodeEditor";
-import PreviewPanel from "@/components/PreviewPanel";
+import RemotionPreview from "@/components/RemotionPreview";
 import RenderControls from "@/components/RenderControls";
 import { parseMultiFileCode } from "@/lib/code-parser";
 import { detectConfig } from "@/lib/detect-config";
@@ -206,7 +206,7 @@ const Playground = () => {
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={50} minSize={30}>
-            <PreviewPanel parsedFiles={parsedFiles} error={error} />
+            <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={error} />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
