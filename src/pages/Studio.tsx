@@ -66,13 +66,27 @@ const Studio = () => {
     let fullResponse = "";
 
     try {
+      // If there's existing code (e.g. loaded template), inject it as context
+      const contextMessages: Message[] = [];
+      if (generatedCode && messages.length === 0) {
+        // First prompt after loading a template — give the AI the current code
+        contextMessages.push({
+          role: "user",
+          content: `Here is my current Remotion code that I want you to edit:\n\n\`\`\`tsx\n${generatedCode}\n\`\`\``,
+        });
+        contextMessages.push({
+          role: "assistant",
+          content: "I can see your current code. What changes would you like me to make?",
+        });
+      }
+
       const resp = await fetch(GENERATE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: [...contextMessages, ...newMessages] }),
       });
 
       if (!resp.ok) {
