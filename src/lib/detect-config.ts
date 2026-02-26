@@ -29,9 +29,9 @@ function parseLooseJson(raw: string): Record<string, unknown> {
       ? trimmed.slice(1, -1)
       : trimmed;
 
-    // Add quotes around unquoted keys for JSON.parse
+    // Add quotes around unquoted keys for JSON.parse (including first key)
     const json = withoutOuterBraces
-      .replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
+      .replace(/(^|[,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
       .replace(/,\s*}/g, "}");
 
     return JSON.parse(`{${json}}`);
