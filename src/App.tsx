@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Playground from "./pages/Playground";
 import Examples from "./pages/Examples";
-import ImageLibrary from "./pages/ImageLibrary";
+
 import RenderResult from "./pages/RenderResult";
 import RendersLibrary from "./pages/RendersLibrary";
 import Studio from "./pages/Studio";
@@ -24,7 +24,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/playground" element={<Playground />} />
           <Route path="/examples" element={<Examples />} />
-          <Route path="/images" element={<ImageLibrary />} />
+          
           <Route path="/result" element={<RenderResult />} />
           <Route path="/renders" element={<RendersLibrary />} />
           <Route path="/studio" element={<Studio />} />

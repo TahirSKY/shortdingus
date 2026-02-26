@@ -89,9 +89,6 @@ const RendersLibrary = () => {
           <Link to="/playground" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Playground
           </Link>
-          <Link to="/images" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Images
-          </Link>
         </div>
       </nav>
 

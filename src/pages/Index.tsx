@@ -34,9 +34,6 @@ const Index = () => {
           <Link to="/examples" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Examples
           </Link>
-          <Link to="/images" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Image Library
-          </Link>
           <Link to="/renders" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Renders
           </Link>
