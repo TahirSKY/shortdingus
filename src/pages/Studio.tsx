@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Send, Loader2, Code2, Eye, RotateCcw, Menu } from "lucide-react";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import SaveTemplateDialog from "@/components/SaveTemplateDialog";
 import TemplateBrowser from "@/components/TemplateBrowser";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -376,6 +377,7 @@ const Studio = () => {
           </ResizablePanelGroup>
         )}
       </div>
+      <MobileBottomNav />
     </div>
   );
 };

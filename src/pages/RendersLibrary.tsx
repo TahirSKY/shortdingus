@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Download, Trash2, Film, Image, Loader2, Sparkles, Library } from "lucide-react";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -169,6 +170,7 @@ const RendersLibrary = () => {
           </div>
         )}
       </div>
+      <MobileBottomNav />
     </div>
   );
 };

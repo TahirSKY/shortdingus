@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Play, Download, Zap, Code2, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 const features = [
   {
@@ -139,9 +140,10 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="px-6 py-8 border-t border-border text-center text-sm text-muted-foreground">
+      <footer className="px-6 py-8 pb-20 md:pb-8 border-t border-border text-center text-sm text-muted-foreground">
         Built with ❤️ using Remotion & AWS Lambda
       </footer>
+      <MobileBottomNav />
     </div>
   );
 };
