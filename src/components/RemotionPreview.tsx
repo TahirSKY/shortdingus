@@ -140,10 +140,16 @@ const RemotionPreview = ({ parsedFiles, detectedConfig, error: externalError }: 
             </AlertDescription>
           </Alert>
         ) : component ? (
-          <div className="w-full flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center">
             <div
               className="rounded-lg overflow-hidden border border-border shadow-lg bg-black"
-              style={{ width: "100%", maxWidth: "720px", aspectRatio: `${width}/${height}` }}
+              style={{
+                aspectRatio: `${width}/${height}`,
+                maxHeight: "100%",
+                maxWidth: "100%",
+                width: height > width ? "auto" : "100%",
+                height: height > width ? "100%" : "auto",
+              }}
             >
               <Player
                 ref={playerRef}
