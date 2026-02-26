@@ -1,8 +1,6 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 Deno.serve(async (req) => {
@@ -20,7 +18,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate URL
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -34,14 +31,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log("Fetching image from:", url);
+
     const imageResponse = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'image/*,*/*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': parsedUrl.origin + '/',
       },
+      redirect: 'follow',
     });
 
     if (!imageResponse.ok) {
+      console.error(`External fetch failed: ${imageResponse.status} ${imageResponse.statusText}`);
       return new Response(JSON.stringify({ error: `Failed to fetch image: ${imageResponse.status}` }), {
         status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -51,6 +54,8 @@ Deno.serve(async (req) => {
     const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
     const imageBytes = await imageResponse.arrayBuffer();
 
+    console.log(`Image fetched successfully: ${imageBytes.byteLength} bytes, type: ${contentType}`);
+
     return new Response(imageBytes, {
       headers: {
         ...corsHeaders,
@@ -58,6 +63,7 @@ Deno.serve(async (req) => {
       },
     });
   } catch (error) {
+    console.error("Edge function error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
