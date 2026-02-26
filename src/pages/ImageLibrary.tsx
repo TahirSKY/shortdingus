@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Upload, Link2, Trash2, Copy, Loader2, ImagePlus, X } from "lucide-react";
+import { ArrowLeft, Upload, Link2, Trash2, Copy, Loader2, ImagePlus, X, Globe } from "lucide-react";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,12 @@ export default function ImageLibrary() {
   const deleteImage = useDeleteImage();
 
   const [urlDialogOpen, setUrlDialogOpen] = useState(false);
+  const [scrapeDialogOpen, setScrapeDialogOpen] = useState(false);
   const [pasteUrl, setPasteUrl] = useState("");
   const [pasteTitle, setPasteTitle] = useState("");
+  const [scrapeUrl, setScrapeUrl] = useState("");
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{ screenshot: string; title: string; url: string } | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +143,58 @@ export default function ImageLibrary() {
     toast.success("URL copied");
   };
 
+  // Scrape a URL for its screenshot
+  const handleScrape = async () => {
+    if (!scrapeUrl.trim()) return;
+    setIsScraping(true);
+    setScrapeResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("firecrawl-scrape", {
+        body: { url: scrapeUrl.trim() },
+      });
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || "Scrape failed");
+      }
+      if (!data.screenshot) {
+        throw new Error("No screenshot returned for this URL");
+      }
+      setScrapeResult({ screenshot: data.screenshot, title: data.title || scrapeUrl.trim(), url: data.url });
+      toast.success("Page scraped! Preview the screenshot below.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to scrape");
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  // Save scraped screenshot to image library
+  const handleSaveScrape = async () => {
+    if (!scrapeResult) return;
+    setIsScraping(true);
+    try {
+      // Convert base64 screenshot to blob
+      const res = await fetch(scrapeResult.screenshot);
+      const blob = await res.blob();
+      const path = `library/${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+      const { error: uploadErr } = await supabase.storage.from("images").upload(path, blob, { contentType: "image/png" });
+      if (uploadErr) throw uploadErr;
+      const { data: publicData } = supabase.storage.from("images").getPublicUrl(path);
+      await addImage.mutateAsync({
+        title: scrapeResult.title,
+        url: publicData.publicUrl,
+        storage_path: path,
+      });
+      toast.success("Screenshot saved to library!");
+      setScrapeDialogOpen(false);
+      setScrapeUrl("");
+      setScrapeResult(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save screenshot");
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
@@ -151,6 +207,9 @@ export default function ImageLibrary() {
           <h1 className="text-base sm:text-lg font-semibold font-[Space_Grotesk]">Image Library</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setScrapeDialogOpen(true)}>
+            <Globe className="w-4 h-4 mr-1" /> Scrape
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setUrlDialogOpen(true)}>
             <Link2 className="w-4 h-4 mr-1" /> Paste URL
           </Button>
@@ -260,6 +319,45 @@ export default function ImageLibrary() {
               Download & Save
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Scrape Dialog */}
+      <Dialog open={scrapeDialogOpen} onOpenChange={(open) => { setScrapeDialogOpen(open); if (!open) { setScrapeResult(null); setScrapeUrl(""); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Scrape Website Screenshot</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Website URL</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  placeholder="https://example.com"
+                  value={scrapeUrl}
+                  onChange={(e) => setScrapeUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleScrape()}
+                />
+                <Button onClick={handleScrape} disabled={isScraping || !scrapeUrl.trim()}>
+                  {isScraping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            {scrapeResult && (
+              <div className="space-y-3">
+                <div className="rounded-lg border border-border overflow-hidden bg-muted/30">
+                  <img src={scrapeResult.screenshot} alt="Screenshot" className="w-full object-contain max-h-[300px]" />
+                </div>
+                <p className="text-sm text-muted-foreground truncate">
+                  <span className="font-medium text-foreground">{scrapeResult.title}</span>
+                </p>
+                <Button onClick={handleSaveScrape} disabled={isScraping} className="w-full bg-gradient-primary hover:opacity-90 border-0">
+                  {isScraping ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ImagePlus className="w-4 h-4 mr-2" />}
+                  Save to Library
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
       <MobileBottomNav />
