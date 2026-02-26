@@ -48,12 +48,10 @@ export default function ImageLibrary() {
     }
   };
 
-  // Download image from URL via proxy, upload to storage
-  const handleUrlDownload = async () => {
-    if (!pasteUrl.trim()) return;
-    setIsDownloading(true);
+  // Try to download image blob, with multiple fallback strategies
+  const downloadImageBlob = async (imageUrl: string): Promise<{ blob: Blob; contentType: string } | null> => {
+    // Strategy 1: Edge function proxy
     try {
-      // Use the fetch-image edge function to proxy — get raw response
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-image`,
         {
@@ -62,27 +60,62 @@ export default function ImageLibrary() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ url: pasteUrl.trim() }),
+          body: JSON.stringify({ url: imageUrl }),
         }
       );
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        throw new Error(errBody.error || `Failed to fetch image: ${response.status}`);
+      if (response.ok) {
+        const contentType = response.headers.get("content-type") || "image/jpeg";
+        if (contentType.startsWith("image/")) {
+          const blob = await response.blob();
+          if (blob.size > 0) return { blob, contentType };
+        }
       }
-      const imageBlob = await response.blob();
-      const contentType = response.headers.get("content-type") || "image/jpeg";
-      const extMap: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
-      const ext = extMap[contentType] || pasteUrl.split(".").pop()?.split("?")[0]?.slice(0, 4) || "jpg";
-      const path = `library/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from("images").upload(path, imageBlob, { contentType });
-      if (uploadErr) throw uploadErr;
-      const { data: publicData } = supabase.storage.from("images").getPublicUrl(path);
-      await addImage.mutateAsync({
-        title: pasteTitle.trim() || "Downloaded image",
-        url: publicData.publicUrl,
-        storage_path: path,
-      });
-      toast.success("Image downloaded & saved");
+    } catch { /* fall through */ }
+
+    // Strategy 2: Direct browser fetch (works for CORS-friendly URLs)
+    try {
+      const response = await fetch(imageUrl);
+      if (response.ok) {
+        const contentType = response.headers.get("content-type") || "image/jpeg";
+        if (contentType.startsWith("image/")) {
+          const blob = await response.blob();
+          if (blob.size > 0) return { blob, contentType };
+        }
+      }
+    } catch { /* fall through */ }
+
+    return null;
+  };
+
+  const handleUrlDownload = async () => {
+    if (!pasteUrl.trim()) return;
+    setIsDownloading(true);
+    try {
+      const result = await downloadImageBlob(pasteUrl.trim());
+
+      if (result) {
+        // We got actual image data — upload to storage
+        const extMap: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+        const ext = extMap[result.contentType] || pasteUrl.split(".").pop()?.split("?")[0]?.slice(0, 4) || "jpg";
+        const path = `library/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("images").upload(path, result.blob, { contentType: result.contentType });
+        if (uploadErr) throw uploadErr;
+        const { data: publicData } = supabase.storage.from("images").getPublicUrl(path);
+        await addImage.mutateAsync({
+          title: pasteTitle.trim() || "Downloaded image",
+          url: publicData.publicUrl,
+          storage_path: path,
+        });
+        toast.success("Image downloaded & saved");
+      } else {
+        // Fallback: save the external URL directly (no local copy)
+        await addImage.mutateAsync({
+          title: pasteTitle.trim() || "Linked image",
+          url: pasteUrl.trim(),
+        });
+        toast.success("Image URL saved (linked, not downloaded)");
+      }
+
       setUrlDialogOpen(false);
       setPasteUrl("");
       setPasteTitle("");
