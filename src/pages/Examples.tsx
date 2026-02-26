@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { exampleTemplates } from "@/lib/example-templates";
 import { useSavedTemplates, useDeleteTemplate } from "@/hooks/use-saved-templates";
@@ -137,6 +138,7 @@ const Examples = () => {
           ))}
         </div>
       </div>
+      <MobileBottomNav />
     </div>
   );
 };

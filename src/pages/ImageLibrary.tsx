@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Upload, Link2, Trash2, Copy, Loader2, ImagePlus, X } from "lucide-react";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -261,6 +262,7 @@ export default function ImageLibrary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <MobileBottomNav />
     </div>
   );
 }

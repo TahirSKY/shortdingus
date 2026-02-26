@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { ArrowLeft, Download, Loader2, Sparkles, BookmarkPlus, Check } from "lucide-react";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -228,6 +229,7 @@ const RenderResult = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <MobileBottomNav />
     </div>
   );
 };

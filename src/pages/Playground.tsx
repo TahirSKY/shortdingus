@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, ArrowLeft, Code2, Eye } from "lucide-react";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import SaveTemplateDialog from "@/components/SaveTemplateDialog";
 import TemplateBrowser from "@/components/TemplateBrowser";
@@ -253,6 +254,7 @@ const Playground = () => {
         detectedConfig={detectedConfig}
         renderMode={renderMode}
       />
+      <MobileBottomNav />
     </div>
   );
 };
