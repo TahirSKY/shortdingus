@@ -41,6 +41,33 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_templates: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          emoji: string
+          id: string
+          title: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string
+          emoji?: string
+          id?: string
+          title: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          emoji?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

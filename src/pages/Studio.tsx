@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Send, Loader2, Code2, Eye, RotateCcw } from "lucide-react";
+import SaveTemplateDialog from "@/components/SaveTemplateDialog";
+import TemplateBrowser from "@/components/TemplateBrowser";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -180,6 +182,8 @@ const Studio = () => {
               {showCode ? "Preview" : "View Code"}
             </Button>
           )}
+          <TemplateBrowser onSelect={(c) => { setGeneratedCode(c); toast.success("Template loaded!"); }} />
+          <SaveTemplateDialog code={generatedCode} />
           <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs gap-1.5">
             <RotateCcw className="w-3.5 h-3.5" />
             Reset

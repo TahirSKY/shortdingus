@@ -1,16 +1,27 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowLeft, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowLeft, ArrowRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exampleTemplates } from "@/lib/example-templates";
+import { useSavedTemplates, useDeleteTemplate } from "@/hooks/use-saved-templates";
+import { toast } from "sonner";
 
 const Examples = () => {
   const navigate = useNavigate();
+  const { data: savedTemplates = [] } = useSavedTemplates();
+  const deleteTemplate = useDeleteTemplate();
 
   const loadExample = (code: string) => {
-    // Store in sessionStorage so Playground can pick it up
     sessionStorage.setItem("playground-code", code);
     navigate("/playground");
+  };
+
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteTemplate.mutate(id, {
+      onSuccess: () => toast.success("Template deleted"),
+      onError: () => toast.error("Failed to delete"),
+    });
   };
 
   return (
@@ -48,6 +59,55 @@ const Examples = () => {
           </p>
         </motion.div>
 
+        {/* Saved Templates */}
+        {savedTemplates.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-xl font-semibold text-foreground mb-4">My Templates</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              {savedTemplates.map((template, i) => (
+                <motion.div
+                  key={template.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="group rounded-xl border border-border bg-card hover:border-primary/30 transition-all overflow-hidden"
+                >
+                  <div className="aspect-video bg-muted/30 flex items-center justify-center border-b border-border relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 group-hover:from-primary/10 group-hover:to-secondary/10 transition-all" />
+                    <span className="text-5xl z-10">{template.emoji}</span>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="text-lg font-semibold text-foreground">{template.title}</h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                        onClick={(e) => handleDelete(template.id, e)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    {template.description && (
+                      <p className="text-sm text-muted-foreground mb-4">{template.description}</p>
+                    )}
+                    <Button
+                      onClick={() => loadExample(template.code)}
+                      size="sm"
+                      className="bg-gradient-primary hover:opacity-90 border-0"
+                    >
+                      Load in Playground
+                      <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Built-in Examples */}
+        <h2 className="text-xl font-semibold text-foreground mb-4">Built-in Examples</h2>
         <div className="grid md:grid-cols-2 gap-6">
           {exampleTemplates.map((template, i) => (
             <motion.div
@@ -57,12 +117,10 @@ const Examples = () => {
               transition={{ duration: 0.4, delay: i * 0.1 }}
               className="group rounded-xl border border-border bg-card hover:border-primary/30 transition-all overflow-hidden"
             >
-              {/* Preview area */}
               <div className="aspect-video bg-muted/30 flex items-center justify-center border-b border-border relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 group-hover:from-primary/10 group-hover:to-secondary/10 transition-all" />
                 <span className="text-5xl z-10">{template.emoji}</span>
               </div>
-
               <div className="p-5">
                 <h3 className="text-lg font-semibold text-foreground mb-1">{template.title}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{template.description}</p>
