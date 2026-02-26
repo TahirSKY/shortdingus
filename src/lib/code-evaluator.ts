@@ -109,8 +109,19 @@ export async function evaluateCode(
     // Transform all files first
     for (const file of parsedFiles) {
       // Strip config comments before transform
-      const cleaned = file.content.replace(
+      let cleaned = file.content.replace(
         /\/\*\s*__REMOTION_CONFIG__[\s\S]*?\*\//g,
+        ""
+      );
+      // Remove imports from local files (e.g. import X from "./MyVideo")
+      // that would fail in single-file mode
+      cleaned = cleaned.replace(
+        /import\s+.*?\s+from\s+["']\.\/[^"']+["'];?\s*\n?/g,
+        ""
+      );
+      // Remove registerRoot calls
+      cleaned = cleaned.replace(
+        /registerRoot\s*\(.*?\);?\s*\n?/g,
         ""
       );
       const code = transformCode(cleaned, file.filename);
