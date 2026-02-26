@@ -30,13 +30,15 @@ const Studio = () => {
   const [generatedCode, setGeneratedCode] = useState("");
   const [showCode, setShowCode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const generatingRef = useRef(false);
 
   const parsedFiles = useMemo(() => parseMultiFileCode(generatedCode), [generatedCode]);
   const detectedConfig = useMemo(() => detectConfig(generatedCode), [generatedCode]);
 
   const handleGenerate = useCallback(async () => {
     const prompt = input.trim();
-    if (!prompt || isGenerating) return;
+    if (!prompt || generatingRef.current) return;
+    generatingRef.current = true;
 
     const userMsg: Message = { role: "user", content: prompt };
     const newMessages = [...messages, userMsg];
@@ -116,8 +118,9 @@ const Studio = () => {
       toast.error(err.message || "Failed to generate video");
     } finally {
       setIsGenerating(false);
+      generatingRef.current = false;
     }
-  }, [input, messages, isGenerating]);
+  }, [input, messages]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
