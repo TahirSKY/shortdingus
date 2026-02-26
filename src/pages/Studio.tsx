@@ -15,12 +15,27 @@ type Message = { role: "user" | "assistant"; content: string };
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-remotion`;
 
 function cleanCodeFromResponse(text: string): string {
-  // Strip markdown fences if the model wraps them
+  // Extract code from markdown fences anywhere in the response
+  const fenceMatch = text.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*\n([\s\S]*?)```/);
+  if (fenceMatch) {
+    return fenceMatch[1].trim();
+  }
+  // If the response starts with a fence (no language tag)
   let cleaned = text.trim();
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "");
+    return cleaned.trim();
   }
-  return cleaned.trim();
+  // If it looks like raw code (has imports or JSX), use as-is
+  if (/^(import |\/\*|\/\/|export )/.test(cleaned)) {
+    return cleaned;
+  }
+  // Last resort: try to find code-like content after any preamble text
+  const codeStart = cleaned.search(/\n(import |\/\*\s*__REMOTION)/);
+  if (codeStart !== -1) {
+    return cleaned.slice(codeStart).trim();
+  }
+  return cleaned;
 }
 
 const Studio = () => {
