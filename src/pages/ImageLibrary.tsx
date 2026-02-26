@@ -191,6 +191,14 @@ export default function ImageLibrary() {
                   alt={img.title}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = "none";
+                    const fallback = document.createElement("div");
+                    fallback.className = "w-full h-full flex items-center justify-center bg-muted text-muted-foreground text-xs text-center p-2";
+                    fallback.textContent = "Image failed to load";
+                    target.parentElement?.insertBefore(fallback, target);
+                  }}
                 />
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
