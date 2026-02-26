@@ -82,16 +82,19 @@ export function detectConfig(code: string): DetectedConfig {
   }
 
   // 3. Inline detection: durationInFrames: 300 or fps: 60
-  const fpsMatch = code.match(/fps\s*[:=]\s*(\d+)/);
+  // Match fps: 30, fps={30}, fps = 30
+  const fpsMatch = code.match(/fps\s*[:=]\s*\{?\s*(\d+)\s*\}?/);
   if (fpsMatch) result.fps = Number(fpsMatch[1]);
 
-  const difMatch = code.match(/durationInFrames\s*[:=]\s*(\d+)/);
+  // Match durationInFrames: 120, durationInFrames={120}, durationInFrames = 120
+  const difMatch = code.match(/durationInFrames\s*[:=]\s*\{?\s*(\d+)\s*\}?/);
   if (difMatch) {
     result.durationInFrames = Number(difMatch[1]);
     result.durationInSeconds = Math.round(Number(difMatch[1]) / (result.fps || 30));
   }
 
-  const disMatch = code.match(/durationInSeconds\s*[:=]\s*(\d+)/);
+  // Match durationInSeconds: 10, durationInSeconds={10}, durationInSeconds = 10
+  const disMatch = code.match(/durationInSeconds\s*[:=]\s*\{?\s*(\d+)\s*\}?/);
   if (disMatch) {
     result.durationInSeconds = Number(disMatch[1]);
   }
