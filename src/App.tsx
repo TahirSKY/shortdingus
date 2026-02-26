@@ -10,6 +10,7 @@ import Examples from "./pages/Examples";
 import RenderResult from "./pages/RenderResult";
 import RendersLibrary from "./pages/RendersLibrary";
 import Studio from "./pages/Studio";
+import ImageLibrary from "./pages/ImageLibrary";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/result" element={<RenderResult />} />
           <Route path="/renders" element={<RendersLibrary />} />
           <Route path="/studio" element={<Studio />} />
+          <Route path="/images" element={<ImageLibrary />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
