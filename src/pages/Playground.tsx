@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, ArrowLeft } from "lucide-react";
+import SaveTemplateDialog from "@/components/SaveTemplateDialog";
+import TemplateBrowser from "@/components/TemplateBrowser";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import CodeEditor from "@/components/CodeEditor";
 import RemotionPreview from "@/components/RemotionPreview";
@@ -195,6 +197,10 @@ const Playground = () => {
             <Sparkles className="w-4 h-4 text-primary" />
             <span className="text-sm font-semibold text-foreground">Remotion Playground</span>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <TemplateBrowser onSelect={(c) => setCode(c)} />
+          <SaveTemplateDialog code={code} />
         </div>
       </div>
 
