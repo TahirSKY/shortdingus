@@ -251,7 +251,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
 
         <p className="text-[11px] text-muted-foreground -mt-1">
           {mode === "video"
-            ? <>Tip: Your code can override these via <code className="text-xs bg-muted px-1 rounded">{"/*__REMOTION_CONFIG__ {fps:60, durationInFrames:900} */"}</code></>
+            ? <>Tip: Your code can override these via <code className="text-xs bg-muted px-1 rounded">{"/* REMOTION_CONFIG { fps: 60, durationInFrames: 900, width: 1920, height: 1080 } */"}</code></>
             : <>Tip: For multi-page brochures, set Pages {'>'} 1. Each page captures a frame spaced 30 frames apart.</>
           }
         </p>
