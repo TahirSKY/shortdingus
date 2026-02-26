@@ -175,9 +175,13 @@ Deno.serve(async (req) => {
     // Prepare code for Lambda's pickEntryFile contract (strip Root.tsx, ensure export default)
     const code = prepareCodeForLambda(rawCode);
 
+    const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.youtube;
+
     const inputProps: Record<string, unknown> = {
       code,
       format,
+      width: dims.width,
+      height: dims.height,
       durationInSeconds,
       fps,
       debug,
