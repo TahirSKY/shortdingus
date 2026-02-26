@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Send, Loader2, Code2, Eye, RotateCcw } from "lucide-react";
+import { ArrowLeft, Sparkles, Send, Loader2, Code2, Eye, RotateCcw, Menu } from "lucide-react";
 import SaveTemplateDialog from "@/components/SaveTemplateDialog";
 import TemplateBrowser from "@/components/TemplateBrowser";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -46,8 +46,17 @@ const Studio = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
   const [showCode, setShowCode] = useState(false);
+  const [mobileView, setMobileView] = useState<"chat" | "preview">("chat");
   const scrollRef = useRef<HTMLDivElement>(null);
   const generatingRef = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const parsedFiles = useMemo(() => parseMultiFileCode(generatedCode), [generatedCode]);
   const detectedConfig = useMemo(() => detectConfig(generatedCode), [generatedCode]);
@@ -169,14 +178,14 @@ const Studio = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/30">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-border bg-card/30">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/"
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </Link>
           <div className="w-px h-5 bg-border" />
           <div className="flex items-center gap-2">
@@ -184,8 +193,20 @@ const Studio = () => {
             <span className="text-sm font-semibold text-foreground">AI Studio</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {generatedCode && (
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Mobile view toggle */}
+          {isMobile && generatedCode && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileView(mobileView === "chat" ? "preview" : "chat")}
+              className="text-xs gap-1.5"
+            >
+              {mobileView === "chat" ? <Eye className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+              {mobileView === "chat" ? "Preview" : "Chat"}
+            </Button>
+          )}
+          {generatedCode && !isMobile && (
             <Button
               variant="ghost"
               size="sm"
@@ -200,33 +221,29 @@ const Studio = () => {
           <SaveTemplateDialog code={generatedCode} />
           <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs gap-1.5">
             <RotateCcw className="w-3.5 h-3.5" />
-            Reset
+            <span className="hidden sm:inline">Reset</span>
           </Button>
         </div>
       </div>
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
-          {/* Left: Chat */}
-          <ResizablePanel defaultSize={40} minSize={25}>
+        {isMobile ? (
+          // Mobile: show chat or preview based on toggle
+          mobileView === "chat" ? (
             <div className="flex flex-col h-full">
-              {/* Messages */}
               <ScrollArea className="flex-1 p-4">
                 <div ref={scrollRef} className="space-y-4">
                   {messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center px-6">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center mb-4 animate-float">
-                        <Sparkles className="w-7 h-7 text-primary-foreground" />
+                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center px-4">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-primary flex items-center justify-center mb-3 animate-float">
+                        <Sparkles className="w-6 h-6 text-primary-foreground" />
                       </div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">
-                        Describe your video
-                      </h3>
+                      <h3 className="text-base font-semibold text-foreground mb-2">Describe your video</h3>
                       <p className="text-sm text-muted-foreground max-w-sm">
-                        Tell me what kind of animation or video you want to create. I'll generate
-                        Remotion code and show you a live preview.
+                        Tell me what kind of animation or video you want to create.
                       </p>
-                      <div className="mt-6 space-y-2 w-full max-w-sm">
+                      <div className="mt-4 space-y-2 w-full max-w-sm">
                         {[
                           "A modern logo reveal with particles",
                           "Animated bar chart showing monthly sales",
@@ -244,25 +261,12 @@ const Studio = () => {
                     </div>
                   )}
                   {messages.map((msg, i) => (
-                    <div
-                      key={i}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${
-                          msg.role === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-card border border-border text-foreground"
-                        }`}
-                      >
-                        {msg.role === "user" ? (
-                          msg.content
-                        ) : (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground"}`}>
+                        {msg.role === "user" ? msg.content : (
                           <div className="flex items-center gap-2">
                             <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-                            <span className="text-muted-foreground">
-                              {isGenerating ? "Generating..." : "Video code generated ✓"}
-                            </span>
+                            <span className="text-muted-foreground">{isGenerating ? "Generating..." : "Video code generated ✓"}</span>
                           </div>
                         )}
                       </div>
@@ -270,64 +274,107 @@ const Studio = () => {
                   ))}
                 </div>
               </ScrollArea>
-
-              {/* Input */}
-              <div className="p-4 border-t border-border bg-card/30">
+              <div className="p-3 border-t border-border bg-card/30">
                 <div className="flex gap-2">
                   <Textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={
-                      messages.length > 0
-                        ? "Describe changes... (e.g. 'make it faster', 'add a subtitle')"
-                        : "Describe the video you want to create..."
-                    }
-                    className="min-h-[44px] max-h-[120px] resize-none text-sm bg-background"
+                    placeholder={messages.length > 0 ? "Describe changes..." : "Describe the video you want to create..."}
+                    className="min-h-[44px] max-h-[100px] resize-none text-sm bg-background"
                     disabled={isGenerating}
                   />
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={!input.trim() || isGenerating}
-                    size="icon"
-                    className="shrink-0 h-[44px] w-[44px]"
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
+                  <Button onClick={handleGenerate} disabled={!input.trim() || isGenerating} size="icon" className="shrink-0 h-[44px] w-[44px]">
+                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </Button>
                 </div>
               </div>
             </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Right: Preview or Code */}
-          <ResizablePanel defaultSize={60} minSize={30}>
-            {showCode ? (
-              <div className="h-full flex flex-col">
-                <div className="flex items-center px-4 py-3 border-b border-border bg-card/50">
-                  <Code2 className="w-4 h-4 text-secondary mr-2" />
-                  <span className="text-sm font-medium text-foreground">Generated Code</span>
-                </div>
-                <ScrollArea className="flex-1">
-                  <pre className="p-4 text-xs font-mono text-foreground whitespace-pre-wrap">
-                    {generatedCode}
-                  </pre>
+          ) : (
+            <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={null} />
+          )
+        ) : (
+          // Desktop: resizable panels
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={40} minSize={25}>
+              <div className="flex flex-col h-full">
+                <ScrollArea className="flex-1 p-4">
+                  <div ref={scrollRef} className="space-y-4">
+                    {messages.length === 0 && (
+                      <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center px-6">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center mb-4 animate-float">
+                          <Sparkles className="w-7 h-7 text-primary-foreground" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Describe your video</h3>
+                        <p className="text-sm text-muted-foreground max-w-sm">
+                          Tell me what kind of animation or video you want to create. I'll generate Remotion code and show you a live preview.
+                        </p>
+                        <div className="mt-6 space-y-2 w-full max-w-sm">
+                          {[
+                            "A modern logo reveal with particles",
+                            "Animated bar chart showing monthly sales",
+                            "Cinematic text intro with fade and scale",
+                          ].map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              onClick={() => setInput(suggestion)}
+                              className="w-full text-left text-xs px-3 py-2 rounded-lg border border-border bg-card/50 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+                            >
+                              "{suggestion}"
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {messages.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground"}`}>
+                          {msg.role === "user" ? msg.content : (
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span className="text-muted-foreground">{isGenerating ? "Generating..." : "Video code generated ✓"}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </ScrollArea>
+                <div className="p-4 border-t border-border bg-card/30">
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={messages.length > 0 ? "Describe changes... (e.g. 'make it faster', 'add a subtitle')" : "Describe the video you want to create..."}
+                      className="min-h-[44px] max-h-[120px] resize-none text-sm bg-background"
+                      disabled={isGenerating}
+                    />
+                    <Button onClick={handleGenerate} disabled={!input.trim() || isGenerating} size="icon" className="shrink-0 h-[44px] w-[44px]">
+                      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <RemotionPreview
-                parsedFiles={parsedFiles}
-                detectedConfig={detectedConfig}
-                error={null}
-              />
-            )}
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={60} minSize={30}>
+              {showCode ? (
+                <div className="h-full flex flex-col">
+                  <div className="flex items-center px-4 py-3 border-b border-border bg-card/50">
+                    <Code2 className="w-4 h-4 text-secondary mr-2" />
+                    <span className="text-sm font-medium text-foreground">Generated Code</span>
+                  </div>
+                  <ScrollArea className="flex-1">
+                    <pre className="p-4 text-xs font-mono text-foreground whitespace-pre-wrap">{generatedCode}</pre>
+                  </ScrollArea>
+                </div>
+              ) : (
+                <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={null} />
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
       </div>
     </div>
   );

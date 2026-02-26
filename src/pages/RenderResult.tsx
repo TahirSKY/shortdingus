@@ -111,14 +111,15 @@ const RenderResult = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/30">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-3 border-b border-border bg-card/30 gap-2">
         <div className="flex items-center gap-3">
           <Link
             to="/playground"
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Playground
+            <span className="hidden sm:inline">Back to Playground</span>
+            <span className="sm:hidden">Back</span>
           </Link>
           <div className="w-px h-5 bg-border" />
           <div className="flex items-center gap-2">
@@ -129,35 +130,29 @@ const RenderResult = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setSaveOpen(true)}
             disabled={saved}
+            className="flex-1 sm:flex-none"
           >
-            {saved ? (
-              <Check className="w-4 h-4 mr-2" />
-            ) : (
-              <BookmarkPlus className="w-4 h-4 mr-2" />
-            )}
-            {saved ? "Saved" : "Save to Library"}
+            {saved ? <Check className="w-4 h-4 mr-2" /> : <BookmarkPlus className="w-4 h-4 mr-2" />}
+            {saved ? "Saved" : "Save"}
           </Button>
-          <Button onClick={handleDownload} disabled={downloading} className="bg-gradient-primary hover:opacity-90 border-0 glow-primary">
-            {downloading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4 mr-2" />
-            )}
-            {isMultiPage ? `Download All (${urls.length})` : `Download ${fileExt.toUpperCase()}`}
+          <Button size="sm" onClick={handleDownload} disabled={downloading} className="bg-gradient-primary hover:opacity-90 border-0 glow-primary flex-1 sm:flex-none">
+            {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {isMultiPage ? `All (${urls.length})` : fileExt.toUpperCase()}
           </Button>
         </div>
       </div>
 
       {/* Content preview */}
-      <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 overflow-auto">
         <div className="max-w-5xl w-full flex flex-col items-center gap-6">
           {isMultiPage ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
               {urls.map((pageUrl, i) => (
                 <div key={i} className="relative group">
                   <img

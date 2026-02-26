@@ -31,7 +31,7 @@ const RenderControls = ({
   const fileExt = isImage ? "PNG" : "MP4";
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-t border-border bg-card/50">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 border-t border-border bg-card/50">
       {downloadUrl ? (
         <Button asChild className="bg-gradient-primary hover:opacity-90 border-0 glow-primary">
           <a href={downloadUrl} download>

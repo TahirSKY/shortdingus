@@ -141,13 +141,13 @@ export default function ImageLibrary() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link to="/studio">
             <Button variant="ghost" size="icon"><ArrowLeft className="w-4 h-4" /></Button>
           </Link>
           <ImagePlus className="w-5 h-5 text-primary" />
-          <h1 className="text-lg font-semibold font-[Space_Grotesk]">Image Library</h1>
+          <h1 className="text-base sm:text-lg font-semibold font-[Space_Grotesk]">Image Library</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setUrlDialogOpen(true)}>
@@ -169,7 +169,7 @@ export default function ImageLibrary() {
       </header>
 
       {/* Grid */}
-      <main className="p-6">
+      <main className="p-4 sm:p-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

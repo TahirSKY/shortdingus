@@ -73,16 +73,16 @@ const RendersLibrary = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto border-b border-border">
+      <nav className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-4 max-w-7xl mx-auto border-b border-border gap-2">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <span className="text-lg font-bold text-foreground">Remotion Playground</span>
+            <span className="text-base sm:text-lg font-bold text-foreground">Remotion Playground</span>
           </Link>
           <div className="w-px h-5 bg-border" />
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Library className="w-4 h-4" />
-            Renders Library
+            Renders
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -92,7 +92,7 @@ const RendersLibrary = () => {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <h1 className="text-3xl font-bold text-foreground mb-2">Renders Library</h1>
         <p className="text-muted-foreground mb-8">Your saved renders with notes and previews.</p>
 
