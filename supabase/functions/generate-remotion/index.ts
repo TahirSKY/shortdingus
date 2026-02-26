@@ -15,11 +15,18 @@ RULES:
 4. Do NOT use browser APIs (window, fetch, localStorage), direct DOM manipulation, local file paths, or CSS imports.
 5. Do NOT use Unsplash URLs. For placeholder images use picsum.photos or solid color backgrounds.
 6. For multi-file projects, use "// --- file: Filename.tsx ---" markers at the start of each file.
-7. Always include a config comment at the top of the main file:
+7. CRITICAL: Always include a __REMOTION_CONFIG__ comment at the VERY TOP of the code, BEFORE any imports. This MUST reflect the actual video settings:
    /* __REMOTION_CONFIG__ { "fps": 30, "durationInFrames": 150, "width": 1920, "height": 1080 } */
+   - For TikTok/vertical: use width: 1080, height: 1920
+   - For YouTube/landscape: use width: 1920, height: 1080
+   - For square: use width: 1080, height: 1080
+   - Update durationInFrames when duration changes (durationInFrames = seconds × fps)
+   - ALWAYS recalculate and update this comment when the user asks to change duration, aspect ratio, fps, or style.
 8. Make animations smooth using spring() or interpolate() from "remotion".
 9. Use inline styles only (no CSS modules, no Tailwind, no styled-components).
 10. Be creative with motion design — use scale, rotation, opacity, translateX/Y for engaging animations.
+
+CRITICAL: When the user asks for changes (e.g. "make it vertical", "make it 10 seconds longer", "change to TikTok style"), you MUST regenerate the COMPLETE code with the updated __REMOTION_CONFIG__ comment. Never respond with just an explanation — always output the full updated code.
 
 RESPOND WITH ONLY THE CODE. No explanations, no markdown fences, no comments outside the code itself.`;
 
