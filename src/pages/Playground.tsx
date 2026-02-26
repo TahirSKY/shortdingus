@@ -1,6 +1,7 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { Sparkles, ArrowLeft, Code2, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import SaveTemplateDialog from "@/components/SaveTemplateDialog";
 import TemplateBrowser from "@/components/TemplateBrowser";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -28,7 +29,16 @@ const Playground = () => {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [renderMode, setRenderMode] = useState<RenderMode>("video");
   const [error] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"code" | "preview">("code");
+  const [isMobile, setIsMobile] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const parsedFiles = useMemo(() => parseMultiFileCode(code), [code]);
   const detectedConfig = useMemo(() => detectConfig(code), [code]);
@@ -183,22 +193,30 @@ const Playground = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/30">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-border bg-card/30">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link to="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </Link>
           <div className="w-px h-5 bg-border" />
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-foreground">Remotion Playground</span>
+            <span className="text-sm font-semibold text-foreground">Playground</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          {isMobile && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileView(mobileView === "code" ? "preview" : "code")}
+              className="text-xs gap-1.5"
+            >
+              {mobileView === "code" ? <Eye className="w-3.5 h-3.5" /> : <Code2 className="w-3.5 h-3.5" />}
+              {mobileView === "code" ? "Preview" : "Code"}
+            </Button>
+          )}
           <TemplateBrowser onSelect={(c) => setCode(c)} />
           <SaveTemplateDialog code={code} />
         </div>
@@ -206,15 +224,23 @@ const Playground = () => {
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={50} minSize={30}>
+        {isMobile ? (
+          mobileView === "code" ? (
             <CodeEditor code={code} onCodeChange={setCode} parsedFiles={parsedFiles} />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={50} minSize={30}>
+          ) : (
             <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={error} />
-          </ResizablePanel>
-        </ResizablePanelGroup>
+          )
+        ) : (
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={50} minSize={30}>
+              <CodeEditor code={code} onCodeChange={setCode} parsedFiles={parsedFiles} />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={50} minSize={30}>
+              <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={error} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
       </div>
 
       {/* Bottom controls */}

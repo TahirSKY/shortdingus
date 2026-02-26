@@ -27,17 +27,17 @@ const Examples = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+      <nav className="flex items-center justify-between px-4 sm:px-6 py-4 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-primary" />
-          <span className="text-lg font-bold text-foreground">Remotion Playground</span>
+          <span className="text-base sm:text-lg font-bold text-foreground">Remotion Playground</span>
         </Link>
-        <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90 border-0">
+        <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90 border-0 text-xs sm:text-sm">
           <Link to="/playground">Open Playground</Link>
         </Button>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <Link
           to="/"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"

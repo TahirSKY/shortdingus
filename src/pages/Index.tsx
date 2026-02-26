@@ -25,29 +25,29 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Nav */}
-      <nav className="relative z-10 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+      <nav className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-primary" />
-          <span className="text-lg font-bold text-foreground">Remotion Playground</span>
+          <span className="text-base sm:text-lg font-bold text-foreground">Remotion Playground</span>
         </Link>
-        <div className="flex items-center gap-4">
-          <Link to="/examples" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link to="/examples" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">
             Examples
           </Link>
-          <Link to="/renders" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/renders" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">
             Renders
           </Link>
-          <Link to="/studio" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/studio" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">
             AI Studio
           </Link>
-          <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90 transition-opacity border-0">
+          <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90 transition-opacity border-0 text-xs sm:text-sm">
             <Link to="/playground">Open Playground</Link>
           </Button>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="relative px-6 pt-20 pb-32 max-w-7xl mx-auto text-center">
+      <section className="relative px-4 sm:px-6 pt-12 sm:pt-20 pb-20 sm:pb-32 max-w-7xl mx-auto text-center">
         {/* Glow orbs */}
         <div className="absolute top-10 left-1/4 w-72 h-72 bg-primary/20 rounded-full blur-[120px] animate-pulse-glow" />
         <div className="absolute top-20 right-1/4 w-64 h-64 bg-secondary/20 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: "1s" }} />
@@ -64,7 +64,7 @@ const Index = () => {
             Powered by Remotion + AWS Lambda
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-4 sm:mb-6 leading-tight">
             Paste code.{" "}
             <span className="text-gradient">See video.</span>
             <br />
@@ -75,7 +75,7 @@ const Index = () => {
             The fastest way to preview and render Remotion videos. No setup, no CLI, no hassle — just paste your code and go.
           </p>
 
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Button asChild size="lg" className="bg-gradient-primary hover:opacity-90 transition-opacity border-0 text-base px-8 glow-primary">
               <Link to="/playground">
                 Try it now <ArrowRight className="w-4 h-4 ml-1" />
@@ -118,8 +118,8 @@ const Index = () => {
       </section>
 
       {/* Features */}
-      <section className="px-6 py-20 max-w-5xl mx-auto">
-        <div className="grid md:grid-cols-3 gap-8">
+      <section className="px-4 sm:px-6 py-12 sm:py-20 max-w-5xl mx-auto">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
           {features.map((feature, i) => (
             <motion.div
               key={feature.title}
