@@ -158,6 +158,7 @@ const RemotionPreview = ({ parsedFiles, detectedConfig, error: externalError }: 
                 compositionHeight={height}
                 durationInFrames={durationInFrames}
                 fps={fps}
+                numberOfSharedAudioTags={20}
                 style={{ width: "100%", height: "100%" }}
                 controls={false}
               />
