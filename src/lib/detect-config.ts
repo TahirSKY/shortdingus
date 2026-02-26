@@ -1,6 +1,6 @@
 // Detect video configuration from user code.
 // Supported patterns:
-//   1. Comment block: __REMOTION_CONFIG__ { fps: 60, durationInFrames: 900 }
+//   1. Comment block: REMOTION_CONFIG { fps: 60, durationInFrames: 900 }
 //   2. compositionConfig = { ... }
 //   3. Inline props: durationInFrames: 300, fps: 30
 
@@ -12,8 +12,8 @@ export interface DetectedConfig {
   height?: number;
 }
 
-// eslint-disable-next-line no-useless-escape
-const CONFIG_COMMENT = /\/\*\s*__REMOTION_CONFIG__\s*([\s\S]*?)\s*\*\//;
+// Supports both REMOTION_CONFIG and legacy __REMOTION_CONFIG__ markers.
+const CONFIG_COMMENT = /\/\*\s*(?:__)?REMOTION_CONFIG(?:__)?\s*([\s\S]*?)\s*\*\//i;
 const COMPOSITION_CONFIG = /compositionConfig\s*[:=]\s*\{([^}]+)\}/;
 
 function extractNumber(obj: Record<string, unknown>, key: string): number | undefined {
@@ -23,8 +23,17 @@ function extractNumber(obj: Record<string, unknown>, key: string): number | unde
 
 function parseLooseJson(raw: string): Record<string, unknown> {
   try {
+    // Accept both `{ fps: 30 }` and `fps: 30` payloads.
+    const trimmed = raw.trim();
+    const withoutOuterBraces = trimmed.startsWith("{") && trimmed.endsWith("}")
+      ? trimmed.slice(1, -1)
+      : trimmed;
+
     // Add quotes around unquoted keys for JSON.parse
-    const json = raw.replace(/(\w+)\s*:/g, '"$1":').replace(/,\s*}/g, "}");
+    const json = withoutOuterBraces
+      .replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
+      .replace(/,\s*}/g, "}");
+
     return JSON.parse(`{${json}}`);
   } catch {
     return {};
