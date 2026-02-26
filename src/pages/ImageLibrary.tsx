@@ -53,16 +53,28 @@ export default function ImageLibrary() {
     if (!pasteUrl.trim()) return;
     setIsDownloading(true);
     try {
-      // Use the fetch-image edge function to proxy
-      const { data: blob, error } = await supabase.functions.invoke("fetch-image", {
-        body: { url: pasteUrl.trim() },
-      });
-      if (error) throw error;
-
-      // blob is the raw response; convert to File
-      const ext = pasteUrl.split(".").pop()?.split("?")[0]?.slice(0, 4) || "jpg";
+      // Use the fetch-image edge function to proxy — get raw response
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-image`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ url: pasteUrl.trim() }),
+        }
+      );
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || `Failed to fetch image: ${response.status}`);
+      }
+      const imageBlob = await response.blob();
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const extMap: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+      const ext = extMap[contentType] || pasteUrl.split(".").pop()?.split("?")[0]?.slice(0, 4) || "jpg";
       const path = `library/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from("images").upload(path, blob);
+      const { error: uploadErr } = await supabase.storage.from("images").upload(path, imageBlob, { contentType });
       if (uploadErr) throw uploadErr;
       const { data: publicData } = supabase.storage.from("images").getPublicUrl(path);
       await addImage.mutateAsync({
