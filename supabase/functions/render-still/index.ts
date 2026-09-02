@@ -13,7 +13,7 @@
  *     inputProps?: object, debug?: boolean }
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { renderStillOnLambda } from "npm:@remotion/lambda-client@4.0.420";
+import { renderStillOnLambda } from "npm:@remotion/lambda-client@4.0.438";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
