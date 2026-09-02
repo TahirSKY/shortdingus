@@ -10,7 +10,7 @@
  *   { renderId: string, bucketName: string, debug?: boolean }
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { getRenderProgress } from "npm:@remotion/lambda-client@4.0.420";
+import { getRenderProgress } from "npm:@remotion/lambda-client@4.0.438";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
