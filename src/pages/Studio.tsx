@@ -1,385 +1,196 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Sparkles, Send, Loader2, Code2, Eye, RotateCcw, Menu } from "lucide-react";
+import { ArrowLeft, Check, Download, Film, Loader2, MessageSquare, Paperclip, Play, RotateCcw, Send, Sparkles, Upload, Video } from "lucide-react";
 import MobileBottomNav from "@/components/MobileBottomNav";
-import SaveTemplateDialog from "@/components/SaveTemplateDialog";
-import TemplateBrowser from "@/components/TemplateBrowser";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import RemotionPreview from "@/components/RemotionPreview";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import { parseMultiFileCode } from "@/lib/code-parser";
 import { detectConfig } from "@/lib/detect-config";
 import { toast } from "sonner";
+import { callStudioAgent, createStudioProject, generateStudioImage, generateVoice, getVideoDuration, newId, patchStudioProject, persistMessage, uploadFootage } from "@/features/studio/api";
+import { compileEdlToRemotion } from "@/features/studio/compile-edl";
+import { createFootageEdl, createIdeaEdl, normalizeEdl } from "@/features/studio/edl";
+import type { EditDirection, StudioBeat, StudioEdl, StudioMessage, StudioMode, StudioStage } from "@/features/studio/types";
 
-type Message = { role: "user" | "assistant"; content: string };
-
-const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-remotion`;
-
-function cleanCodeFromResponse(text: string): string {
-  // Extract code from markdown fences anywhere in the response
-  const fenceMatch = text.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*\n([\s\S]*?)```/);
-  if (fenceMatch) {
-    return fenceMatch[1].trim();
-  }
-  // If the response starts with a fence (no language tag)
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "");
-    return cleaned.trim();
-  }
-  // If it looks like raw code (has imports or JSX), use as-is
-  if (/^(import |\/\*|\/\/|export )/.test(cleaned)) {
-    return cleaned;
-  }
-  // Last resort: try to find code-like content after any preamble text
-  const codeStart = cleaned.search(/\n(import |\/\*\s*__REMOTION)/);
-  if (codeStart !== -1) {
-    return cleaned.slice(codeStart).trim();
-  }
-  return cleaned;
-}
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+const starterIdeas = ["A 30s intern vs CEO sketch about ridiculous loans", "Turn this dog walk into a threshold-training story", "A sharp product story with a surprising first line"];
 
 const Studio = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [mode, setMode] = useState<StudioMode>("have_footage");
+  const [stage, setStage] = useState<StudioStage>("start");
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<StudioMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState("");
-  const [showCode, setShowCode] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [beats, setBeats] = useState<StudioBeat[]>([]);
+  const [directions, setDirections] = useState<EditDirection[]>([]);
+  const [edl, setEdl] = useState<StudioEdl | null>(null);
+  const [footage, setFootage] = useState<{ url: string; duration: number; name: string } | null>(null);
   const [mobileView, setMobileView] = useState<"chat" | "preview">("chat");
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const generatingRef = useRef(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [renderProgress, setRenderProgress] = useState(0);
+  const [rendering, setRendering] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+  const code = useMemo(() => edl ? compileEdlToRemotion(edl) : "", [edl]);
+  const parsedFiles = useMemo(() => parseMultiFileCode(code), [code]);
+  const detectedConfig = useMemo(() => detectConfig(code), [code]);
 
-  const parsedFiles = useMemo(() => parseMultiFileCode(generatedCode), [generatedCode]);
-  const detectedConfig = useMemo(() => detectConfig(generatedCode), [generatedCode]);
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  const handleGenerate = useCallback(async () => {
-    const prompt = input.trim();
-    if (!prompt || generatingRef.current) return;
-    generatingRef.current = true;
+  const addMessage = useCallback(async (message: StudioMessage, id = projectId) => {
+    setMessages((current) => [...current, message]);
+    if (id) await persistMessage(id, message, messages.length).catch(console.error);
+  }, [messages.length, projectId]);
 
-    const userMsg: Message = { role: "user", content: prompt };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput("");
-    setIsGenerating(true);
+  const ensureProject = async (title: string) => {
+    if (projectId) return projectId;
+    const project = await createStudioProject(mode, title.slice(0, 80) || "Untitled video");
+    setProjectId(project.id);
+    return project.id;
+  };
 
-    let fullResponse = "";
+  const requestDirections = async (goal: string, id: string, analysis: unknown, source?: typeof footage) => {
+    setStage("directions");
+    const result = await callStudioAgent({ action: "directions", mode, message: goal, analysis, footage: source });
+    const next = (result.directions || []).slice(0, 3);
+    setDirections(next);
+    await patchStudioProject(id, { stage: "directions", footage_analysis: analysis });
+    await addMessage({ id: newId(), role: "assistant", kind: "directions", content: result.reply || "Here are three ways I could cut it.", payload: next }, id);
+  };
 
+  const handleUpload = async (file?: File) => {
+    if (!file) return;
+    if (file.type !== "video/mp4") return toast.error("Upload an MP4 video.");
+    if (!file.size || file.size > MAX_VIDEO_BYTES) return toast.error("The MP4 must be between 1 byte and 200MB.");
+    setBusy(true);
     try {
-      // If there's existing code (e.g. loaded template), inject it as context
-      const contextMessages: Message[] = [];
-      if (generatedCode && messages.length === 0) {
-        // First prompt after loading a template — give the AI the current code
-        contextMessages.push({
-          role: "user",
-          content: `Here is my current Remotion code that I want you to edit:\n\n\`\`\`tsx\n${generatedCode}\n\`\`\``,
-        });
-        contextMessages.push({
-          role: "assistant",
-          content: "I can see your current code. What changes would you like me to make?",
-        });
+      const duration = await getVideoDuration(file);
+      if (duration > 60.05) throw new Error("The clip is over 60 seconds. Trim it, then upload again.");
+      const id = await ensureProject(file.name.replace(/\.mp4$/i, ""));
+      setStage("analyzing");
+      await addMessage({ id: newId(), role: "user", kind: "text", content: `Uploaded ${file.name}` }, id);
+      const asset = await uploadFootage(id, file, duration);
+      const source = { url: asset.url, duration, name: file.name };
+      setFootage(source);
+      await patchStudioProject(id, { stage: "analyzing" });
+      const analysis = await callStudioAgent({ action: "analyze", mode, message: input || "Find the strongest short-form story", footage: source });
+      const nextBeats = analysis.beats || [];
+      setBeats(nextBeats);
+      await addMessage({ id: newId(), role: "assistant", kind: "beats", content: analysis.summary || "I watched the clip. These are the useful beats.", payload: nextBeats }, id);
+      await requestDirections(input || "Find the strongest short-form story", id, analysis, source);
+      setInput("");
+    } catch (error) { toast.error((error as Error).message); setStage("error"); }
+    finally { setBusy(false); }
+  };
+
+  const handleIdea = async () => {
+    const text = input.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    try {
+      const id = await ensureProject(text);
+      await addMessage({ id: newId(), role: "user", kind: "text", content: text }, id);
+      setInput("");
+      if (edl) {
+        const result = await callStudioAgent({ action: "update", mode, message: text, edl });
+        const nextEdl = normalizeEdl(result.edl || edl);
+        setEdl(nextEdl);
+        await patchStudioProject(id, { edl: nextEdl, revision: nextEdl.revision, stage: "ready" });
+        await addMessage({ id: newId(), role: "assistant", kind: "text", content: result.reply || "Done — the preview is updated." }, id);
+      } else {
+        await requestDirections(text, id, null);
       }
+    } catch (error) { toast.error((error as Error).message); await addMessage({ id: newId(), role: "assistant", kind: "error", content: (error as Error).message }); }
+    finally { setBusy(false); }
+  };
 
-      const resp = await fetch(GENERATE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ messages: [...contextMessages, ...newMessages] }),
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Generation failed" }));
-        throw new Error(err.error || `HTTP ${resp.status}`);
+  const approveDirection = async (direction: EditDirection) => {
+    if (!projectId || busy) return;
+    setBusy(true);
+    setStage("building");
+    try {
+      await addMessage({ id: newId(), role: "user", kind: "approval", content: `Use “${direction.title}”` });
+      await patchStudioProject(projectId, { stage: "approved", selected_direction: direction });
+      const result = await callStudioAgent({ action: "build", mode, message: input, direction, footage });
+      let imageUrls: string[] = [];
+      if (!footage && result.imagePrompts?.length) {
+        const images = await Promise.allSettled(result.imagePrompts.slice(0, 5).map((prompt) => generateStudioImage(projectId, prompt)));
+        imageUrls = images.flatMap((image) => image.status === "fulfilled" ? [image.value.url] : []);
       }
+      let nextEdl = footage ? createFootageEdl(direction.title, footage.url, footage.duration, direction) : createIdeaEdl(direction.title, direction, imageUrls);
+      const narration = result.script?.turns?.map((turn) => turn.text).join(" ") || direction.structure.join(" ");
+      try {
+        const voice = await generateVoice(projectId, narration, mode === "need_footage" ? "alloy" : "nova");
+        nextEdl = { ...nextEdl, audio: [{ id: "narration", start: 0, end: nextEdl.duration, url: voice.url, volume: 1, label: "Narration" }] };
+      } catch (voiceError) { toast.warning("The visual edit is ready; voice generation was unavailable."); console.error(voiceError); }
+      setEdl(nextEdl);
+      setStage("ready");
+      setDirections([]);
+      await patchStudioProject(projectId, { stage: "ready", selected_direction: direction, script: result.script || null, edl: nextEdl, revision: nextEdl.revision });
+      await addMessage({ id: newId(), role: "assistant", kind: "text", content: result.reply || "The first cut is ready. Tell me what you want changed." });
+      setMobileView("preview");
+    } catch (error) { toast.error((error as Error).message); setStage("error"); }
+    finally { setBusy(false); }
+  };
 
-      if (!resp.body) throw new Error("No response body");
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx: number;
-        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIdx);
-          buffer = buffer.slice(newlineIdx + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullResponse += content;
-              // Update assistant message progressively
-              setMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === "assistant") {
-                  return prev.map((m, i) =>
-                    i === prev.length - 1 ? { ...m, content: fullResponse } : m
-                  );
-                }
-                return [...prev, { role: "assistant", content: fullResponse }];
-              });
-            }
-          } catch {
-            // partial JSON, wait for more data
-          }
+  const handleRender = async () => {
+    if (!edl || rendering) return;
+    setRendering(true); setRenderProgress(0); setDownloadUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("render-video", { body: { code, format: "tiktok", durationInSeconds: edl.duration, fps: edl.fps, debug: true } });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Could not start the render.");
+      await patchStudioProject(projectId || "", { stage: "rendering" });
+      setStage("rendering");
+      pollRef.current = setInterval(async () => {
+        const result = await supabase.functions.invoke("check-render-progress", { body: { renderId: data.renderId, bucketName: data.bucketName } });
+        const progress = result.data;
+        if (result.error || progress?.error) return;
+        if (progress?.fatalErrorEncountered || progress?.fatal) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null; setRendering(false); setStage("error");
+          toast.error(progress.errors?.[0]?.message || "The render failed.");
+          return;
         }
-      }
-
-      // Set the generated code for preview
-      const code = cleanCodeFromResponse(fullResponse);
-      if (code) {
-        setGeneratedCode(code);
-        toast.success("Video generated! Check the preview.");
-      }
-    } catch (err: any) {
-      console.error("Generation error:", err);
-      toast.error(err.message || "Failed to generate video");
-    } finally {
-      setIsGenerating(false);
-      generatingRef.current = false;
-    }
-  }, [input, messages]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleGenerate();
-    }
+        setRenderProgress(Math.round((progress?.overallProgress || 0) * 100));
+        if (progress?.done && progress?.outputFile) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null; setRendering(false); setStage("complete"); setRenderProgress(100); setDownloadUrl(progress.outputFile);
+          await patchStudioProject(projectId || "", { stage: "complete" });
+          const db = supabase as any;
+          await db.from("studio_assets").insert({ project_id: projectId, kind: "render", title: edl.title, url: progress.outputFile, mime_type: "video/mp4", duration_seconds: edl.duration });
+          await db.from("saved_renders").insert({ title: edl.title, url: progress.outputFile, mode: "video", notes: "Created in AI Studio · TikTok 9:16" });
+          toast.success("Your MP4 is ready.");
+        }
+      }, 10000);
+    } catch (error) { setRendering(false); toast.error((error as Error).message); }
   };
 
-  const handleReset = () => {
-    setMessages([]);
-    setGeneratedCode("");
-    setInput("");
-  };
-
-  return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-border bg-card/30">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            to="/"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back</span>
-          </Link>
-          <div className="w-px h-5 bg-border" />
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-foreground">AI Studio</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          {/* Mobile view toggle */}
-          {isMobile && generatedCode && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileView(mobileView === "chat" ? "preview" : "chat")}
-              className="text-xs gap-1.5"
-            >
-              {mobileView === "chat" ? <Eye className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-              {mobileView === "chat" ? "Preview" : "Chat"}
-            </Button>
-          )}
-          {generatedCode && !isMobile && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCode(!showCode)}
-              className="text-xs gap-1.5"
-            >
-              {showCode ? <Eye className="w-3.5 h-3.5" /> : <Code2 className="w-3.5 h-3.5" />}
-              {showCode ? "Preview" : "View Code"}
-            </Button>
-          )}
-          <TemplateBrowser onSelect={(c) => { setGeneratedCode(c); toast.success("Template loaded!"); }} />
-          <SaveTemplateDialog code={generatedCode} />
-          <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs gap-1.5">
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reset</span>
-          </Button>
-        </div>
+  const reset = () => { setProjectId(null); setMessages([]); setStage("start"); setDirections([]); setBeats([]); setEdl(null); setFootage(null); setInput(""); setDownloadUrl(null); setRenderProgress(0); };
+  const renderMessage = (message: StudioMessage) => (
+    <div key={message.id} className={message.role === "user" ? "flex justify-end" : "flex justify-start"}>
+      <div className={message.role === "user" ? "max-w-[86%] rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" : "max-w-[94%] text-sm text-foreground"}>
+        {message.role !== "user" && <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Sparkles className="h-3 w-3" /> Editor</div>}
+        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+        {message.kind === "beats" && beats.length > 0 && <div className="mt-3 divide-y divide-border border-y border-border">{beats.map((beat) => <div key={`${beat.start}-${beat.label}`} className="grid grid-cols-[48px_1fr] gap-3 py-3"><span className="font-mono text-xs text-primary">{beat.start.toFixed(1)}s</span><div><p className="font-medium">{beat.label}</p><p className="mt-0.5 text-xs text-muted-foreground">{beat.detail}</p><p className="mt-1 text-xs text-foreground">Edit: {beat.opportunity}</p></div></div>)}</div>}
+        {message.kind === "directions" && directions.length > 0 && <div className="mt-3 space-y-2">{directions.map((direction, index) => <button key={direction.id} onClick={() => approveDirection(direction)} disabled={busy} className="w-full rounded-md border border-border bg-card p-3 text-left transition-colors hover:border-primary/60 hover:bg-muted"><div className="flex gap-3"><span className="font-mono text-xs text-muted-foreground">0{index + 1}</span><div><p className="font-medium">{direction.title}</p><p className="mt-1 text-xs text-muted-foreground">“{direction.hook}”</p><p className="mt-2 text-xs leading-relaxed">{direction.angle}</p></div></div></button>)}</div>}
       </div>
-
-      {/* Main content */}
-      <div className="flex-1 overflow-hidden">
-        {isMobile ? (
-          // Mobile: show chat or preview based on toggle
-          mobileView === "chat" ? (
-            <div className="flex flex-col h-full">
-              <ScrollArea className="flex-1 p-4">
-                <div ref={scrollRef} className="space-y-4">
-                  {messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center px-4">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-primary flex items-center justify-center mb-3 animate-float">
-                        <Sparkles className="w-6 h-6 text-primary-foreground" />
-                      </div>
-                      <h3 className="text-base font-semibold text-foreground mb-2">Describe your video</h3>
-                      <p className="text-sm text-muted-foreground max-w-sm">
-                        Tell me what kind of animation or video you want to create.
-                      </p>
-                      <div className="mt-4 space-y-2 w-full max-w-sm">
-                        {[
-                          "A modern logo reveal with particles",
-                          "Animated bar chart showing monthly sales",
-                          "Cinematic text intro with fade and scale",
-                        ].map((suggestion) => (
-                          <button
-                            key={suggestion}
-                            onClick={() => setInput(suggestion)}
-                            className="w-full text-left text-xs px-3 py-2 rounded-lg border border-border bg-card/50 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-                          >
-                            "{suggestion}"
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground"}`}>
-                        {msg.role === "user" ? msg.content : (
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-                            <span className="text-muted-foreground">{isGenerating ? "Generating..." : "Video code generated ✓"}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              <div className="p-3 border-t border-border bg-card/30">
-                <div className="flex gap-2">
-                  <Textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={messages.length > 0 ? "Describe changes..." : "Describe the video you want to create..."}
-                    className="min-h-[44px] max-h-[100px] resize-none text-sm bg-background"
-                    disabled={isGenerating}
-                  />
-                  <Button onClick={handleGenerate} disabled={!input.trim() || isGenerating} size="icon" className="shrink-0 h-[44px] w-[44px]">
-                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={null} />
-          )
-        ) : (
-          // Desktop: resizable panels
-          <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={40} minSize={25}>
-              <div className="flex flex-col h-full">
-                <ScrollArea className="flex-1 p-4">
-                  <div ref={scrollRef} className="space-y-4">
-                    {messages.length === 0 && (
-                      <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center px-6">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-primary flex items-center justify-center mb-4 animate-float">
-                          <Sparkles className="w-7 h-7 text-primary-foreground" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground mb-2">Describe your video</h3>
-                        <p className="text-sm text-muted-foreground max-w-sm">
-                          Tell me what kind of animation or video you want to create. I'll generate Remotion code and show you a live preview.
-                        </p>
-                        <div className="mt-6 space-y-2 w-full max-w-sm">
-                          {[
-                            "A modern logo reveal with particles",
-                            "Animated bar chart showing monthly sales",
-                            "Cinematic text intro with fade and scale",
-                          ].map((suggestion) => (
-                            <button
-                              key={suggestion}
-                              onClick={() => setInput(suggestion)}
-                              className="w-full text-left text-xs px-3 py-2 rounded-lg border border-border bg-card/50 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-                            >
-                              "{suggestion}"
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {messages.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground"}`}>
-                          {msg.role === "user" ? msg.content : (
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-                              <span className="text-muted-foreground">{isGenerating ? "Generating..." : "Video code generated ✓"}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-                <div className="p-4 border-t border-border bg-card/30">
-                  <div className="flex gap-2">
-                    <Textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={messages.length > 0 ? "Describe changes... (e.g. 'make it faster', 'add a subtitle')" : "Describe the video you want to create..."}
-                      className="min-h-[44px] max-h-[120px] resize-none text-sm bg-background"
-                      disabled={isGenerating}
-                    />
-                    <Button onClick={handleGenerate} disabled={!input.trim() || isGenerating} size="icon" className="shrink-0 h-[44px] w-[44px]">
-                      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={60} minSize={30}>
-              {showCode ? (
-                <div className="h-full flex flex-col">
-                  <div className="flex items-center px-4 py-3 border-b border-border bg-card/50">
-                    <Code2 className="w-4 h-4 text-secondary mr-2" />
-                    <span className="text-sm font-medium text-foreground">Generated Code</span>
-                  </div>
-                  <ScrollArea className="flex-1">
-                    <pre className="p-4 text-xs font-mono text-foreground whitespace-pre-wrap">{generatedCode}</pre>
-                  </ScrollArea>
-                </div>
-              ) : (
-                <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={null} />
-              )}
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        )}
-      </div>
-      <MobileBottomNav />
     </div>
   );
-};
 
+  const chat = <div className="flex h-full min-h-0 flex-col border-r border-border bg-background">
+    <div className="border-b border-border px-4 py-3"><div className="grid grid-cols-2 rounded-md bg-muted p-1"><Button variant={mode === "have_footage" ? "secondary" : "ghost"} size="sm" onClick={() => { if (!projectId) setMode("have_footage"); }} disabled={Boolean(projectId)}><Video className="mr-2 h-4 w-4" />I have footage</Button><Button variant={mode === "need_footage" ? "secondary" : "ghost"} size="sm" onClick={() => { if (!projectId) setMode("need_footage"); }} disabled={Boolean(projectId)}><Sparkles className="mr-2 h-4 w-4" />I need footage</Button></div></div>
+    <ScrollArea className="flex-1"><div className="space-y-5 p-4 pb-8">{messages.length === 0 && <div className="pt-8"><p className="text-xs font-medium uppercase text-muted-foreground">New edit</p><h1 className="mt-3 max-w-sm text-2xl font-semibold leading-tight">{mode === "have_footage" ? "Drop in the clip. I’ll find the story." : "What should we make people stop for?"}</h1><p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">{mode === "have_footage" ? "One MP4, up to 60 seconds. I’ll map the moments, pitch three cuts, then wait for your pick." : "Give me the premise in your own words. I’ll pitch three distinct ways to play it."}</p>{mode === "have_footage" ? <Button className="mt-6" onClick={() => fileRef.current?.click()} disabled={busy}><Upload className="mr-2 h-4 w-4" />Choose MP4</Button> : <div className="mt-6 space-y-2">{starterIdeas.filter((_, index) => index !== 1).map((idea) => <Button key={idea} variant="outline" className="h-auto w-full justify-start whitespace-normal py-3 text-left text-xs" onClick={() => setInput(idea)}>{idea}</Button>)}</div>}</div>}{messages.map(renderMessage)}{busy && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{stage === "analyzing" ? "Watching the clip…" : stage === "building" ? "Building the first cut…" : "Thinking like an editor…"}</div>}</div></ScrollArea>
+    <div className="border-t border-border p-3 pb-16 md:pb-3">{footage && <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Paperclip className="h-3 w-3" /><span className="truncate">{footage.name}</span><span>{footage.duration.toFixed(1)}s</span></div>}<div className="flex items-end gap-2"><Textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); handleIdea(); } }} placeholder={edl ? "Ask for a precise change…" : mode === "have_footage" ? "What should this clip be about?" : "Describe the idea…"} className="min-h-[46px] max-h-32 resize-none bg-card" disabled={busy} /><Button size="icon" className="h-[46px] w-[46px] shrink-0" onClick={handleIdea} disabled={!input.trim() || busy}><Send className="h-4 w-4" /></Button></div></div>
+  </div>;
+
+  const preview = <div className="flex h-full min-h-0 flex-col bg-card/30"><div className="flex items-center justify-between border-b border-border px-4 py-2.5"><div><p className="text-sm font-medium">{edl?.title || "Preview"}</p><p className="text-xs text-muted-foreground">9:16 · 1080×1920 {edl ? `· ${edl.duration.toFixed(1)}s` : ""}</p></div><div className="flex items-center gap-2">{edl && <Button size="sm" onClick={handleRender} disabled={rendering}>{rendering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Film className="mr-2 h-4 w-4" />}Render</Button>}{downloadUrl && <Button size="icon" variant="outline" asChild><a href={downloadUrl} download><Download className="h-4 w-4" /></a></Button>}</div></div>{rendering && <div className="border-b border-border px-4 py-2"><div className="mb-1 flex justify-between text-xs text-muted-foreground"><span>Rendering MP4</span><span>{renderProgress}%</span></div><Progress value={renderProgress} className="h-1" /></div>}<div className="min-h-0 flex-1">{edl ? <RemotionPreview parsedFiles={parsedFiles} detectedConfig={detectedConfig} error={null} /> : <div className="flex h-full items-center justify-center p-8"><div className="aspect-[9/16] h-[min(72vh,680px)] max-h-full rounded-md border border-border bg-background"><div className="flex h-full flex-col items-center justify-center px-8 text-center"><Play className="mb-4 h-8 w-8 text-muted-foreground" /><p className="text-sm font-medium">Your cut will play here</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Pick a direction in chat and the edit appears immediately.</p></div></div></div>}</div></div>;
+
+  return <div className="studio-theme flex h-screen flex-col bg-background font-sans"><header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3"><div className="flex items-center gap-3"><Link to="/" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link><div className="h-4 w-px bg-border" /><span className="text-sm font-semibold">Studio</span>{stage !== "start" && <span className="hidden text-xs capitalize text-muted-foreground sm:inline">{stage}</span>}</div><div className="flex items-center gap-2"><div className="grid grid-cols-2 rounded-md bg-muted p-0.5 md:hidden"><Button size="sm" variant={mobileView === "chat" ? "secondary" : "ghost"} onClick={() => setMobileView("chat")}><MessageSquare className="h-4 w-4" /></Button><Button size="sm" variant={mobileView === "preview" ? "secondary" : "ghost"} onClick={() => setMobileView("preview")}><Play className="h-4 w-4" /></Button></div><Button variant="ghost" size="icon" onClick={reset} title="New project"><RotateCcw className="h-4 w-4" /></Button></div></header><main className="min-h-0 flex-1"><div className="hidden h-full grid-cols-[minmax(340px,42%)_1fr] md:grid">{chat}{preview}</div><div className="h-full md:hidden">{mobileView === "chat" ? chat : preview}</div></main><input ref={fileRef} type="file" accept="video/mp4" className="hidden" onChange={(event) => handleUpload(event.target.files?.[0])} /><MobileBottomNav /></div>;
+};
 export default Studio;
