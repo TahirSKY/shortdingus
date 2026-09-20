@@ -92,6 +92,136 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_assets: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          kind: string
+          metadata: Json | null
+          mime_type: string
+          project_id: string
+          storage_path: string | null
+          title: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          kind: string
+          metadata?: Json | null
+          mime_type: string
+          project_id: string
+          storage_path?: string | null
+          title: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          kind?: string
+          metadata?: Json | null
+          mime_type?: string
+          project_id?: string
+          storage_path?: string | null
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "studio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          payload: Json | null
+          project_id: string
+          role: string
+          sequence: number
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json | null
+          project_id: string
+          role: string
+          sequence: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json | null
+          project_id?: string
+          role?: string
+          sequence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "studio_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_projects: {
+        Row: {
+          created_at: string
+          edl: Json | null
+          footage_analysis: Json | null
+          id: string
+          mode: string
+          revision: number
+          script: Json | null
+          selected_direction: Json | null
+          stage: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edl?: Json | null
+          footage_analysis?: Json | null
+          id?: string
+          mode: string
+          revision?: number
+          script?: Json | null
+          selected_direction?: Json | null
+          stage?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edl?: Json | null
+          footage_analysis?: Json | null
+          id?: string
+          mode?: string
+          revision?: number
+          script?: Json | null
+          selected_direction?: Json | null
+          stage?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
