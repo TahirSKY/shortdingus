@@ -54,3 +54,10 @@ export async function generateVoice(projectId: string, text: string, voice: stri
   await db.from("studio_assets").insert({ project_id: projectId, kind: "voice", title: "Narration", url: data.url, storage_path: data.storagePath, mime_type: data.mimeType });
   return data as { url: string };
 }
+
+export async function generateStudioImage(projectId: string, prompt: string) {
+  const { data, error } = await supabase.functions.invoke("studio-image", { body: { projectId, prompt } });
+  if (error || data?.error) throw new Error(data?.error || error?.message || "Image generation failed.");
+  await db.from("studio_assets").insert({ project_id: projectId, kind: "generated_image", title: prompt.slice(0, 80), url: data.url, storage_path: data.storagePath, mime_type: data.mimeType });
+  return data as { url: string };
+}

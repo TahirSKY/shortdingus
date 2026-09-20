@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseMultiFileCode } from "@/lib/code-parser";
 import { detectConfig } from "@/lib/detect-config";
 import { toast } from "sonner";
-import { callStudioAgent, createStudioProject, generateVoice, getVideoDuration, newId, patchStudioProject, persistMessage, uploadFootage } from "@/features/studio/api";
+import { callStudioAgent, createStudioProject, generateStudioImage, generateVoice, getVideoDuration, newId, patchStudioProject, persistMessage, uploadFootage } from "@/features/studio/api";
 import { compileEdlToRemotion } from "@/features/studio/compile-edl";
 import { createFootageEdl, createIdeaEdl, normalizeEdl } from "@/features/studio/edl";
 import type { EditDirection, StudioBeat, StudioEdl, StudioMessage, StudioMode, StudioStage } from "@/features/studio/types";
@@ -118,7 +118,12 @@ const Studio = () => {
       await addMessage({ id: newId(), role: "user", kind: "approval", content: `Use “${direction.title}”` });
       await patchStudioProject(projectId, { stage: "approved", selected_direction: direction });
       const result = await callStudioAgent({ action: "build", mode, message: input, direction, footage });
-      let nextEdl = footage ? createFootageEdl(direction.title, footage.url, footage.duration, direction) : createIdeaEdl(direction.title, direction);
+      let imageUrls: string[] = [];
+      if (!footage && result.imagePrompts?.length) {
+        const images = await Promise.allSettled(result.imagePrompts.slice(0, 5).map((prompt) => generateStudioImage(projectId, prompt)));
+        imageUrls = images.flatMap((image) => image.status === "fulfilled" ? [image.value.url] : []);
+      }
+      let nextEdl = footage ? createFootageEdl(direction.title, footage.url, footage.duration, direction) : createIdeaEdl(direction.title, direction, imageUrls);
       const narration = result.script?.turns?.map((turn) => turn.text).join(" ") || direction.structure.join(" ");
       try {
         const voice = await generateVoice(projectId, narration, mode === "need_footage" ? "alloy" : "nova");
