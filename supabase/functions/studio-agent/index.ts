@@ -14,7 +14,7 @@ function extractJson(text: string) {
   return JSON.parse(candidate);
 }
 
-async function askAgent(prompt: string, signal: AbortSignal) {
+async function askAgent(prompt: string, signal: AbortSignal, videoUrl?: string) {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("AI is not configured for this workspace.");
   const response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
@@ -30,7 +30,7 @@ async function askAgent(prompt: string, signal: AbortSignal) {
       stream: true,
       store: false,
       reasoning: { effort: "low", summary: "auto" },
-      input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+      input: [{ role: "user", content: [...(videoUrl ? [{ type: "input_video", video_url: videoUrl }] : []), { type: "input_text", text: prompt }] }],
     }),
   });
   if (!response.ok) {
@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     } else {
       task = `Apply the user's edit request narrowly to the current EDL. Request: ${goal}. Current EDL: ${JSON.stringify(currentEdl)}. Return {"reply":string,"edl":the full updated EDL}. Preserve every unrelated field. Increment revision by exactly one. Common requests: caption size, hook text, overlay timing, zoom, pacing, duration.`;
     }
-    const text = await askAgent(`${shared}\n${task}`, req.signal);
+    const text = await askAgent(`${shared}\n${task}`, req.signal, action === "analyze" ? footage?.url : undefined);
     return json(extractJson(text));
   } catch (error) {
     if ((error as Error).name === "AbortError") return json({ error: "Request cancelled." }, 499);
