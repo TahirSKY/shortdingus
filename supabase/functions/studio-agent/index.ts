@@ -11,6 +11,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 function extractJson(text: string) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
   const candidate = fenced || text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
+  if (!candidate) throw new Error("The editor returned an empty response. Please try again.");
   return JSON.parse(candidate);
 }
 
@@ -30,6 +31,7 @@ async function askAgent(prompt: string, signal: AbortSignal, videoUrl?: string) 
       stream: true,
       store: false,
       reasoning: { effort: "low", summary: "auto" },
+      text: { format: { type: "json_object" } },
       input: [{ role: "user", content: [...(videoUrl ? [{ type: "input_video", video_url: videoUrl }] : []), { type: "input_text", text: prompt }] }],
     }),
   });
@@ -59,6 +61,17 @@ async function askAgent(prompt: string, signal: AbortSignal, videoUrl?: string) 
       } catch { /* wait for the next event */ }
     }
   }
+  buffer += decoder.decode();
+  if (buffer.startsWith("data: ")) {
+    const raw = buffer.slice(6).trim();
+    if (raw && raw !== "[DONE]") {
+      try {
+        const event = JSON.parse(raw);
+        if (event.type === "response.output_text.delta") output += event.delta || "";
+      } catch { /* terminal SSE fragments are ignored */ }
+    }
+  }
+  if (!output.trim()) throw new Error("The editor returned an empty response. Please try again.");
   return output;
 }
 
