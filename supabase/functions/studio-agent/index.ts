@@ -87,14 +87,44 @@ Deno.serve(async (req) => {
     const currentEdl = body.edl || null;
     const footage = body.footage || null;
 
-    const shared = `You are a decisive short-form video editor. Build a different structure for each idea. The output must be JSON only, without markdown. The canvas is always 9:16, 30fps, maximum 60 seconds. Never mention code or templates.`;
+    const shared = `You are a decisive short-form video editor for viral TikTok/Reels. Build a different structure for each idea. The output must be JSON only, without markdown. The canvas is always 9:16, 30fps, maximum 60 seconds. Never mention code or templates. Visual storytelling is critical - every scene must have a clear visual, not just text.`;
+
     let task = "";
     if (action === "analyze") {
-      task = `Analyze this uploaded clip from the supplied metadata and editorial goal. Metadata: ${JSON.stringify(footage)}. Goal: ${goal}. Return {"summary":string,"beats":[{"start":number,"end":number,"label":string,"detail":string,"opportunity":string}]}. Use plausible timecoded beats spanning the real duration; describe only what can be supported by the provided metadata and goal.`;
+      task = `Analyze this uploaded clip from metadata and goal. Metadata: ${JSON.stringify(footage)}. Goal: ${goal}. Return {"summary":string,"beats":[{"start":number,"end":number,"label":string,"detail":string,"opportunity":string}]}. Use plausible timecoded beats spanning real duration. Focus on moments for cuts, zooms, emotional beats.`;
     } else if (action === "directions") {
-      task = `Mode: ${mode}. User idea: ${goal}. Footage understanding: ${JSON.stringify(analysis)}. Return {"reply":string,"directions":[exactly three {"id":string,"title":string,"hook":string,"angle":string,"structure":[3 to 7 concise spoken or caption lines]}]}. Make the three concepts meaningfully different.`;
+      task = `Mode: ${mode}. User idea: ${goal}. Footage understanding: ${JSON.stringify(analysis)}. 
+Return {"reply":string,"directions":[exactly three {"id":string,"title":string,"hook":string,"angle":string,"structure":[5 to 7 concise spoken lines, each under 12 words, punchy, viral style]}]}. 
+Make the three concepts MEANINGFULLY different in angle and structure. 
+If idea contains "intern vs CEO" or "loans" or "money" or "psychology": make them corporate horror-comedy, dark humor, showing how normal financial things are ridiculous. Intern is curious/concerned, CEO is smug/laughing.
+If idea contains "dog" or "reactive" or "threshold": make them owner-to-owner empathetic, one insight per video, like "If he won't take a treat, you're too close".
+Hooks must be scroll-stoppers in first 2 seconds.`;
     } else if (action === "build") {
-      task = `Approved direction: ${JSON.stringify(direction)}. User context: ${goal}. Return {"reply":string,"script":{"title":string,"turns":[{"speaker":string,"text":string,"start":number,"end":number}]},"imagePrompts":[up to 5 strings]}. Keep a footage-based script within ${Number(footage?.duration || 30)} seconds; otherwise target 30 seconds. For footage-based edits, imagePrompts should usually be empty.`;
+      // ENHANCED: Force detailed image prompts with consistent characters for intern vs CEO
+      const isInternCEO = JSON.stringify(direction).toLowerCase().includes("intern") || JSON.stringify(direction).toLowerCase().includes("ceo") || goal.toLowerCase().includes("intern") || goal.toLowerCase().includes("ceo") || goal.toLowerCase().includes("loan");
+      
+      const imagePromptInstructions = isInternCEO ? `
+For imagePrompts, create 5 DETAILED anime-style prompts with CONSISTENT CHARACTERS:
+- Character 1: Young intern, early 20s, nervous, wearing casual office shirt, expressive worried eyes, short dark hair
+- Character 2: Smug CEO, 40s, expensive suit, slicked back hair, condescending smile, expensive watch
+- Style: Anime, flat color illustration, bold lines, studio lighting, office background, 9:16 vertical, highly detailed, viral thumbnail aesthetic, no text, no logos
+- Each prompt must be a different scene/moment from the script, with specific action and emotion
+- Example: "Anime style, young nervous intern holding paycheck looking confused in modern office, CEO in expensive suit smirking in background, dramatic lighting, flat colors, bold lines, 9:16 vertical, no text"
+- Keep characters consistent across all 5 images - same faces, same clothes
+` : `
+For imagePrompts, create 5 DETAILED cinematic prompts for the story:
+- Style: Cinematic, photorealistic or illustrative depending on topic, 9:16 vertical, highly detailed, emotional, no text, no logos
+- Each prompt must be a different scene/moment, with specific action, lighting, and composition
+- If dog-related: show real dogs, body language, distance, treats, owner perspective
+- Make them visually distinct and story-driven
+`;
+
+      task = `Approved direction: ${JSON.stringify(direction)}. User context: ${goal}. 
+Return {"reply":string,"script":{"title":string,"turns":[{"speaker":string,"text":string,"start":number,"end":number}]},"imagePrompts":[up to 5 detailed visual prompts]}. 
+${imagePromptInstructions}
+Keep footage-based script within ${Number(footage?.duration || 30)} seconds; otherwise target 30 seconds. For footage-based edits, imagePrompts should be empty.
+Script turns: For intern vs CEO, use 2 speakers: "intern" and "CEO", with alternating dialogue, punchy, dark humor. For dog content, single narrator, empathetic owner-to-owner voice.
+Each turn should be under 15 words, timed to fit 30s total.`;
     } else {
       task = `Apply the user's edit request narrowly to the current EDL. Request: ${goal}. Current EDL: ${JSON.stringify(currentEdl)}. Return {"reply":string,"edl":the full updated EDL}. Preserve every unrelated field. Increment revision by exactly one. Common requests: caption size, hook text, overlay timing, zoom, pacing, duration.`;
     }

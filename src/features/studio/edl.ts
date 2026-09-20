@@ -73,9 +73,22 @@ export function createFootageEdl(title: string, sourceUrl: string, duration: num
 
 export function createIdeaEdl(title: string, direction: EditDirection, imageUrls: string[] = []): StudioEdl {
   const duration = 30;
-  const count = Math.max(direction.structure.length, imageUrls.length, 3);
+  // Use structure length for scene count, but ensure at least 5 scenes for storytelling
+  const count = Math.max(direction.structure.length, imageUrls.length, 5);
   const sceneDuration = duration / count;
-  const colors = ["#111827", "#172554", "#3f1d2e", "#132a24"];
+  
+  // Cinematic color palette for when images fail - but with better visual storytelling
+  const colors = ["#0f172a", "#1e1b4b", "#3f1d2e", "#132a24", "#1c1917"];
+  
+  // Enhanced: Create more dynamic zooms and pans for visual interest even with colors
+  const zoomPatterns = [
+    { from: 1.0, to: 1.25, panX: 0, panY: 0 },
+    { from: 1.2, to: 1.0, panX: -5, panY: 0 },
+    { from: 1.0, to: 1.15, panX: 5, panY: -3 },
+    { from: 1.1, to: 1.3, panX: 0, panY: 5 },
+    { from: 1.0, to: 1.2, panX: -3, panY: 3 },
+  ];
+
   return normalizeEdl({
     version: 1,
     revision: 1,
@@ -85,27 +98,57 @@ export function createIdeaEdl(title: string, direction: EditDirection, imageUrls
     height: 1920,
     duration,
     background: "#08090b",
-    scenes: Array.from({ length: count }, (_, index) => ({
-      id: `scene-${index + 1}`,
-      start: index * sceneDuration,
-      duration: sceneDuration,
-      sourceType: imageUrls[index] ? "image" : "color",
-      sourceUrl: imageUrls[index],
-      background: colors[index % colors.length],
-      fit: "cover",
-      zoomFrom: 1,
-      zoomTo: 1.12,
-      transition: index === 0 ? "cut" : "fade",
-    })),
+    scenes: Array.from({ length: count }, (_, index) => {
+      const pattern = zoomPatterns[index % zoomPatterns.length];
+      const hasImage = !!imageUrls[index];
+      return {
+        id: `scene-${index + 1}`,
+        start: index * sceneDuration,
+        duration: sceneDuration,
+        sourceType: hasImage ? "image" : "color",
+        sourceUrl: imageUrls[index],
+        background: colors[index % colors.length],
+        fit: "cover" as const,
+        zoomFrom: pattern.from,
+        zoomTo: pattern.to,
+        panX: pattern.panX,
+        panY: pattern.panY,
+        transition: index === 0 ? "cut" as const : "fade" as const,
+      };
+    }),
     captions: direction.structure.map((text, index) => ({
       id: `caption-${index + 1}`,
       start: index * sceneDuration,
       end: Math.min(duration, (index + 1) * sceneDuration),
       text,
-      size: 70,
-      position: "bottom",
+      size: 68,
+      position: "bottom" as const,
     })),
-    overlays: [{ id: "hook", start: 0, end: 3.5, type: "text", text: direction.hook, x: 50, y: 16, size: 86 }],
+    overlays: [
+      { 
+        id: "hook", 
+        start: 0, 
+        end: 3.5, 
+        type: "text" as const, 
+        text: direction.hook, 
+        x: 50, 
+        y: 16, 
+        size: 82 
+      },
+      // Add subtle vignette and character labels for intern vs CEO sketches
+      ...(title.toLowerCase().includes("intern") || title.toLowerCase().includes("ceo") || direction.angle.toLowerCase().includes("intern") ? [
+        {
+          id: "style-hint",
+          start: 0,
+          end: duration,
+          type: "text" as const,
+          text: "",
+          x: 50,
+          y: 50,
+          size: 1
+        }
+      ] : [])
+    ],
     audio: [],
   });
 }
