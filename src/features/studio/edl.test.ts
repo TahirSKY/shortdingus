@@ -13,6 +13,6 @@ describe("Studio EDL", () => {
     const code = compileEdlToRemotion(createIdeaEdl("Test", direction));
     expect(code).toContain('durationInFrames\": 900');
     expect(code).toContain("OffthreadVideo");
-    expect(code).toContain("numberOfSharedAudioTags").not.toBeTruthy();
+    expect(code).not.toContain("numberOfSharedAudioTags");
   });
 });
