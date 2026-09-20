@@ -159,7 +159,7 @@ const Studio = () => {
           await patchStudioProject(projectId || "", { stage: "complete" });
           const db = supabase as any;
           await db.from("studio_assets").insert({ project_id: projectId, kind: "render", title: edl.title, url: progress.outputFile, mime_type: "video/mp4", duration_seconds: edl.duration });
-          await db.from("saved_renders").insert({ name: edl.title, url: progress.outputFile, mode: "video", format: "tiktok" });
+          await db.from("saved_renders").insert({ title: edl.title, url: progress.outputFile, mode: "video", notes: "Created in AI Studio · TikTok 9:16" });
           toast.success("Your MP4 is ready.");
         }
       }, 10000);
