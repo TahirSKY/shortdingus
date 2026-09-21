@@ -14,6 +14,7 @@ import AgentStudio from "./pages/AgentStudio";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import ImageLibrary from "./pages/ImageLibrary";
+import VoiceStudio from "./pages/VoiceStudio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,8 @@ const App = () => (
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/images" element={<ImageLibrary />} />
+          <Route path="/voice-studio" element={<VoiceStudio />} />
+          <Route path="/voice" element={<VoiceStudio />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -47,6 +47,9 @@ const Index = () => {
           <Link to="/agent-studio" className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors hidden sm:inline border border-primary/20 px-3 py-1 rounded-full">
             Agent Studio ✨
           </Link>
+          <Link to="/voice-studio" className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors hidden sm:inline border border-green-500/30 px-3 py-1 rounded-full bg-green-500/10">
+            Voice Studio 🎙️
+          </Link>
           <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90 transition-opacity border-0 text-xs sm:text-sm">
             <Link to="/playground">Open Playground</Link>
           </Button>
