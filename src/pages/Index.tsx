@@ -41,6 +41,9 @@ const Index = () => {
           <Link to="/studio" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">
             AI Studio
           </Link>
+          <Link to="/agent-studio" className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors hidden sm:inline border border-primary/20 px-3 py-1 rounded-full">
+            Agent Studio ✨
+          </Link>
           <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90 transition-opacity border-0 text-xs sm:text-sm">
             <Link to="/playground">Open Playground</Link>
           </Button>
@@ -80,6 +83,11 @@ const Index = () => {
             <Button asChild size="lg" className="bg-gradient-primary hover:opacity-90 transition-opacity border-0 text-base px-8 glow-primary">
               <Link to="/playground">
                 Try it now <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="text-base border-primary/30">
+              <Link to="/agent-studio">
+                <Sparkles className="w-4 h-4 mr-2" /> Agent Studio - New
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="text-base">
