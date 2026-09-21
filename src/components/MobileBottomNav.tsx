@@ -1,5 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
-import { Wand2, Sparkles, ImageIcon, Film, Zap, Folder } from "lucide-react";
+import { Wand2, Sparkles, ImageIcon, Film, Zap, Folder, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { to: "/studio", label: "Studio", icon: Wand2 },
   { to: "/playground", label: "Play", icon: Sparkles },
   { to: "/renders", label: "Renders", icon: Film },
+  { to: "/voice-studio", label: "Voice", icon: Mic },
 ];
 
 const MobileBottomNav = () => {
