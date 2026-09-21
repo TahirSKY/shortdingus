@@ -32,6 +32,9 @@ const Index = () => {
           <span className="text-base sm:text-lg font-bold text-foreground">Remotion Playground</span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
+          <Link to="/projects" className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors hidden sm:inline border border-primary/30 px-3 py-1 rounded-full bg-primary/10">
+            Projects 📁
+          </Link>
           <Link to="/examples" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline">
             Examples
           </Link>

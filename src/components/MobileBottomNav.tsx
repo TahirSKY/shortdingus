@@ -1,8 +1,9 @@
 import { useLocation, Link } from "react-router-dom";
-import { Wand2, Sparkles, ImageIcon, Film, Zap } from "lucide-react";
+import { Wand2, Sparkles, ImageIcon, Film, Zap, Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  { to: "/projects", label: "Projects", icon: Folder },
   { to: "/agent-studio", label: "Agent", icon: Zap },
   { to: "/studio", label: "Studio", icon: Wand2 },
   { to: "/playground", label: "Play", icon: Sparkles },

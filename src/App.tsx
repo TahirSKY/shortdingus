@@ -11,6 +11,8 @@ import RenderResult from "./pages/RenderResult";
 import RendersLibrary from "./pages/RendersLibrary";
 import Studio from "./pages/Studio";
 import AgentStudio from "./pages/AgentStudio";
+import Projects from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
 import ImageLibrary from "./pages/ImageLibrary";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +33,8 @@ const App = () => (
           <Route path="/renders" element={<RendersLibrary />} />
           <Route path="/studio" element={<Studio />} />
           <Route path="/agent-studio" element={<AgentStudio />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/images" element={<ImageLibrary />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
