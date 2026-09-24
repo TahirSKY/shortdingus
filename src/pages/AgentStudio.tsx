@@ -145,7 +145,8 @@ export default function Video() {
           <span className="text-sm font-semibold">Agent Studio</span>
           <Badge variant="secondary" className="text-xs">Feeds Playground</Badge>
         </div>
-        <Link to="/playground"><Button size="sm" variant="outline"><Play className="mr-2 h-4 w-4" />Open Playground</Button></Link>
+          <Link to="/playground"><Button size="sm" variant="outline"><Play className="mr-2 h-4 w-4" />Open Playground</Button></Link>
+          <Link to="/video-analyzer.html"><Button size="sm" variant="outline"><Zap className="mr-2 h-4 w-4" />Video Analyzer</Button></Link>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-[42%_1fr] h-[calc(100vh-48px)]">
