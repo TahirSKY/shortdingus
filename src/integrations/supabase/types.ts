@@ -222,6 +222,48 @@ export type Database = {
         }
         Relationships: []
       }
+      video_analyses: {
+        Row: {
+          beats: Json
+          created_at: string
+          duration_seconds: number
+          error_message: string | null
+          id: string
+          mime_type: string
+          status: string
+          storage_path: string
+          summary: string | null
+          updated_at: string
+          video_name: string
+        }
+        Insert: {
+          beats?: Json
+          created_at?: string
+          duration_seconds?: number
+          error_message?: string | null
+          id?: string
+          mime_type: string
+          status?: string
+          storage_path: string
+          summary?: string | null
+          updated_at?: string
+          video_name: string
+        }
+        Update: {
+          beats?: Json
+          created_at?: string
+          duration_seconds?: number
+          error_message?: string | null
+          id?: string
+          mime_type?: string
+          status?: string
+          storage_path?: string
+          summary?: string | null
+          updated_at?: string
+          video_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
