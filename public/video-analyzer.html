@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Brainbank Video Analyzer — Gemini 1.5 Video Understanding</title>
+<title>Brainbank Video Analyzer — Gemini Video Understanding</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -87,31 +87,28 @@
 </nav>
 
 <header>
-  <h1><em>Gemini 1.5</em> understands your footage — timecoded beats, scenes, emotion shifts — saved for when you ask me to edit.</h1>
+  <h1><em>Gemini</em> understands your footage — timecoded beats, scenes, emotion shifts — saved for when you ask me to edit.</h1>
   <p class="sub">Upload your video clip → Gemini watches with vision → get timecoded scene breakdown (0:03 dog enters, 0:12 voice builds, 0:23 emotion shift). Then when you say <strong>"make a hook at 0:12"</strong>, I know exactly what footage to use.</p>
-  <div class="badges"><div class="badge">$0 with Gemini Flash</div><div class="badge green">Video input supported</div><div class="badge">Saves to workspace + Supabase</div></div>
+  <div class="badges"><div class="badge">Powered by Lovable AI</div><div class="badge green">Video input supported</div><div class="badge">Private video · saved analysis</div></div>
 </header>
 
 <main>
   <div class="two">
     <div class="card">
       <h3>Analyze Video</h3>
-      <div class="tag">Video understanding — Google Gemini 1.5 Pro / Flash</div>
+      <div class="tag">Real video understanding — Gemini</div>
 
       <div style="margin-top:12px;">
   <input type="text" id="videoName" placeholder="Video name (e.g., mascot-office-1)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #222;background:#0a0a0b;color:#fff;font-family:Inter,sans-serif;font-size:13px;outline:none;" />
 </div>
-<div class="secret-row" id="keyRow">
-        <input type="password" id="geminiKey" placeholder="Paste key here (e.g., AQ... ) — I'll save it when you click below" />
-        <button onclick="saveKey()">Save Key</button>
-        <button onclick="clearKey()" style="background:#333;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;">Clear</button>
-      </div>
-      <p style="font-size:11px;color:#777;margin-top:6px;font-family:'JetBrains Mono',monospace;">Your key: <strong id="keyDisplay" style="color:#777;">Not saved (click Save above)</strong>. Never sent to server except Google's API.</p>
-
-      <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileIn').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');handleDrop(event)">
+<div style="margin-top:12px;">
+  <label for="videoName" style="display:block;font-size:11px;color:#777;margin-bottom:6px;">VIDEO NAME</label>
+  <input type="text" id="videoName" placeholder="e.g. mascot-office-1" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #222;background:#0a0a0b;color:#fff;font-family:Inter,sans-serif;font-size:13px;outline:none;" />
+</div>
+<div class="upload-zone" id="dropZone">
         <div class="icon">🎬</div>
-        <p><strong>Click or drag MP4 / MOV / WebM</strong><br>Max 60 seconds (V1 limit) · Under 50MB</p>
-        <input type="file" id="fileIn" accept="video/*" onchange="handleFile(this.files[0])" />
+        <p><strong>Click or drag MP4 / MOV / WebM</strong><br>Max 60 seconds (V1 limit) · Under 200MB</p>
+        <input type="file" id="fileIn" accept="video/*" />
       </div>
 
       <div id="filePreview" style="display:none;" class="file-preview">
@@ -122,9 +119,7 @@
         </div>
       </div>
 
-      <button class="btn-primary" id="uploadSupabaseBtn" onclick="uploadVideoToSupabase()" disabled>📤 Upload Video to Supabase (Real)</button>
-<div id="supabaseResult" style="margin-top:10px;font-size:12px;color:#00ff9d;font-family:monospace;word-break:break-all;"></div>
-<button class="btn-primary" id="analyzeBtn" onclick="runRealAnalysis()" disabled>✅ Send for Real Gemini Analysis (Agent will process)</button>
+      <button class="btn-primary" id="analyzeBtn" disabled>Upload &amp; analyze video</button>
 
       <div id="statusDiv" class="status"></div>
 
@@ -134,12 +129,12 @@
 
     <div class="card">
       <h3>How The Agent Uses It</h3>
-      <div class="tag">Agent memory — I read /home/user/video-beats/ when you chat</div>
+      <div class="tag">Persistent analysis — available to the app</div>
 
       <div style="font-size:13px;color:#ccc;line-height:1.7;">
         <p><strong>When you upload:</strong> Gemini returns timecoded beats — scene descriptions with timestamps, emotion labels, dialogue mentions, visual events.</p>
-        <p style="margin-top:10px"><strong>When you prompt me:</strong> I read <code>/home/user/video-beats/*.json</code> automatically. If you say <em>"make a hook at the part where he talks about the garage"</em>, I find the beat near 0:12 with that dialogue and build the edit around that timestamp.</p>
-        <p style="margin-top:10px"><strong>Saved to:</strong> Workspace <code>/home/user/video-beats/</code> + Supabase storage bucket <code>beat-analyses</code> (creates when table ready).</p>
+        <p style="margin-top:10px"><strong>When you prompt me:</strong> the app can retrieve the saved analysis by video name or analysis ID. If you say <em>"make a hook at the part where he talks about the garage"</em>, I find the beat near 0:12 with that dialogue and build the edit around that timestamp.</p>
+        <p style="margin-top:10px"><strong>Saved to:</strong> private cloud video storage plus a structured analysis record.</p>
       </div>
 
       <div style="margin-top:14px;padding:12px;background:#0a0a0b;border-radius:10px;border:1px solid #222;">
@@ -157,202 +152,211 @@
 
       <div class="agent-note" id="how">
         <h4>Agent Integration — How I Use Your Beats</h4>
-        <p>When working on your video, before I suggest hooks or edits, I check <code>/home/user/video-beats/</code>. If a file exists with your video name, I reference the timecodes in my response — <em>"At 0:08 when he gestures toward camera is a great hook — let's zoom in there."</em> This is how you get agentic video understanding instead of blind editing.</p>
+        <p>When working on your video, before I suggest hooks or edits, the app retrieves its saved analysis record. If a record exists with your video name, I reference the timecodes in my response — <em>"At 0:08 when he gestures toward camera is a great hook — let's zoom in there."</em> This is how you get agentic video understanding instead of blind editing.</p>
       </div>
     </div>
   </div>
 
   <section style="margin-top:28px;" id="savedSection">
-    <h3 style="font-weight:800;font-size:16px;margin-bottom:14px;">Saved Beat Analyses (from workspace)</h3>
+    <h3 style="font-weight:800;font-size:16px;margin-bottom:14px;">Saved Video Analyses</h3>
     <div id="savedList2" class="saved"></div>
   </section>
 </main>
 
 <script>
+const BACKEND_URL = "https://rfbrxohavioeaexhztxa.supabase.co";
+const PUBLIC_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmYnJ4b2hhdmlvZWFleGh6dHhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjE5MzUsImV4cCI6MjA4NjIzNzkzNX0._5aZAa3FSreWDblpiCoWo9tib1bMUAptjOs8sw3_PMo";
+const MAX_BYTES = 200 * 1024 * 1024;
+const ALLOWED_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
 let currentFile = null;
-const KEY_STORAGE = 'brainbank_gemini_key';
+let currentDuration = 0;
+let previewUrl = "";
 
-function saveKey(){
-  const k = document.getElementById('geminiKey').value.trim();
-  if(!k) { showStatus('Paste your key first', 'error'); return; }
-  localStorage.setItem(KEY_STORAGE, k);
-  document.getElementById('keyDisplay').textContent = k.substring(0,8)+'••••••••••••';
-  document.getElementById('keyDisplay').style.color = '#00ff9d';
-  showStatus('API key saved (locally). Ready to analyze.', 'ok');
-}
-function clearKey(){
-  localStorage.removeItem(KEY_STORAGE);
-  document.getElementById('geminiKey').value = '';
-  document.getElementById('keyDisplay').textContent = 'Not saved (click Save above)';
-  document.getElementById('keyDisplay').style.color = '#777';
-  showStatus('Key cleared.', 'info');
+const apiHeaders = (extra = {}) => ({ apikey: PUBLIC_KEY, Authorization: `Bearer ${PUBLIC_KEY}`, ...extra });
+const el = (id) => document.getElementById(id);
+const cleanName = (name) => name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 100);
+
+function showStatus(message, type = "info") {
+  const node = el("statusDiv");
+  node.textContent = message;
+  node.className = `status ${type}`;
+  node.style.display = "block";
 }
 
-// Load saved key
-(function loadKey(){
-  const k = localStorage.getItem(KEY_STORAGE);
-  if(k){ document.getElementById('geminiKey').value = k; document.getElementById('geminiKey').type = 'password'; }
-})();
-
-function uploadToSupabase(file, name) {
-  const anon = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmYnJ4b2hhdmlvZWFleGh6dHhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjE5MzUsImV4cCI6MjA4NjIzNzkzNX0._5aZAa3FSreWDblpiCoWo9tib1bMUAptjOs8sw3_PMo";
-  const key = name ? name.replace(/[^a-zA-Z0-9_-]/g,"_") + "." + file.name.split(".").pop() : file.name;
-  return fetch("https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/videos/" + key, {
-    method: "POST",
-    headers: { "apikey": anon, "Authorization": "Bearer " + anon, "Content-Type": file.type },
-    body: file
-  }).then(r => r.json()).then(j => "https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/public/videos/" + key);
-}
-function handleFile(f){
-  if(!f) return;
-  currentFile = f;
-  document.getElementById('filePreview').style.display = 'flex';
-  document.getElementById('fName').textContent = f.name;
-  document.getElementById('fMeta').textContent = (f.size/1024/1024).toFixed(1) + ' MB';
-  const vid = document.getElementById('prevVid');
-  vid.src = URL.createObjectURL(f);
-  vid.load();
-  document.getElementById('analyzeBtn').disabled = false;
-  showStatus('File ready. Enter API key (if not saved) then click Analyze.', 'info');
+function setBusy(busy) {
+  const button = el("analyzeBtn");
+  button.disabled = busy || !currentFile;
+  button.textContent = busy ? "Uploading and analyzing…" : "Upload & analyze video";
+  el("fileIn").disabled = busy;
 }
 
-function handleDrop(e){
-  const f = e.dataTransfer.files[0];
-  if(f && f.type.startsWith('video/')) handleFile(f);
-  else showStatus('Drop a video file (MP4/MOV/WebM)', 'error');
-}
-
-function showStatus(msg, type){
-  const d = document.getElementById('statusDiv');
-  d.textContent = msg;
-  d.className = 'status '+(type||'info');
-  d.style.display = 'block';
-}
-
-function uploadVideoToSupabase(){
-  if(!currentFile){ showStatus('Upload video first', 'error'); return; }
-  const name = document.getElementById('videoName').value.trim() || currentFile.name.replace(/\.[^.]+$/,"");
-  document.getElementById('uploadSupabaseBtn').textContent = 'Uploading...';
-  uploadToSupabase(currentFile, name).then(url => {
-    document.getElementById('supabaseResult').textContent = "Saved to Supabase: " + url;
-    document.getElementById('uploadSupabaseBtn').textContent = '📤 Uploaded ✓';
-    document.getElementById('analyzeBtn').disabled = false;
-    window._lastVideoUrl = url;
-    window._lastVideoName = name;
-    // Save to workspace via local download hint
-    showStatus('Video saved to Supabase. Tell me the name/URL to run real Gemini.', 'ok');
-  }).catch(e => {
-    showStatus('Upload failed: ' + e.message, 'error');
-    document.getElementById('uploadSupabaseBtn').textContent = '📤 Upload Video to Supabase (Real)';
-  });
-}
-
-function runRealAnalysis(){
-  if(!window._lastVideoUrl){ showStatus('Upload to Supabase first', 'error'); return; }
-  document.getElementById('analyzeBtn').disabled = true;
-  document.getElementById('analyzeBtn').textContent = 'Agent processing with Gemini 1.5...';
-  showStatus('Real analysis queued for agent. Confirm video name: ' + (window._lastVideoName||''), 'info');
-  // Instead of mock, show clear message that agent will use backend
-  document.getElementById('beatsOutput').innerHTML = 
-    '<div style="font-family:Inter,sans-serif;font-size:13px;color:#ddd;padding:12px;background:#0a0a0b;border-radius:10px;border:1px solid #00ff9d30;">' +
-    '<h4 style="color:#00ff9d;margin-bottom:8px;">📹 VIDEO QUEUED FOR REAL GEMINI ANALYSIS</h4>' +
-    '<p><strong>File:</strong> ' + (window._lastVideoName||'unknown') + '</p>' +
-    '<p><strong>Supabase URL:</strong> <a href="' + window._lastVideoUrl + '" style="color:#00ff9d;word-break:break-all;">' + window._lastVideoUrl + '</a></p>' +
-    '<p><strong>Action:</strong> Confirm to agent — I will download this URL and run <code>python video_analyzer_backend.py</code> with your API key. Real beats will save to <code>/home/user/video-beats/</code>.</p>' +
-    '<p style="margin-top:8px;font-size:12px;color:#888;">No mock data. Real Gemini 1.5 vision analysis will generate timecoded beats with scene, emotion, dialogue, visual events.</p>' +
-    '</div>';
-  document.getElementById('beatsOutput').classList.add('show');
-  document.getElementById('analyzeBtn').textContent = 'Send for Real Gemini Analysis (Agent will process)';
-  document.getElementById('analyzeBtn').disabled = false;
-}
-
-function runAnalysis(){
-  if(!currentFile){ showStatus('Upload a video first', 'error'); return; }
-  const key = localStorage.getItem(KEY_STORAGE) || document.getElementById('geminiKey').value.trim();
-  if(!key){ showStatus('API key required — paste at aistudio.google.com/app/apikey', 'error'); return; }
-
-  document.getElementById('analyzeBtn').disabled = true;
-  document.getElementById('analyzeBtn').textContent = 'Analyzing with Gemini... (30-90 sec)';
-  showStatus('Sending to Gemini 1.5 Flash — video input + vision + timecoded request', 'info');
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const base64 = e.target.result.split(',')[1];
-    // We cannot actually call Google API from browser without CORS issues,
-    // so this demonstrates the payload and saves a simulated example for now.
-    // REAL USE: backend Python script with requests library.
-    const payload = {
-      contents:[{
-        parts:[
-          {text: `Analyze this video and return timecoded scene beats with timestamps, emotion, dialogue mentions, and visual events. Format as JSON array with fields: time (hh:mm:ss), scene, emotion, dialogue_mention, visual_event. Make each beat 2-6 seconds. Total ~30-60 sec video.`},
-          {inlineData:{mimeType:currentFile.type, data:base64}}
-        ]
-      }],
-      generationConfig:{responseMimeType:"application/json", temperature:0.2}
+function getDuration(file) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      const duration = video.duration;
+      URL.revokeObjectURL(url);
+      Number.isFinite(duration) ? resolve(duration) : reject(new Error("Could not read this video's duration."));
     };
-
-    // Save payload + simulated result locally so agent can use it
-    const result = simulateGeminiResponse(currentFile.name, currentFile.duration || 28);
-    saveBeatFile(currentFile.name, result);
-
-    document.getElementById('beatsOutput').innerHTML = formatBeats(result);
-    document.getElementById('beatsOutput').classList.add('show');
-    document.getElementById('analyzeBtn').textContent = 'Analyze with Gemini — Get Beats';
-    document.getElementById('analyzeBtn').disabled = false;
-    showStatus('Saved to /home/user/video-beats/ — agent now knows your footage', 'ok');
-  };
-  reader.readAsDataURL(currentFile);
-}
-
-// Simulated realistic Gemini 1.5 response based on mascot video content
-function simulateGeminiResponse(filename, duration){
-  const beats = [
-    {time:"0:00 - 0:03", scene:"Mascot sits in luxury leather office chair, leaned back, red shoes crossed on desk, smug neutral smile, mouth slightly open", emotion:"calm_confident", dialogue_mention:"none", visual_event:"red_shoes_prominent"},
-    {time:"0:03 - 0:08", scene:"Mascot begins yapping continuously, mouth moving, slight head tilt, hands behind head, continuous speech no pause", emotion:"engaged_yapping", dialogue_mention:"self-made billionaires origin story", visual_event:"mouth_open_continuous"},
-    {time:"0:08 - 0:14", scene:"Hand gesture toward viewer, reaching toward lens, first-person POV feel, talking continuously through gesture", emotion:"animated", dialogue_mention:"same exact origin story", visual_event:"hand_reaching_toward_lens"},
-    {time:"0:14 - 0:20", scene:"Stand up from chair, walk toward camera with continuous yapping, white gloves visible, red shoes step forward", emotion:"confident_transition", dialogue_mention:"not actually self-made", visual_event:"stand_up_walk_toward_camera"},
-    {time:"0:20 - 0:28", scene:"Close-up face filling frame, mouth still moving continuously, smug faint smile, no pause, high production feel", emotion:"smug_neutral", dialogue_mention:"ending hook subscribe", visual_event:"close_up_face_yapping"}
-  ];
-  return {filename, duration, analyzed_at: new Date().toISOString(), model:"google-gemini-1.5-flash", beats};
-}
-
-function formatBeats(obj){
-  let html = '<div style="font-family:Inter,sans-serif;font-size:12px;color:#ccc;margin-top:10px;"><h4 style="color:#00ff9d;font-weight:700;font-size:13px;margin-bottom:8px;">⏱ Timecoded Beats (from Gemini 1.5 Vision)</h4><div style="border:1px solid #222;border-radius:10px;padding:10px 12px;background:#0a0a0b;">';
-  obj.beats.forEach(b => {
-    html += `<div style="display:flex;gap:12px;padding:6px 0;border-bottom:1px solid #18181a;font-size:12px;line-height:1.5;"><div style="color:#00ff9d;font-weight:700;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;">${b.time}</div><div><strong style="color:#fff;">${b.scene}</strong><br><span style="color:#999;font-size:11px;">Emotion: ${b.emotion} · Dialogue: ${b.dialogue_mention} · Visual: ${b.visual_event}</span></div></div>`;
+    video.onerror = () => { URL.revokeObjectURL(url); reject(new Error("This video could not be opened.")); };
+    video.src = url;
   });
-  html += '</div></div>'; 
-  html += '<p style="font-size:11px;color:#777;margin-top:8px;font-family:monospace;">File saved: /home/user/video-beats/'+obj.filename+'.json</p>';
-  return html;
 }
 
-function saveBeatFile(name, data){
-  // In real backend: fs.writeFileSync('./video-beats/'+name+'.json', JSON.stringify(data))
-  // Here we save to a local variable and render saved list from it.
-  const key = 'beats_'+name.replace(/\.[^.]+$/,'');
-  localStorage.setItem(key, JSON.stringify(data));
-  renderSaved();
-}
-
-function renderSaved(){
-  const container = document.getElementById('savedList2');
-  let html = '';
-  for(let i=0;i<localStorage.length;i++){
-    const k = localStorage.key(i);
-    if(!k||!k.startsWith('beats_')) continue;
-    const d = JSON.parse(localStorage.getItem(k));
-    html += `<div class="saved-row"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#888;">${d.filename}</div><div style="font-size:12px;color:#ddd;">${d.beats.length} beats · ${d.duration}s · Gemini 1.5</div><button onclick="loadBeat('${k}')">Load Beats</button></div>`;
+async function handleFile(file) {
+  if (!file) return;
+  if (!ALLOWED_TYPES.has(file.type)) return showStatus("Choose an MP4, MOV, or WebM video.", "error");
+  if (!file.size || file.size > MAX_BYTES) return showStatus("The video must be smaller than 200 MB.", "error");
+  try {
+    const duration = await getDuration(file);
+    if (duration > 60.05) throw new Error("The video is longer than 60 seconds. Trim it and try again.");
+    currentFile = file;
+    currentDuration = duration;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(file);
+    el("prevVid").src = previewUrl;
+    el("filePreview").style.display = "flex";
+    el("fName").textContent = file.name;
+    el("fMeta").textContent = `${duration.toFixed(1)} sec · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
+    el("videoName").value ||= file.name.replace(/\.[^.]+$/, "");
+    setBusy(false);
+    showStatus("Ready to upload and analyze.", "info");
+  } catch (error) {
+    currentFile = null;
+    showStatus(error.message, "error");
   }
-  container.innerHTML = html || '<p style="font-size:13px;color:#555;">No saved analyses yet. Upload & analyze above.</p>';
-}
-function loadBeat(k){
-  const d = JSON.parse(localStorage.getItem(k));
-  document.getElementById('beatsOutput').innerHTML = formatBeats(d);
-  document.getElementById('beatsOutput').classList.add('show');
-  showStatus('Loaded beats: '+d.filename+' — I now know your footage', 'ok');
 }
 
-renderSaved();
+function handleDrop(event) {
+  const file = event.dataTransfer.files[0];
+  handleFile(file);
+}
+
+async function parseResponse(response) {
+  const text = await response.text();
+  let payload = {};
+  try { payload = text ? JSON.parse(text) : {}; } catch { payload = { error: text }; }
+  if (!response.ok) throw new Error(payload.error || payload.message || `Request failed (${response.status}).`);
+  return payload;
+}
+
+async function uploadAndAnalyze() {
+  if (!currentFile) return showStatus("Choose a video first.", "error");
+  setBusy(true);
+  el("beatsOutput").classList.remove("show");
+  try {
+    const title = el("videoName").value.trim() || currentFile.name.replace(/\.[^.]+$/, "");
+    const extension = currentFile.name.split(".").pop()?.toLowerCase() || "mp4";
+    const path = `video-analyses/${crypto.randomUUID()}-${cleanName(title)}.${extension}`;
+    showStatus("Uploading the video securely…", "info");
+    const upload = await fetch(`${BACKEND_URL}/storage/v1/object/studio-media/${encodeURIComponent(path).replaceAll("%2F", "/")}`, {
+      method: "POST",
+      headers: apiHeaders({ "Content-Type": currentFile.type, "x-upsert": "false" }),
+      body: currentFile,
+    });
+    await parseResponse(upload);
+
+    const created = await fetch(`${BACKEND_URL}/rest/v1/video_analyses`, {
+      method: "POST",
+      headers: apiHeaders({ "Content-Type": "application/json", Prefer: "return=representation" }),
+      body: JSON.stringify({ video_name: title, storage_path: path, mime_type: currentFile.type, duration_seconds: currentDuration }),
+    }).then(parseResponse);
+    const record = Array.isArray(created) ? created[0] : created;
+    if (!record?.id) throw new Error("The video uploaded, but its analysis record could not be created.");
+
+    showStatus("Gemini is watching the clip and mapping its timeline…", "info");
+    const result = await fetch(`${BACKEND_URL}/functions/v1/video-analyzer`, {
+      method: "POST",
+      headers: apiHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ analysisId: record.id }),
+    }).then(parseResponse);
+    renderAnalysis(result.analysis);
+    showStatus("Analysis saved. It is now available to the app's AI workflow.", "ok");
+    await loadSaved();
+  } catch (error) {
+    showStatus(error.message || "Upload or analysis failed.", "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+function formatTime(seconds) {
+  const value = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.floor(value / 60);
+  return `${minutes}:${String(Math.floor(value % 60)).padStart(2, "0")}`;
+}
+
+function renderAnalysis(analysis) {
+  const output = el("beatsOutput");
+  output.replaceChildren();
+  const heading = document.createElement("h4");
+  heading.textContent = analysis.video_name;
+  heading.style.cssText = "color:#00ff9d;margin-bottom:8px;font-family:Inter,sans-serif";
+  const summary = document.createElement("p");
+  summary.textContent = analysis.summary || "Analysis complete.";
+  summary.style.cssText = "font-family:Inter,sans-serif;color:#ddd;margin-bottom:12px";
+  output.append(heading, summary);
+  (analysis.beats || []).forEach((beat) => {
+    const row = document.createElement("div");
+    row.className = "beat-row";
+    const time = document.createElement("span");
+    time.className = "beat-time";
+    time.textContent = `${formatTime(beat.start)}–${formatTime(beat.end)}`;
+    const description = document.createElement("div");
+    description.className = "beat-desc";
+    const label = document.createElement("strong");
+    label.textContent = beat.label;
+    const detail = document.createElement("div");
+    detail.textContent = beat.detail;
+    const meta = document.createElement("small");
+    meta.textContent = [beat.emotion && `Tone: ${beat.emotion}`, beat.dialogue && `Dialogue: ${beat.dialogue}`, beat.opportunity && `Edit: ${beat.opportunity}`].filter(Boolean).join(" · ");
+    meta.style.color = "#888";
+    description.append(label, document.createElement("br"), detail, document.createElement("br"), meta);
+    row.append(time, description);
+    output.append(row);
+  });
+  output.classList.add("show");
+}
+
+async function loadSaved() {
+  const response = await fetch(`${BACKEND_URL}/rest/v1/video_analyses?select=id,video_name,duration_seconds,status,summary,beats,error_message,created_at&order=created_at.desc&limit=30`, { headers: apiHeaders() });
+  const rows = await parseResponse(response);
+  const container = el("savedList2");
+  container.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No saved analyses yet.";
+    empty.style.cssText = "font-size:13px;color:#555";
+    container.append(empty);
+    return;
+  }
+  rows.forEach((row) => {
+    const item = document.createElement("div");
+    item.className = "saved-row";
+    const name = document.createElement("div");
+    name.textContent = row.video_name;
+    name.style.cssText = "font-family:'JetBrains Mono',monospace;font-size:11px;color:#bbb;overflow:hidden;text-overflow:ellipsis";
+    const info = document.createElement("div");
+    info.textContent = row.status === "complete" ? `${(row.beats || []).length} beats · ${Number(row.duration_seconds).toFixed(1)}s · saved` : row.status === "error" ? `Analysis failed · ${row.error_message || "Try again"}` : `${row.status}…`;
+    info.style.cssText = "font-size:12px;color:#888";
+    const button = document.createElement("button");
+    button.textContent = row.status === "complete" ? "Load beats" : row.status;
+    button.disabled = row.status !== "complete";
+    button.onclick = () => { renderAnalysis(row); showStatus(`Loaded ${row.video_name}.`, "ok"); };
+    item.append(name, info, button);
+    container.append(item);
+  });
+}
+
+el("fileIn").addEventListener("change", (event) => handleFile(event.target.files[0]));
+el("dropZone").addEventListener("click", () => el("fileIn").click());
+el("dropZone").addEventListener("dragover", (event) => { event.preventDefault(); el("dropZone").classList.add("drag"); });
+el("dropZone").addEventListener("dragleave", () => el("dropZone").classList.remove("drag"));
+el("dropZone").addEventListener("drop", (event) => { event.preventDefault(); el("dropZone").classList.remove("drag"); handleDrop(event); });
+el("analyzeBtn").addEventListener("click", uploadAndAnalyze);
+loadSaved().catch((error) => showStatus(`Could not load saved analyses: ${error.message}`, "error"));
 </script>
 </body>
 </html>

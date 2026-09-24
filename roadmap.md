@@ -6,3 +6,4 @@
 - [x] Replace Studio with the chat-first vertical video workspace
 - [x] Connect preview, revisions, AWS render progress, and download
 - [x] Add tests and verify desktop/mobile flows
+- [x] Repair Video Analyzer uploads, real Gemini analysis, and persistent saved results
