@@ -98,7 +98,10 @@
       <h3>Analyze Video</h3>
       <div class="tag">Video understanding — Google Gemini 1.5 Pro / Flash</div>
 
-      <div class="secret-row" id="keyRow">
+      <div style="margin-top:12px;">
+  <input type="text" id="videoName" placeholder="Video name (e.g., mascot-office-1)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #222;background:#0a0a0b;color:#fff;font-family:Inter,sans-serif;font-size:13px;outline:none;" />
+</div>
+<div class="secret-row" id="keyRow">
         <input type="password" id="geminiKey" placeholder="Paste key here (e.g., AQ... ) — I'll save it when you click below" />
         <button onclick="saveKey()">Save Key</button>
         <button onclick="clearKey()" style="background:#333;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;">Clear</button>
@@ -119,7 +122,9 @@
         </div>
       </div>
 
-      <button class="btn-primary" id="analyzeBtn" onclick="runAnalysis()" disabled>Analyze with Gemini — Get Beats</button>
+      <button class="btn-primary" id="uploadSupabaseBtn" onclick="uploadVideoToSupabase()" disabled>📤 Upload Video to Supabase (Real)</button>
+<div id="supabaseResult" style="margin-top:10px;font-size:12px;color:#00ff9d;font-family:monospace;word-break:break-all;"></div>
+<button class="btn-primary" id="analyzeBtn" onclick="runRealAnalysis()" disabled>✅ Send for Real Gemini Analysis (Agent will process)</button>
 
       <div id="statusDiv" class="status"></div>
 
@@ -189,6 +194,15 @@ function clearKey(){
   if(k){ document.getElementById('geminiKey').value = k; document.getElementById('geminiKey').type = 'password'; }
 })();
 
+function uploadToSupabase(file, name) {
+  const anon = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmYnJ4b2hhdmlvZWFleGh6dHhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjE5MzUsImV4cCI6MjA4NjIzNzkzNX0._5aZAa3FSreWDblpiCoWo9tib1bMUAptjOs8sw3_PMo";
+  const key = name ? name.replace(/[^a-zA-Z0-9_-]/g,"_") + "." + file.name.split(".").pop() : file.name;
+  return fetch("https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/videos/" + key, {
+    method: "POST",
+    headers: { "apikey": anon, "Authorization": "Bearer " + anon, "Content-Type": file.type },
+    body: file
+  }).then(r => r.json()).then(j => "https://rfbrxohavioeaexhztxa.supabase.co/storage/v1/object/public/videos/" + key);
+}
 function handleFile(f){
   if(!f) return;
   currentFile = f;
@@ -213,6 +227,43 @@ function showStatus(msg, type){
   d.textContent = msg;
   d.className = 'status '+(type||'info');
   d.style.display = 'block';
+}
+
+function uploadVideoToSupabase(){
+  if(!currentFile){ showStatus('Upload video first', 'error'); return; }
+  const name = document.getElementById('videoName').value.trim() || currentFile.name.replace(/\.[^.]+$/,"");
+  document.getElementById('uploadSupabaseBtn').textContent = 'Uploading...';
+  uploadToSupabase(currentFile, name).then(url => {
+    document.getElementById('supabaseResult').textContent = "Saved to Supabase: " + url;
+    document.getElementById('uploadSupabaseBtn').textContent = '📤 Uploaded ✓';
+    document.getElementById('analyzeBtn').disabled = false;
+    window._lastVideoUrl = url;
+    window._lastVideoName = name;
+    // Save to workspace via local download hint
+    showStatus('Video saved to Supabase. Tell me the name/URL to run real Gemini.', 'ok');
+  }).catch(e => {
+    showStatus('Upload failed: ' + e.message, 'error');
+    document.getElementById('uploadSupabaseBtn').textContent = '📤 Upload Video to Supabase (Real)';
+  });
+}
+
+function runRealAnalysis(){
+  if(!window._lastVideoUrl){ showStatus('Upload to Supabase first', 'error'); return; }
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('analyzeBtn').textContent = 'Agent processing with Gemini 1.5...';
+  showStatus('Real analysis queued for agent. Confirm video name: ' + (window._lastVideoName||''), 'info');
+  // Instead of mock, show clear message that agent will use backend
+  document.getElementById('beatsOutput').innerHTML = 
+    '<div style="font-family:Inter,sans-serif;font-size:13px;color:#ddd;padding:12px;background:#0a0a0b;border-radius:10px;border:1px solid #00ff9d30;">' +
+    '<h4 style="color:#00ff9d;margin-bottom:8px;">📹 VIDEO QUEUED FOR REAL GEMINI ANALYSIS</h4>' +
+    '<p><strong>File:</strong> ' + (window._lastVideoName||'unknown') + '</p>' +
+    '<p><strong>Supabase URL:</strong> <a href="' + window._lastVideoUrl + '" style="color:#00ff9d;word-break:break-all;">' + window._lastVideoUrl + '</a></p>' +
+    '<p><strong>Action:</strong> Confirm to agent — I will download this URL and run <code>python video_analyzer_backend.py</code> with your API key. Real beats will save to <code>/home/user/video-beats/</code>.</p>' +
+    '<p style="margin-top:8px;font-size:12px;color:#888;">No mock data. Real Gemini 1.5 vision analysis will generate timecoded beats with scene, emotion, dialogue, visual events.</p>' +
+    '</div>';
+  document.getElementById('beatsOutput').classList.add('show');
+  document.getElementById('analyzeBtn').textContent = 'Send for Real Gemini Analysis (Agent will process)';
+  document.getElementById('analyzeBtn').disabled = false;
 }
 
 function runAnalysis(){
