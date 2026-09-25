@@ -90,6 +90,11 @@ Deno.serve(async (req) => {
   };
   const reuse = (a: any) => json({ id: a.id, url: assetUrl(a.id), ...(a.meta?.creating ? { status: "creating" } : { asset: a }), duplicate: true }, a.meta?.creating ? 202 : 200);
 
+  const settle = async (mine: any) => {
+    const first = await recent(mine.name);
+    if (first && first.id !== mine.id) { await db.from("assets").delete().eq("id", mine.id); return first; }
+    return null;
+  };
   // ---- sourceUrl push ----
   if (sourceUrl) {
     let url: URL;
@@ -123,6 +128,8 @@ Deno.serve(async (req) => {
     if (dup) return reuse(dup);
     const { data, error } = await db.from("assets").insert({ group_id: group.id, kind, name, inline_content: content, mime_type: kind === "code" ? "text/plain" : "text/markdown", size_bytes: new TextEncoder().encode(content).byteLength, meta: {} }).select().single();
     if (error) return json({ error: error.message }, 500);
+    const winner = await settle(data);
+    if (winner) return reuse(winner);
     await db.from("asset_groups").update({ updated_at: new Date().toISOString() }).eq("id", group.id);
     return json({ id: data.id, url: assetUrl(data.id), asset: data }, 201);
   }
@@ -139,6 +146,8 @@ Deno.serve(async (req) => {
     meta: { creating: true, prompt, ...(kind === "voice" ? { voice } : {}) },
   }).select().single();
   if (error || !asset) return json({ error: error?.message || "Could not create asset." }, 500);
+  const winner = await settle(asset);
+  if (winner) return reuse(winner);
   EdgeRuntime.waitUntil(finish(asset, group.slug, kind, prompt, voice));
   return json({ id: asset.id, url: assetUrl(asset.id), status: "creating" }, 202);
 });
