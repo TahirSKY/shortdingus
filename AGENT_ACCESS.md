@@ -71,6 +71,30 @@ Content-Type: application/json
 - Returns `201 { asset: { …, url } }`. Error codes: 401 bad token, 404 unknown slug, 400 unknown kind.
 - The token is stored in the app's Cloud secrets as `HUB_WRITE_TOKEN`. The owner gives it to you directly. It is never in the repo.
 
+## Create assets (GET works)
+
+Agents that can only fetch URLs can generate files on the server:
+
+```
+GET /agent-create?token=<HUB_WRITE_TOKEN>&slug=loan-horror-01&kind=image&name=scene-01&prompt=intern+opening+envelope
+```
+
+| param | notes |
+|---|---|
+| token | required, `HUB_WRITE_TOKEN` |
+| slug | target group |
+| kind | `image`, `voice`, `text`, `code` |
+| name | optional file name |
+| prompt | image description, or the words to speak for `voice` |
+| inlineContent | the content for `text` / `code` |
+| voice | optional, default `alloy` |
+
+The same fields also work as a POST JSON body.
+
+- `text` / `code` are saved immediately and return `201 { id, url }`.
+- `image` / `voice` return `202 { id, url, status: "creating" }` right away. Poll `group-manifest` every few seconds until that asset's `meta.creating` is gone. If `meta.error` is set, it failed. Until then `url` returns 409. Voice is stored as kind `audio` (MP3).
+- **Token in query string:** on GET, the token appears in the URL, so it can end up in logs and history. This is an accepted trade-off for a single-user tool. Rotate `HUB_WRITE_TOKEN` if it leaks.
+
 ## Remotion example
 
 ```tsx

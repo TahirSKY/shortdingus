@@ -6,8 +6,10 @@ Deno.serve(async (req) => {
   if (!id) return json({ error: "Missing id." }, 400);
   if (!isUuid(id)) return json({ error: "Invalid id." }, 400);
   const db = admin();
-  const { data: asset } = await db.from("assets").select("storage_path, inline_content, mime_type").eq("id", id).maybeSingle();
+  const { data: asset } = await db.from("assets").select("storage_path, inline_content, mime_type, meta").eq("id", id).maybeSingle();
   if (!asset) return json({ error: "Asset not found." }, 404);
+  if ((asset.meta as any)?.creating) return json({ error: "Still creating. Try again shortly." }, 409);
+  if ((asset.meta as any)?.error && !asset.storage_path) return json({ error: (asset.meta as any).error }, 424);
   if (!asset.storage_path) {
     return new Response(asset.inline_content || "", { headers: { ...cors, "Content-Type": `${asset.mime_type || "text/plain"}; charset=utf-8`, "Cache-Control": "no-store" } });
   }
