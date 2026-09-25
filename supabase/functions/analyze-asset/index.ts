@@ -92,11 +92,14 @@ Deno.serve(async (req) => {
     return json({ error: "Transcripts are not implemented yet." }, 501);
   }
 
-  if (tool !== "gemini-video") return json({ error: "Unknown tool." }, 400);
-  if (asset.kind !== "video" || !asset.storage_path) return json({ error: "Only uploaded videos can be analysed." }, 400);
+  await expireStale(db);
+  const isImage = asset.kind === "image";
+  const useTool = isImage ? "gemini-image" : tool;
+  if (useTool !== "gemini-video" && useTool !== "gemini-image") return json({ error: "Unknown tool." }, 400);
+  if (!["video", "image"].includes(asset.kind) || !asset.storage_path) return json({ error: "Only uploaded videos or images can be analysed." }, 400);
   const { data: row, error } = await db.from("asset_analyses")
-    .insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
+    .insert({ asset_id: asset.id, group_id: asset.group_id, tool: useTool, status: "running" }).select().single();
   if (error || !row) return json({ error: "Could not start analysis." }, 500);
-  EdgeRuntime.waitUntil(runGemini(row.id, asset));
+  EdgeRuntime.waitUntil(isImage ? runImage(row.id, asset) : runGemini(row.id, asset));
   return json({ analysis: row }, 202);
 });
