@@ -1,4 +1,7 @@
 import { admin, assetUrl, cors, json, KINDS, safeName } from "../_shared/hub.ts";
+import { startAnalysis } from "../_shared/analysis.ts";
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
 const MAX_BYTES = 200 * 1024 * 1024;
 
@@ -44,5 +47,7 @@ Deno.serve(async (req) => {
   const { data, error } = await db.from("assets").insert(row).select().single();
   if (error) return json({ error: "Could not save asset." }, 500);
   await db.from("asset_groups").update({ updated_at: new Date().toISOString() }).eq("id", group.id);
-  return json({ asset: { ...data, url: assetUrl(id) } }, 201);
+  const job = await startAnalysis(data);
+  if (job) EdgeRuntime.waitUntil(job);
+  return json({ asset: { ...data, url: assetUrl(id) }, ...(job ? { analysis: "started" } : {}) }, 201);
 });
