@@ -176,7 +176,7 @@ export default function GroupDetail() {
                           <div className="flex justify-end gap-1">
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy URL" onClick={() => copy(assetUrl(a.id))}><Copy className="h-3.5 w-3.5" /></Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Open" asChild><a href={assetUrl(a.id)} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a></Button>
-                            {a.kind === "video" && <Button size="icon" variant="ghost" className="h-7 w-7" title="Run analysis" disabled={busy} onClick={async () => {
+                            {(a.kind === "video" || (a.kind === "image" && !(a.meta as any)?.creating)) && <Button size="icon" variant="ghost" className="h-7 w-7" title="Run analysis" disabled={busy} onClick={async () => {
                               try { await runAnalysis(a.id); refresh(); toast.success("Analysis started"); } catch (e) { toast.error((e as Error).message); }
                             }}><ScanSearch className="h-3.5 w-3.5" /></Button>}
                             <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete" onClick={async () => {

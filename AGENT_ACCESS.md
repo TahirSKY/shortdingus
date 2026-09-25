@@ -93,7 +93,14 @@ The same fields also work as a POST JSON body.
 
 - `text` / `code` are saved immediately and return `201 { id, url }`.
 - `image` / `voice` return `202 { id, url, status: "creating" }` right away. Poll `group-manifest` every few seconds until that asset's `meta.creating` is gone. If `meta.error` is set, it failed. Until then `url` returns 409. Voice is stored as kind `audio` (MP3).
+- Voice uses `openai/gpt-4o-mini-tts` (voices: alloy, echo, fable, onyx, nova, shimmer…).
+- **Push a hosted file:** add `sourceUrl=<public http(s) url>` (any `kind` from the table above). The server fetches it (200MB max), stores it, and returns `201 { id, url }`. No generation runs. Example: `GET /agent-create?token=…&slug=…&kind=image&sourceUrl=https://raw.githubusercontent.com/…/frame.png`.
+- **Duplicate guard:** a repeat request for the same group and name within 60s returns the existing asset instead of making a new one. If you leave out `name`, it's derived from the prompt or content, so retries are safe.
 - **Token in query string:** on GET, the token appears in the URL, so it can end up in logs and history. This is an accepted trade-off for a single-user tool. Rotate `HUB_WRITE_TOKEN` if it leaks.
+
+## Seeing images as text
+
+`POST /analyze-asset { "assetId": "<image id>" }` runs a `gemini-image` analysis (202, then background). When it's done, the manifest's `analyses` has `{ tool: "gemini-image", summary, report: { summary, detail } }`. Read that text to understand the picture. Analyses stuck running for more than 10 minutes become `error` ("Analysis timed out. Run it again.").
 
 ## Remotion example
 
