@@ -1,14 +1,12 @@
 import { useLocation, Link } from "react-router-dom";
-import { Wand2, Sparkles, ImageIcon, Film, Zap, Folder, Mic } from "lucide-react";
+import { Folder, Sparkles, Film, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/projects", label: "Projects", icon: Folder },
-  { to: "/agent-studio", label: "Agent", icon: Zap },
-  { to: "/studio", label: "Studio", icon: Wand2 },
+  { to: "/", label: "Groups", icon: Folder },
   { to: "/playground", label: "Play", icon: Sparkles },
   { to: "/renders", label: "Renders", icon: Film },
-  { to: "/voice-studio", label: "Voice", icon: Mic },
+  { to: "/examples", label: "Examples", icon: LayoutGrid },
 ];
 
 const MobileBottomNav = () => {
@@ -18,7 +16,7 @@ const MobileBottomNav = () => {
     <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
       <div className="flex items-center justify-around h-14">
         {navItems.map(({ to, label, icon: Icon }) => {
-          const active = pathname === to;
+          const active = to === "/" ? pathname === "/" || pathname.startsWith("/groups") : pathname === to;
           return (
             <Link
               key={to}

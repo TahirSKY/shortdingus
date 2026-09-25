@@ -112,7 +112,7 @@ export default function VoiceStudio() {
           <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-600 border-green-500/30">LIVE - Modal Deployed</Badge>
         </div>
         <div className="flex gap-2">
-          <Link to="/agent-studio"><Button size="sm" variant="outline">Agent Studio</Button></Link>
+          <Link to="/"><Button size="sm" variant="outline">Groups</Button></Link>
           <Link to="/playground"><Button size="sm">Playground</Button></Link>
         </div>
       </header>

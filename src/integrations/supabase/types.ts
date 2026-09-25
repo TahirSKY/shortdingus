@@ -14,29 +14,136 @@ export type Database = {
   }
   public: {
     Tables: {
-      image_library: {
+      asset_analyses: {
+        Row: {
+          asset_id: string
+          created_at: string
+          error_message: string | null
+          group_id: string
+          id: string
+          report: Json
+          status: string
+          summary: string | null
+          tool: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          error_message?: string | null
+          group_id: string
+          id?: string
+          report?: Json
+          status?: string
+          summary?: string | null
+          tool: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          error_message?: string | null
+          group_id?: string
+          id?: string
+          report?: Json
+          status?: string
+          summary?: string | null
+          tool?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_analyses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_analyses_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_groups: {
         Row: {
           created_at: string
           id: string
-          storage_path: string | null
+          notes: string | null
+          slug: string
           title: string
-          url: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
-          storage_path?: string | null
-          title?: string
-          url: string
+          notes?: string | null
+          slug: string
+          title: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
-          storage_path?: string | null
+          notes?: string | null
+          slug?: string
           title?: string
-          url?: string
+          updated_at?: string
         }
         Relationships: []
+      }
+      assets: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          group_id: string
+          id: string
+          inline_content: string | null
+          kind: string
+          meta: Json
+          mime_type: string
+          name: string
+          size_bytes: number | null
+          storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          group_id: string
+          id?: string
+          inline_content?: string | null
+          kind: string
+          meta?: Json
+          mime_type: string
+          name: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          group_id?: string
+          id?: string
+          inline_content?: string | null
+          kind?: string
+          meta?: Json
+          mime_type?: string
+          name?: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_renders: {
         Row: {
@@ -89,178 +196,6 @@ export type Database = {
           emoji?: string
           id?: string
           title?: string
-        }
-        Relationships: []
-      }
-      studio_assets: {
-        Row: {
-          created_at: string
-          duration_seconds: number | null
-          id: string
-          kind: string
-          metadata: Json | null
-          mime_type: string
-          project_id: string
-          storage_path: string | null
-          title: string
-          url: string
-        }
-        Insert: {
-          created_at?: string
-          duration_seconds?: number | null
-          id?: string
-          kind: string
-          metadata?: Json | null
-          mime_type: string
-          project_id: string
-          storage_path?: string | null
-          title: string
-          url: string
-        }
-        Update: {
-          created_at?: string
-          duration_seconds?: number | null
-          id?: string
-          kind?: string
-          metadata?: Json | null
-          mime_type?: string
-          project_id?: string
-          storage_path?: string | null
-          title?: string
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "studio_assets_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "studio_projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      studio_messages: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          kind: string
-          payload: Json | null
-          project_id: string
-          role: string
-          sequence: number
-        }
-        Insert: {
-          content?: string
-          created_at?: string
-          id?: string
-          kind?: string
-          payload?: Json | null
-          project_id: string
-          role: string
-          sequence: number
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          kind?: string
-          payload?: Json | null
-          project_id?: string
-          role?: string
-          sequence?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "studio_messages_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "studio_projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      studio_projects: {
-        Row: {
-          created_at: string
-          edl: Json | null
-          footage_analysis: Json | null
-          id: string
-          mode: string
-          revision: number
-          script: Json | null
-          selected_direction: Json | null
-          stage: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          edl?: Json | null
-          footage_analysis?: Json | null
-          id?: string
-          mode: string
-          revision?: number
-          script?: Json | null
-          selected_direction?: Json | null
-          stage?: string
-          title?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          edl?: Json | null
-          footage_analysis?: Json | null
-          id?: string
-          mode?: string
-          revision?: number
-          script?: Json | null
-          selected_direction?: Json | null
-          stage?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      video_analyses: {
-        Row: {
-          beats: Json
-          created_at: string
-          duration_seconds: number
-          error_message: string | null
-          id: string
-          mime_type: string
-          status: string
-          storage_path: string
-          summary: string | null
-          updated_at: string
-          video_name: string
-        }
-        Insert: {
-          beats?: Json
-          created_at?: string
-          duration_seconds?: number
-          error_message?: string | null
-          id?: string
-          mime_type: string
-          status?: string
-          storage_path: string
-          summary?: string | null
-          updated_at?: string
-          video_name: string
-        }
-        Update: {
-          beats?: Json
-          created_at?: string
-          duration_seconds?: number
-          error_message?: string | null
-          id?: string
-          mime_type?: string
-          status?: string
-          storage_path?: string
-          summary?: string | null
-          updated_at?: string
-          video_name?: string
         }
         Relationships: []
       }
