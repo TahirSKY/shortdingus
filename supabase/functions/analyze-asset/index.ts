@@ -99,7 +99,7 @@ async function runImage(analysisId: string, asset: any) {
     });
     if (res.status === 402) throw new Error("AI credits are used up. Add credits and try again.");
     if (res.status === 429) throw new Error("AI is busy right now. Try again in a minute.");
-    if (!res.ok) throw new Error(`AI request failed (${res.status}).`);
+    if (!res.ok) throw new Error(`AI request failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
     const parsed = parseJsonObject(await readSseText(res));
     const summary = String(parsed.summary || "").trim().slice(0, 2000);
     const detail = String(parsed.detail || "").trim().slice(0, 6000);
