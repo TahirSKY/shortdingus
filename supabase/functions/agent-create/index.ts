@@ -1,4 +1,5 @@
 import { admin, assetUrl, cors, json, KINDS, safeName } from "../_shared/hub.ts";
+import { startAnalysis } from "../_shared/analysis.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -53,6 +54,7 @@ async function finish(asset: any, slug: string, kind: string, prompt: string, vo
     if (up.error) throw new Error(`Upload failed: ${up.error.message}`);
     await db.from("assets").update({ storage_path: path, mime_type: out.mime, size_bytes: out.bytes.byteLength, meta: baseMeta }).eq("id", asset.id);
     await db.from("asset_groups").update({ updated_at: new Date().toISOString() }).eq("id", asset.group_id);
+    if (kind === "image") { const job = await startAnalysis({ ...asset, kind: "image", storage_path: path }); if (job) await job; }
   } catch (e) {
     console.error("[agent-create]", e);
     await db.from("assets").update({ meta: { ...baseMeta, error: (e as Error).message?.slice(0, 300) || "Creation failed." } }).eq("id", asset.id);
@@ -116,7 +118,9 @@ Deno.serve(async (req) => {
     const { data, error } = await db.from("assets").insert({ id, group_id: group.id, kind: storeKind, name, storage_path: path, mime_type: mime, size_bytes: bytes.byteLength, meta: { sourceUrl } }).select().single();
     if (error) return json({ error: error.message }, 500);
     await db.from("asset_groups").update({ updated_at: new Date().toISOString() }).eq("id", group.id);
-    return json({ id, url: assetUrl(id), asset: data }, 201);
+    const job = await startAnalysis(data);
+    if (job) EdgeRuntime.waitUntil(job);
+    return json({ id, url: assetUrl(id), asset: data, ...(job ? { analysis: "started" } : {}) }, 201);
   }
 
   if (kind === "text" || kind === "code") {

@@ -97,6 +97,7 @@ export async function uploadFile(group: AssetGroup, file: File) {
   const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: duration });
   if (error) { await supabase.storage.from("hub-media").remove([path]); throw error; }
   await touch(group.id);
+  if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));
 }
 
 export async function addTextAsset(group: AssetGroup, name: string, kind: AssetKind, content: string) {
