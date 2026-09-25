@@ -6,5 +6,14 @@ verify_jwt = false
 [functions.render-still]
 verify_jwt = false
 
-[functions.generate-remotion]
+[functions.asset-url]
+verify_jwt = false
+
+[functions.group-manifest]
+verify_jwt = false
+
+[functions.asset-ingest]
+verify_jwt = false
+
+[functions.analyze-asset]
 verify_jwt = false
