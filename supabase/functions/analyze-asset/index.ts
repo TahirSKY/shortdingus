@@ -75,6 +75,42 @@ Rules: times are numeric seconds; cover the full timeline with non-overlapping b
   }
 }
 
+export async function expireStale(db: any) {
+  const cutoff = new Date(Date.now() - 10 * 60_000).toISOString();
+  await db.from("asset_analyses").update({ status: "error", error_message: "Analysis timed out. Run it again." })
+    .in("status", ["running", "pending"]).lt("created_at", cutoff);
+}
+
+async function runImage(analysisId: string, asset: any) {
+  const db = admin();
+  try {
+    const key = Deno.env.get("LOVABLE_API_KEY");
+    if (!key) throw new Error("AI is not configured.");
+    const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 1800);
+    if (error || !signed) throw new Error("Could not open the image.");
+    const prompt = `Describe this image for a video editor who cannot see it. Return ONLY a JSON object: {"summary": string (one or two sentences), "detail": string (subjects, setting, composition, colors, mood, any visible text, and how it could be used in a vertical short video)}. Valid JSON only.`;
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" },
+      body: JSON.stringify({
+        model: "google/gemini-3.8-flash", stream: true, response_format: { type: "json_object" },
+        messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: signed.signedUrl } }] }],
+      }),
+    });
+    if (res.status === 402) throw new Error("AI credits are used up. Add credits and try again.");
+    if (res.status === 429) throw new Error("AI is busy right now. Try again in a minute.");
+    if (!res.ok) throw new Error(`AI request failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
+    const parsed = parseJsonObject(await readSseText(res));
+    const summary = String(parsed.summary || "").trim().slice(0, 2000);
+    const detail = String(parsed.detail || "").trim().slice(0, 6000);
+    if (!summary) throw new Error("The model returned no description.");
+    await db.from("asset_analyses").update({ status: "complete", summary, report: { summary, detail }, error_message: null }).eq("id", analysisId);
+  } catch (e) {
+    console.error("[analyze-asset:image]", e);
+    await db.from("asset_analyses").update({ status: "error", error_message: (e as Error).message?.slice(0, 300) || "Analysis failed." }).eq("id", analysisId);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
@@ -92,11 +128,14 @@ Deno.serve(async (req) => {
     return json({ error: "Transcripts are not implemented yet." }, 501);
   }
 
-  if (tool !== "gemini-video") return json({ error: "Unknown tool." }, 400);
-  if (asset.kind !== "video" || !asset.storage_path) return json({ error: "Only uploaded videos can be analysed." }, 400);
+  await expireStale(db);
+  const isImage = asset.kind === "image";
+  const useTool = isImage ? "gemini-image" : tool;
+  if (useTool !== "gemini-video" && useTool !== "gemini-image") return json({ error: "Unknown tool." }, 400);
+  if (!["video", "image"].includes(asset.kind) || !asset.storage_path) return json({ error: "Only uploaded videos or images can be analysed." }, 400);
   const { data: row, error } = await db.from("asset_analyses")
-    .insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
+    .insert({ asset_id: asset.id, group_id: asset.group_id, tool: useTool, status: "running" }).select().single();
   if (error || !row) return json({ error: "Could not start analysis." }, 500);
-  EdgeRuntime.waitUntil(runGemini(row.id, asset));
+  EdgeRuntime.waitUntil(isImage ? runImage(row.id, asset) : runGemini(row.id, asset));
   return json({ analysis: row }, 202);
 });

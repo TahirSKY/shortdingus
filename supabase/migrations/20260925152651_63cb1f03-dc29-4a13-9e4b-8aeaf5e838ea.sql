@@ -1,0 +1,2 @@
+ALTER TABLE public.asset_analyses DROP CONSTRAINT IF EXISTS asset_analyses_tool_check;
+ALTER TABLE public.asset_analyses ADD CONSTRAINT asset_analyses_tool_check CHECK (tool IN ('gemini-video','gemini-image','assembly-transcript','manual'));

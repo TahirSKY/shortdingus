@@ -7,6 +7,8 @@ Deno.serve(async (req) => {
   const db = admin();
   const { data: group } = await db.from("asset_groups").select("*").eq("slug", slug).maybeSingle();
   if (!group) return json({ error: `No group with slug "${slug}".` }, 404);
+  await db.from("asset_analyses").update({ status: "error", error_message: "Analysis timed out. Run it again." })
+    .eq("group_id", group.id).in("status", ["running", "pending"]).lt("created_at", new Date(Date.now() - 10 * 60_000).toISOString());
   const [{ data: assets }, { data: analyses }] = await Promise.all([
     db.from("assets").select("*").eq("group_id", group.id).order("created_at", { ascending: true }),
     db.from("asset_analyses").select("*").eq("group_id", group.id).eq("status", "complete").order("created_at", { ascending: true }),
