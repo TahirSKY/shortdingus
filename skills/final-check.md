@@ -1,21 +1,19 @@
 ---
 name: final-check
-description: Mandatory check before any full render — six parts present, hook speed, cut-off words, voice/caption sync, banned words, safe areas, loop, phone-size frames.
+description: Practical checks before a full render — cut-off words, voice/caption sync, banned words, safe areas, audio, asset links, phone-size frames. No structure or timing rules.
 ---
 
-# Final check — do this before rendering
+# Final check — before rendering
 
-Render key frames with `render-still` (frame 0, each part's first frame, the last frame) and actually look at them at phone size. Fix, re-check, only then render the full video.
+Render a few key frames with `render-still` (start, a few middle moments, the end) and look at them at phone size. Fix, re-check, then render the full video. Structure and length are whatever the user agreed — don't judge them here.
 
-- [ ] **Six parts** in `project.plan`: hook, setup, quiz, reveal, twist, loop — none missing.
-- [ ] **Hook**: frame 0 fully composed (not black, not fading in); first spoken word before 0.5s; hook ends by ~3.4s.
-- [ ] **No cut-off words**: every cut snaps to word boundaries (word timing); no clipped first/last syllable.
-- [ ] **Sync**: captions and SFX land on the word (±0.1s); voice not drifting from visuals.
-- [ ] **Banned words**: none from the hub style guide's banned list; no profanity unless the hub allows it; no false claims.
-- [ ] **Safe areas**: text/captions not in the top ~12% or bottom ~20%; nothing cropped at 1080×1920.
-- [ ] **Readability**: captions ≥ ~60px, high contrast; on-screen change every ≤2s.
-- [ ] **Loop**: last frame ≈ frame 0 and last line flows into the first — or ends cleanly on the payoff. No CTA outro.
-- [ ] **Audio**: music ducked under voice; no peaks clipping; no silent gaps.
-- [ ] **Assets**: every URL in the code is a hub `asset-url` link (no Unsplash — it's blocked on the renderer).
+- [ ] **No cut-off words**: cuts snap to word boundaries (voiceover transcript); no clipped syllables.
+- [ ] **Sync**: captions and SFX land on their words; voice not drifting from visuals.
+- [ ] **Banned words**: none from the hub style guide; no false claims.
+- [ ] **Safe areas**: text/captions not hidden under phone UI; nothing cropped at the chosen format.
+- [ ] **Readability**: captions large and high contrast.
+- [ ] **Opening frame** isn't accidentally black or blank (unless intended).
+- [ ] **Audio**: music under the voice; no clipping; no unintended silent gaps.
+- [ ] **Assets**: every URL is a hub `asset-url` link (no Unsplash — blocked on the renderer).
 
-Write the result as `check.md` in the project (`role=plan`), then set stage to `render`.
+Optionally save the result as `check.md` in the project (`role=plan`).
