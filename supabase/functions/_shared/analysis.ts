@@ -165,6 +165,7 @@ export async function runWords(analysisId: string, asset: any) {
 /** Start an analysis row for an image/video asset and return the background job promise (or null). */
 export async function startAnalysis(asset: any): Promise<Promise<void> | null> {
   if (!asset?.storage_path || !["image", "video"].includes(asset.kind)) return null;
+  if ((asset.tags || []).includes("cutout")) return null; // cut-outs don't need their own description
   const db = admin();
   await expireStale(db);
   const tool = asset.kind === "image" ? "gemini-image" : "gemini-video";

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import HubHeader from "@/components/HubHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import AssetPanel from "@/features/hub/AssetPanel";
@@ -147,6 +148,10 @@ export default function GroupDetail() {
             <AssetPanel group={group} title="Library" />
           </TabsContent>
           <TabsContent value="style" className="mt-6">
+            <label className="mb-4 flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
+              <Switch checked={!!group.auto_cutout} onCheckedChange={(auto_cutout) => save({ auto_cutout })} className="mt-0.5" />
+              <span><span className="font-medium">Auto cut-outs</span><span className="block text-xs text-muted-foreground">Every new picture in this hub also gets a transparent-background copy tagged "cutout". The original is kept. Best for collage styles.</span></span>
+            </label>
             <p className="mb-2 text-sm text-muted-foreground">The style guide every agent obeys in this hub: voice and tone, colours, fonts, pacing, sound taste, banned words.</p>
             <EditableText multiline rows={20} value={group.style_guide || ""} onSave={(style_guide) => save({ style_guide })} placeholder="e.g. Tone: slow dread, never jump-scare in the first 3s. Palette: #0b0b0b, bone white, blood red accents. Banned words: …" className="font-mono text-xs" />
           </TabsContent>

@@ -6,7 +6,7 @@ const BASE = import.meta.env.VITE_SUPABASE_URL as string;
 export const ASSET_KINDS = ["video", "image", "audio", "text", "transcript", "analysis", "code", "render"] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
-export interface AssetGroup { id: string; slug: string; title: string; notes: string | null; style_guide?: string; created_at: string; updated_at: string }
+export interface AssetGroup { id: string; slug: string; title: string; notes: string | null; style_guide?: string; auto_cutout?: boolean; created_at: string; updated_at: string }
 export interface Asset { id: string; group_id: string; kind: AssetKind; name: string; storage_path: string | null; inline_content: string | null; mime_type: string; size_bytes: number | null; duration_seconds: number | null; meta: Record<string, unknown>; created_at: string; project_id?: string | null; role?: string | null; tags?: string[] }
 export interface Beat { start: number; end: number; label: string; detail: string; emotion?: string; dialogue?: string; visual_event?: string; opportunity?: string }
 export interface Analysis { id: string; asset_id: string; group_id: string; tool: string; status: "pending" | "running" | "complete" | "error"; summary: string | null; report: { summary?: string; beats?: Beat[] }; error_message: string | null; created_at: string; updated_at: string }
@@ -41,7 +41,7 @@ export async function getGroup(slug: string) {
   return data as AssetGroup | null;
 }
 
-export async function updateGroup(id: string, patch: Partial<Pick<AssetGroup, "title" | "notes" | "style_guide">>) {
+export async function updateGroup(id: string, patch: Partial<Pick<AssetGroup, "title" | "notes" | "style_guide" | "auto_cutout">>) {
   const { error } = await db.from("asset_groups").update(patch).eq("id", id);
   if (error) throw error;
 }
@@ -99,6 +99,13 @@ export async function uploadFile(group: AssetGroup, file: File, projectId: strin
   if (error) { await supabase.storage.from("hub-media").remove([path]); throw error; }
   await touch(group.id);
   if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));
+  if (kind === "image" && group.auto_cutout) makeCutout(id).catch((e) => console.warn("Auto cut-out failed to start", e));
+}
+
+export async function makeCutout(assetId: string, force = false) {
+  const { data, error } = await supabase.functions.invoke("make-cutout", { body: { assetId, force } });
+  if (error || data?.error) throw new Error(data?.error || error?.message || "Cut-out failed to start.");
+  return data;
 }
 
 export async function addTextAsset(group: AssetGroup, name: string, kind: AssetKind, content: string, projectId: string | null = null) {

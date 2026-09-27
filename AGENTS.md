@@ -1,3 +1,4 @@
 - Hubs = `asset_groups` rows; projects (`projects`) belong to a hub; assets with `project_id = null` are the hub library. Why: reuse existing tables, keep old links working.
 - Skills live in `skills` (group_id null = shared) and their source markdown in `/skills`; re-import with `bun ./scripts/import-skills.ts <repo-path>`. Why: one editable source agents can also read from GitHub.
 - The `shared-library` hub is included in every project manifest. Why: cross-niche sounds/music without copying.
+- Cut-outs: `_shared/cutout.ts` (edge flood-fill of white via deno.land imagescript, AI edit fallback), gated by `asset_groups.auto_cutout`; cut-outs are separate assets tagged `cutout` with `meta.source_asset_id`. Why: free, deterministic on generated white-background images; npm imagescript fails in the edge runtime.
