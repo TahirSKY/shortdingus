@@ -1,4 +1,4 @@
-import { admin, assetUrl, cors, json, KINDS, safeName } from "../_shared/hub.ts";
+import { admin, assetTarget, assetUrl, cors, json, KINDS, safeName } from "../_shared/hub.ts";
 import { startAnalysis } from "../_shared/analysis.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -83,6 +83,9 @@ Deno.serve(async (req) => {
   const db = admin();
   const { data: group } = await db.from("asset_groups").select("id, slug").eq("slug", slug).maybeSingle();
   if (!group) return json({ error: "Unknown slug." }, 404);
+  const target = await assetTarget(db, group.id, p);
+  if ("error" in target) return json({ error: target.error }, target.status);
+  const extra = target.extra;
 
   // Duplicate guard: same group + name within 60s returns the existing row.
   const recent = async (name: string) => {
@@ -115,7 +118,7 @@ Deno.serve(async (req) => {
     const path = `groups/${group.slug}/${id}-${safeName(name)}`;
     const up = await db.storage.from("hub-media").upload(path, bytes, { contentType: mime, upsert: false });
     if (up.error) return json({ error: "Upload failed." }, 500);
-    const { data, error } = await db.from("assets").insert({ id, group_id: group.id, kind: storeKind, name, storage_path: path, mime_type: mime, size_bytes: bytes.byteLength, meta: { sourceUrl } }).select().single();
+    const { data, error } = await db.from("assets").insert({ id, group_id: group.id, kind: storeKind, name, storage_path: path, mime_type: mime, size_bytes: bytes.byteLength, meta: { sourceUrl }, ...extra }).select().single();
     if (error) return json({ error: error.message }, 500);
     await db.from("asset_groups").update({ updated_at: new Date().toISOString() }).eq("id", group.id);
     const job = await startAnalysis(data);
@@ -130,7 +133,7 @@ Deno.serve(async (req) => {
     const name = String(p.name || (kind === "code" ? `snippet-${h}.tsx` : `note-${h}.md`)).slice(0, 200);
     const dup = await recent(name);
     if (dup) return reuse(dup);
-    const { data, error } = await db.from("assets").insert({ group_id: group.id, kind, name, inline_content: content, mime_type: kind === "code" ? "text/plain" : "text/markdown", size_bytes: new TextEncoder().encode(content).byteLength, meta: {} }).select().single();
+    const { data, error } = await db.from("assets").insert({ group_id: group.id, kind, name, inline_content: content, mime_type: kind === "code" ? "text/plain" : "text/markdown", size_bytes: new TextEncoder().encode(content).byteLength, meta: {}, ...extra }).select().single();
     if (error) return json({ error: error.message }, 500);
     const winner = await settle(data);
     if (winner) return reuse(winner);
@@ -147,7 +150,7 @@ Deno.serve(async (req) => {
   const { data: asset, error } = await db.from("assets").insert({
     group_id: group.id, kind: kind === "voice" ? "audio" : "image", name,
     mime_type: kind === "image" ? "image/png" : "audio/mpeg",
-    meta: { creating: true, prompt, ...(kind === "voice" ? { voice } : {}) },
+    meta: { creating: true, prompt, ...(kind === "voice" ? { voice } : {}) }, ...extra,
   }).select().single();
   if (error || !asset) return json({ error: error?.message || "Could not create asset." }, 500);
   const winner = await settle(asset);

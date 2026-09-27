@@ -1,4 +1,4 @@
-import { admin, assetUrl, cors, json, KINDS, safeName } from "../_shared/hub.ts";
+import { admin, assetTarget, assetUrl, cors, json, KINDS, safeName } from "../_shared/hub.ts";
 import { startAnalysis } from "../_shared/analysis.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -26,8 +26,10 @@ Deno.serve(async (req) => {
   const { data: group } = await db.from("asset_groups").select("id, slug").eq("slug", slug).maybeSingle();
   if (!group) return json({ error: `No group with slug "${slug}".` }, 404);
 
+  const target = await assetTarget(db, group.id, body);
+  if ("error" in target) return json({ error: target.error }, target.status);
   const id = crypto.randomUUID();
-  let row: Record<string, unknown> = { id, group_id: group.id, kind, name, meta };
+  let row: Record<string, unknown> = { id, group_id: group.id, kind, name, meta, ...target.extra };
   if (sourceUrl) {
     let url: URL;
     try { url = new URL(sourceUrl); } catch { return json({ error: "Invalid sourceUrl." }, 400); }
