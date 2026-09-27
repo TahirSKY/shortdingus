@@ -33,8 +33,8 @@ Kit: `remotion/src/lib/collage.tsx` — `CollageBoard` (camera keyframes + paral
 
 ## Format
 
-1080×1920 @30, 35–45s. The hook grammar of make-short applies: composed frame 0,
-loop-friendly tail, no CTA outros.
+Format and length are whatever the user wants (vertical 1080×1920 @30 is common). Ideas from
+`retention-structure` (strong opening, loop-friendly ending, no CTA outro) are optional.
 
 ## Stage 1 — script + scene dissection
 

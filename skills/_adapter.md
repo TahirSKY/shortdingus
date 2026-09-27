@@ -4,9 +4,9 @@
 > | Laptop step | In the hub |
 > |---|---|
 > | Read `brand.md`, catalogs, `IDEAS.md` | `project-manifest` → `style_guide`, `library` (role/tags/analyses), `skills` |
-> | `script.md`, `beats.json`, `sfx-plan.json`, `scenes.json` | Save as project files (`kind=text`, `role=script`/`plan`) via `agent-create`, and mirror the six parts into `project.plan` via `project-update` |
+> | `script.md`, `beats.json`, `sfx-plan.json`, `scenes.json` | Save as project files (`kind=text`, `role=script`/`plan`) via `agent-create`, and optionally keep a free-form outline in `project.plan` via `project-update` |
 > | `gen_voice.py` (ElevenLabs) | `agent-create kind=voice role=voice prompt=<line>` (one file per line/character), or use the user's own recorded voice from the library |
-> | Word-exact captions (ElevenLabs alignment) | `analyze-asset tool=gemini-words` on the voice file → `words`, `caption_lines`, `cuts` |
+> | Word-exact captions (ElevenLabs alignment) | Voice files are auto-transcribed by AssemblyAI (`tool=assembly-transcript`) → `words`, `caption_lines`, `cuts` in the file's analyses |
 > | `gen_image.py` / cutouts / layers | `agent-create kind=image role=shot` (1024×1536 portrait). Ask for plain/solid backgrounds when you need a cut-out layer |
 > | fal video clips | Not available yet — use stills + camera moves in Remotion |
 > | `media/library/sfx`, `music` | Hub `library` + the `shared-library` hub (`role=sfx`/`music`, tags, prompt/description in `meta`). Library-first: reuse before generating |

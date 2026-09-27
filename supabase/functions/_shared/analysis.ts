@@ -162,15 +162,73 @@ export async function runWords(analysisId: string, asset: any) {
   }
 }
 
-/** Start an analysis row for an image/video asset and return the background job promise (or null). */
+function wordExtras(words: { w: string; start: number; end: number }[]) {
+  const cuts: { start: number; end: number; reason: string }[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const bare = words[i].w.toLowerCase().replace(/[^a-z]/g, "");
+    if (["um", "uh", "erm", "ah", "hmm"].includes(bare)) cuts.push({ start: words[i].start, end: words[i].end, reason: `filler "${words[i].w}"` });
+    if (i > 0 && words[i].start - words[i - 1].end > 0.6) cuts.push({ start: +(words[i - 1].end + 0.1).toFixed(3), end: +(words[i].start - 0.1).toFixed(3), reason: "silence" });
+  }
+  const lines: { text: string; start: number; end: number }[] = [];
+  let cur: typeof words = [];
+  for (const w of words) { cur.push(w); if (cur.length >= 4 || /[.!?,]$/.test(w.w)) { lines.push({ text: cur.map((c) => c.w).join(" "), start: cur[0].start, end: cur[cur.length - 1].end }); cur = []; } }
+  if (cur.length) lines.push({ text: cur.map((c) => c.w).join(" "), start: cur[0].start, end: cur[cur.length - 1].end });
+  return { cuts, caption_lines: lines };
+}
+
+/** AssemblyAI word-level transcript (times in seconds). */
+export async function runAssembly(analysisId: string, asset: any) {
+  const db = admin();
+  try {
+    const key = Deno.env.get("ASSEMBLYAI_API_KEY");
+    if (!key) throw new Error("AssemblyAI is not configured.");
+    const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 3600);
+    if (error || !signed) throw new Error("Could not open the file.");
+    const start = await fetch("https://api.assemblyai.com/v2/transcript", {
+      method: "POST", headers: { authorization: key, "content-type": "application/json" },
+      body: JSON.stringify({ audio_url: signed.signedUrl, speech_model: "universal", disfluencies: true, punctuate: true, format_text: true, speaker_labels: true }),
+    });
+    const job = await start.json().catch(() => ({}));
+    if (!start.ok || !job.id) throw new Error(`AssemblyAI refused the file (${start.status}): ${String(job.error || "").slice(0, 200)}`);
+    let t: any = job;
+    const deadline = Date.now() + 9 * 60_000;
+    while (t.status !== "completed" && t.status !== "error") {
+      if (Date.now() > deadline) throw new Error("Transcription took too long. Run it again.");
+      await new Promise((r) => setTimeout(r, 3000));
+      const r = await fetch(`https://api.assemblyai.com/v2/transcript/${job.id}`, { headers: { authorization: key } });
+      t = await r.json();
+    }
+    if (t.status === "error") throw new Error(`AssemblyAI: ${String(t.error).slice(0, 200)}`);
+    const words = (t.words || []).map((x: any) => ({ w: String(x.text), start: x.start / 1000, end: x.end / 1000, ...(x.speaker ? { speaker: x.speaker } : {}) }));
+    const utterances = (t.utterances || []).map((u: any) => ({ speaker: u.speaker, text: u.text, start: u.start / 1000, end: u.end / 1000 }));
+    const extras = wordExtras(words);
+    const summary = words.length ? `${words.length} words, ${extras.cuts.length} suggested cuts.` : "No speech found.";
+    await db.from("asset_analyses").update({ status: "complete", summary, report: { text: t.text || "", words, utterances, ...extras, provider: "assemblyai", transcript_id: t.id }, error_message: null }).eq("id", analysisId);
+  } catch (e) {
+    console.error("[analyze-asset:assembly]", e);
+    await db.from("asset_analyses").update({ status: "error", error_message: (e as Error).message?.slice(0, 300) || "Transcription failed." }).eq("id", analysisId);
+  }
+}
+
+const isVoice = (a: any) => a.kind === "audio" ? !["sfx", "music"].includes(a.role) : a.kind === "video" && a.role === "voice";
+
+/** Start background analyses for a new asset (description for images/videos, transcript for voice). */
 export async function startAnalysis(asset: any): Promise<Promise<void> | null> {
-  if (!asset?.storage_path || !["image", "video"].includes(asset.kind)) return null;
+  if (!asset?.storage_path) return null;
   if ((asset.tags || []).includes("cutout")) return null; // cut-outs don't need their own description
   const db = admin();
   await expireStale(db);
-  const tool = asset.kind === "image" ? "gemini-image" : "gemini-video";
-  const { data: row, error } = await db.from("asset_analyses")
-    .insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
-  if (error || !row) { console.error("[auto-analysis] insert failed", error); return null; }
-  return asset.kind === "image" ? runImage(row.id, asset) : runGemini(row.id, asset);
+  const jobs: Promise<void>[] = [];
+  if (["image", "video"].includes(asset.kind)) {
+    const tool = asset.kind === "image" ? "gemini-image" : "gemini-video";
+    const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
+    if (error || !row) console.error("[auto-analysis] insert failed", error);
+    else jobs.push(asset.kind === "image" ? runImage(row.id, asset) : runGemini(row.id, asset));
+  }
+  if (isVoice(asset)) {
+    const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool: "assembly-transcript", status: "running" }).select().single();
+    if (error || !row) console.error("[auto-transcript] insert failed", error);
+    else jobs.push(runAssembly(row.id, asset));
+  }
+  return jobs.length ? Promise.all(jobs).then(() => {}) : null;
 }

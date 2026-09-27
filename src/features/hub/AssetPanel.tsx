@@ -14,16 +14,20 @@ import {
 
 const copy = (text: string) => { navigator.clipboard.writeText(text); toast.success("Copied"); };
 
-function AnalysisView({ a }: { a: Analysis }) {
-  const [open, setOpen] = useState(false);
-  if (a.status === "running" || a.status === "pending") return <p className="text-xs text-muted-foreground">{a.tool === "gemini-words" ? "Timing every word…" : "Analysing…"} this can take a minute.</p>;
+const TOOL_LABEL: Record<string, string> = { "gemini-words": "Word timing: ", "assembly-transcript": "Transcript: " };
+
+export function AnalysisView({ a, defaultOpen = false }: { a: Analysis; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const [showWords, setShowWords] = useState(false);
+  if (a.status === "running" || a.status === "pending") return <p className="text-xs text-muted-foreground">{a.tool === "assembly-transcript" ? "Transcribing…" : a.tool === "gemini-words" ? "Timing every word…" : "Analysing…"} this can take a minute.</p>;
   if (a.status === "error") return <p className="text-xs text-destructive">Failed: {a.error_message}</p>;
   const r = a.report as any;
   const beats = r?.beats || [];
   const words = r?.words || [];
+  const lines = r?.caption_lines || [];
   return (
     <div className="text-sm">
-      <p className="text-muted-foreground">{a.tool === "gemini-words" ? "Words: " : ""}{a.summary}</p>
+      <p className="text-muted-foreground">{TOOL_LABEL[a.tool] || ""}{a.summary}</p>
       {(beats.length > 0 || words.length > 0) && (
         <button onClick={() => setOpen(!open)} className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} /> {beats.length ? `${beats.length} beats` : `transcript + ${r.cuts?.length || 0} cuts`}
@@ -36,7 +40,9 @@ function AnalysisView({ a }: { a: Analysis }) {
       )}
       {open && words.length > 0 && (
         <div className="mt-2 space-y-2 text-xs">
-          <p>{r.text}</p>
+          <ul className="space-y-0.5">{lines.map((l: any, i: number) => <li key={i}><span className="font-mono text-muted-foreground">{l.start.toFixed(2)}s</span> {l.text}</li>)}</ul>
+          <button onClick={() => setShowWords(!showWords)} className="text-muted-foreground underline">{showWords ? "Hide" : "Show"} every word</button>
+          {showWords && <p className="font-mono leading-6">{words.map((w: any, i: number) => <span key={i} className="mr-2 whitespace-nowrap">{w.w}<sub className="text-muted-foreground">{w.start.toFixed(2)}</sub></span>)}</p>}
           {r.cuts?.length > 0 && <ul className="font-mono text-muted-foreground">{r.cuts.map((c: any, i: number) => <li key={i}>cut {c.start.toFixed(2)}s–{c.end.toFixed(2)}s · {c.reason}</li>)}</ul>}
         </div>
       )}
@@ -164,8 +170,8 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
                     {(a.kind === "video" || (a.kind === "image" && !(a.meta as any)?.creating)) && <Button size="icon" variant="ghost" className="h-7 w-7" title="Describe / analyse" disabled={busy} onClick={async () => {
                       try { await runAnalysis(a.id); refresh(); toast.success("Analysis started"); } catch (e) { toast.error((e as Error).message); }
                     }}><ScanSearch className="h-3.5 w-3.5" /></Button>}
-                    {(a.kind === "video" || a.kind === "audio") && a.storage_path && <Button size="icon" variant="ghost" className="h-7 w-7" title="Time every word (captions + cuts)" disabled={busy} onClick={async () => {
-                      try { await runAnalysis(a.id, "gemini-words"); refresh(); toast.success("Word timing started"); } catch (e) { toast.error((e as Error).message); }
+                    {(a.kind === "video" || a.kind === "audio") && a.storage_path && <Button size="icon" variant="ghost" className="h-7 w-7" title="Transcribe with AssemblyAI (timed words, captions, cuts)" disabled={busy} onClick={async () => {
+                      try { await runAnalysis(a.id, "assembly-transcript"); refresh(); toast.success("Transcript started"); } catch (e) { toast.error((e as Error).message); }
                     }}><AudioLines className="h-3.5 w-3.5" /></Button>}
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete" onClick={async () => {
                       if (!confirm(`Delete ${a.name}?`)) return;

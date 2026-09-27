@@ -60,6 +60,9 @@ async function finish(asset: any, slug: string, kind: string, prompt: string, vo
       const cut = await startCutout(saved);
       const job = await startAnalysis(saved);
       await Promise.all([cut, job].filter(Boolean));
+    } else {
+      const job = await startAnalysis({ ...asset, kind: "audio", storage_path: path, mime_type: out.mime });
+      if (job) await job;
     }
   } catch (e) {
     console.error("[agent-create]", e);

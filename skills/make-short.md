@@ -35,10 +35,10 @@ generic enough for a series.
 
 ## Stage 1 — script + beats
 
-Beat grammar (~38–42s): **HOOK** (0–3.4s, frame 0 FULLY composed — the payoff already visible,
-no fade from black) → **SETUP** → optional **QUIZ** (PauseCard, ~2.5s — drives comments) →
-**REVEAL** in 2–4 steps, each synced to a VO word → **TWIST** → **LOOP** (last frame == frame 0,
-dissolving the payoff back into the intro so it replays seamlessly).
+Structure and length are agreed with the user — the original author's example is below as
+inspiration only (see `retention-structure` for the ideas): a strong opening frame, setup, an
+optional quiz (PauseCard), a reveal synced to VO words, a twist, and a loop back to the start.
+Don't reuse the same shape and timings every video.
 
 **Outros — no fluff.** NEVER end on an old-school engagement-CTA — no "what should I do next?",
 no "comment below", no "which one should I break down". They read as dated. End on the PAYOFF

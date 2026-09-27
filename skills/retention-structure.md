@@ -1,34 +1,26 @@
 ---
 name: retention-structure
-description: The six-part story order every short follows for retention — hook, setup, quiz, reveal, twist, loop. Used by every making skill; the project plan is written in this shape.
+description: Reference, not a rule — six story ideas (hook, setup, quiz, reveal, twist, loop) that often help short videos keep viewers. Use what fits the video you and the user agreed on.
 ---
 
-# Retention structure — six parts, every video
+# Retention ideas — a toolbox, not a template
 
-Length ~35–45s at 1080×1920, 30fps. No intros, no "like and subscribe", no CTA outro. The loop IS the ending.
+These six ideas come from short-form video practice. They are **not** required, not in a fixed order and have no fixed timings or length. Agree the length, structure and pacing with the user first; then pick whichever ideas serve that video. Mixing, skipping or inventing your own structure is fine — repeating the same shape every time makes videos feel templated.
 
-| # | Part | Time | Job | Rules |
-|---|---|---|---|---|
-| 1 | **Hook** | 0–3.4s | Stop the scroll | Frame 0 is FULLY composed — the payoff/tension already visible. No fade-in from black. First word lands in the first 0.5s. A question, contradiction or impossible image. |
-| 2 | **Setup** | ~3–10s | Give just enough context | One idea per sentence. Every line earns the next. |
-| 3 | **Quiz** | ~10–16s | Make the viewer guess | Pose the question on screen; hold a beat (~1s) so they commit to an answer. |
-| 4 | **Reveal** | ~16–30s | Pay it off | In 2–4 steps, each synced to a spoken word (zoom, stamp, highlight, SFX on the word). |
-| 5 | **Twist** | ~30–38s | Re-open curiosity | A second surprise or a reframing of the answer. |
-| 6 | **Loop** | last 2–4s | Rewatch | Last frame ≈ frame 0; last line flows into the first line (sentence reads continuously on replay). If a loop is impossible, end on the payoff with no filler. |
+| Idea | What it does | Why it can work |
+|---|---|---|
+| **Hook** | Opens on something that makes people stay — a question, contradiction, surprising image or the payoff itself. | Viewers decide fast whether to keep watching. |
+| **Setup** | Gives just enough context for the idea to matter. | Stakes make the payoff land. |
+| **Quiz / gap** | Invites the viewer to guess or take a side before the answer. | A committed guess makes people want to see if they were right. |
+| **Reveal** | Pays off the promise, often in steps that land on spoken words. | Delivers what the hook promised. |
+| **Twist** | A second surprise or reframing after the answer. | Re-opens curiosity when people would otherwise leave. |
+| **Loop** | The ending flows back into the opening. | Encourages rewatches. Only when it suits the piece. |
 
-## Project plan shape (save with project-update)
+## Ideas that often help (use judgement)
+- Word-by-word captions and effects that land on the spoken word (use the voiceover transcript's `words`).
+- Keeping text clear of phone UI areas at the top and bottom.
+- Regular visual change so the frame doesn't feel static.
+- Avoiding dated "like and subscribe" outros.
 
-```json
-{ "title": "…", "duration_s": 40,
-  "parts": [
-    { "part": "hook",   "start": 0,   "end": 3.4, "on_screen": "…", "voice": "…", "sfx": ["impact-soft@0.2"] },
-    { "part": "setup",  "start": 3.4, "end": 10,  "on_screen": "…", "voice": "…" },
-    { "part": "quiz",   … }, { "part": "reveal", … }, { "part": "twist", … }, { "part": "loop", … }
-  ] }
-```
-
-## Always
-- Captions highlight each word as it's spoken (word timing), kept clear of the top 12% and bottom 20% UI zones.
-- Something changes on screen at least every 1.5–2s (cut, camera move, layer, highlight).
-- Motion is many simple staggered moves plus a virtual camera — not complex per-element animation.
-- Pick topics that make people argue or feel smart; your angle/voice beats generic facts.
+## Project plan
+`project.plan` is free-form JSON — write whatever structure you and the user chose (or leave it empty).

@@ -40,11 +40,12 @@ Deno.serve(async (req) => {
 
   return json({
     read_first: [
-      "1. Follow `skills` — start with project.skill (if set) and always `retention-structure`, then `final-check` before rendering.",
-      "2. Obey `style_guide` (hub first, then shared).",
-      "3. Reuse `library` items (search by role/tags/analyses) before generating anything new.",
-      "4. Save every file for this video into the project: add `project=<project slug>` and a `role` when writing.",
-      "5. Keep `project.plan` updated via project-update (six parts: hook, setup, quiz, reveal, twist, loop).",
+      "This is a toolbox, not a template. Agree the idea, length, structure and pacing with the user — nothing here is a fixed rule.",
+      "`skills` are references you can draw on (project.skill is the user's suggested starting point; `retention-structure` holds optional story ideas; `final-check` has practical pre-render checks).",
+      "`style_guide` (hub, then shared) describes the look and voice the user likes.",
+      "`library` holds reusable sounds, music, clips and images (search by role/tags/analyses).",
+      "Voiceover files (role=voice) carry an `assembly-transcript` analysis: words [{w,start,end}] in seconds, caption_lines and suggested cuts.",
+      "Save files for this video into the project (`project=<project slug>`, plus a `role`). `project.plan` is free-form notes — use any shape.",
     ],
     hub: { slug: hub.slug, title: hub.title, notes: hub.notes, style_guide: hub.style_guide },
     shared_style_guide: shared && shared.id !== hub.id ? shared.style_guide : undefined,
