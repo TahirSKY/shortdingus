@@ -143,3 +143,6 @@ Returns `read_first` steps, `hub.style_guide`, `shared_style_guide`, `project` (
 - Plan shape: `{ "title", "duration_s", "parts": [{ "part": "hook|setup|quiz|reveal|twist|loop", "start", "end", "voice", "on_screen", "sfx": [] }] }` — see skill `retention-structure`.
 - Word timing: `POST /analyze-asset { assetId, tool: "gemini-words" }` on audio/video → report `{ text, words:[{w,start,end}], caption_lines, cuts }`.
 - Render: save the single-file Remotion composition as `kind=code role=code`; the user presses "Preview & render" on the project page (or call `render-video`).
+
+## Auto cut-outs (opt-in per hub)
+Hubs with `auto_cutout: true` (shown in the manifest's hub object; VOX is on) automatically get a transparent-PNG copy of every new image, whichever way it arrives. The copy is named `<name>-cutout.png`, tagged `cutout`, keeps the original's project and role, and has `meta.source_asset_id` pointing to the original. While it's being made `meta.creating` is true and its URL returns 409; on failure `meta.error` holds the reason. For collage layers, use the `cutout` file; the original is always kept.

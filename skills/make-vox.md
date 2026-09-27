@@ -101,3 +101,6 @@ The user's ear is the audit gate.
 script.md scenes each name their layers · all layers generated + sidecars in media/projects ·
 composition QA'd at cues and from the final mp4 · contrast rule honored · voice + SFX when
 requested · kit additions generic.
+
+## Cut-outs
+In a hub with auto cut-outs on, each image you push also yields `<name>-cutout.png` (tag `cutout`, `meta.source_asset_id` = original). Use the cut-out for layered collage subjects; wait until it no longer shows `creating`.
