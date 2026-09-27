@@ -28,14 +28,14 @@ export default function Groups() {
       <HubHeader />
       <main className="mx-auto max-w-6xl px-4 py-8">
         <form onSubmit={create} className="flex gap-2">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New group name, e.g. Loan horror 01" maxLength={100} />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New hub for a niche, e.g. Horror" maxLength={100} />
           <Button type="submit" disabled={busy || !title.trim()}>Create</Button>
         </form>
 
         {isLoading ? <p className="mt-10 text-sm text-muted-foreground">Loading…</p> : groups.length === 0 ? (
           <div className="mt-16 max-w-md text-sm text-muted-foreground">
-            <p>Create a group, drop videos, images, audio or scripts into it, and every file gets a permanent link.</p>
-            <p className="mt-2">Hand the group's name to any AI agent — it can read everything as one JSON file and add files back.</p>
+            <p>Create a hub for each niche (Horror, Finance…). A hub holds skills, a reusable library and a style guide; inside it, each project is one video.</p>
+            <p className="mt-2">Give a project's agent link to any AI — it reads everything and saves its work back.</p>
           </div>
         ) : (
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
