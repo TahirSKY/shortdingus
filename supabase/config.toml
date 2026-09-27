@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.project-update]
 verify_jwt = false
+
+[functions.make-cutout]
+verify_jwt = false

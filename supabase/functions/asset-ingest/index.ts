@@ -1,5 +1,6 @@
 import { admin, assetTarget, assetUrl, cors, json, KINDS, safeName } from "../_shared/hub.ts";
 import { startAnalysis } from "../_shared/analysis.ts";
+import { startCutout } from "../_shared/cutout.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -51,5 +52,7 @@ Deno.serve(async (req) => {
   await db.from("asset_groups").update({ updated_at: new Date().toISOString() }).eq("id", group.id);
   const job = await startAnalysis(data);
   if (job) EdgeRuntime.waitUntil(job);
+  const cut = await startCutout(data);
+  if (cut) EdgeRuntime.waitUntil(cut);
   return json({ asset: { ...data, url: assetUrl(id) }, ...(job ? { analysis: "started" } : {}) }, 201);
 });
