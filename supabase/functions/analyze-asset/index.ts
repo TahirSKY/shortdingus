@@ -15,12 +15,14 @@ Deno.serve(async (req) => {
   const { data: asset } = await db.from("assets").select("*").eq("id", assetId).maybeSingle();
   if (!asset) return json({ error: "Asset not found." }, 404);
 
-  // ---- assembly-transcript: insert path ready, provider not wired yet ----
-  if (tool === "assembly-transcript") {
-    return json({ error: "Transcripts are not implemented yet." }, 501);
-  }
-
   await expireStale(db);
+  if (tool === "assembly-transcript") {
+    if (!["audio", "video"].includes(asset.kind) || !asset.storage_path) return json({ error: "Transcripts work on uploaded audio or video." }, 400);
+    const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
+    if (error || !row) return json({ error: "Could not start transcript." }, 500);
+    EdgeRuntime.waitUntil(runAssembly(row.id, asset));
+    return json({ analysis: row }, 202);
+  }
   if (tool === "gemini-words") {
     if (!["audio", "video"].includes(asset.kind) || !asset.storage_path) return json({ error: "Word timing works on uploaded audio or video." }, 400);
     const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
