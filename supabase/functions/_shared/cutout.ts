@@ -1,4 +1,4 @@
-import { decode, Image } from "npm:imagescript@1.3.0";
+import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 import { admin, safeName } from "./hub.ts";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1";
