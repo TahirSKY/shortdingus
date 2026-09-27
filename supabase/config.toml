@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.agent-create]
 verify_jwt = false
+
+[functions.project-manifest]
+verify_jwt = false
+
+[functions.project-update]
+verify_jwt = false

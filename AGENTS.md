@@ -1,0 +1,3 @@
+- Hubs = `asset_groups` rows; projects (`projects`) belong to a hub; assets with `project_id = null` are the hub library. Why: reuse existing tables, keep old links working.
+- Skills live in `skills` (group_id null = shared) and their source markdown in `/skills`; re-import with `bun ./scripts/import-skills.ts <repo-path>`. Why: one editable source agents can also read from GitHub.
+- The `shared-library` hub is included in every project manifest. Why: cross-niche sounds/music without copying.

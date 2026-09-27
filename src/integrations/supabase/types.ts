@@ -74,6 +74,7 @@ export type Database = {
           id: string
           notes: string | null
           slug: string
+          style_guide: string
           title: string
           updated_at: string
         }
@@ -82,6 +83,7 @@ export type Database = {
           id?: string
           notes?: string | null
           slug: string
+          style_guide?: string
           title: string
           updated_at?: string
         }
@@ -90,6 +92,7 @@ export type Database = {
           id?: string
           notes?: string | null
           slug?: string
+          style_guide?: string
           title?: string
           updated_at?: string
         }
@@ -106,8 +109,11 @@ export type Database = {
           meta: Json
           mime_type: string
           name: string
+          project_id: string | null
+          role: string | null
           size_bytes: number | null
           storage_path: string | null
+          tags: string[]
         }
         Insert: {
           created_at?: string
@@ -119,8 +125,11 @@ export type Database = {
           meta?: Json
           mime_type: string
           name: string
+          project_id?: string | null
+          role?: string | null
           size_bytes?: number | null
           storage_path?: string | null
+          tags?: string[]
         }
         Update: {
           created_at?: string
@@ -132,8 +141,11 @@ export type Database = {
           meta?: Json
           mime_type?: string
           name?: string
+          project_id?: string | null
+          role?: string | null
           size_bytes?: number | null
           storage_path?: string | null
+          tags?: string[]
         }
         Relationships: [
           {
@@ -141,6 +153,67 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          name: string
+          notes: string
+          plan: Json
+          skill_id: string | null
+          slug: string
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          name: string
+          notes?: string
+          plan?: Json
+          skill_id?: string | null
+          slug: string
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          name?: string
+          notes?: string
+          plan?: Json
+          skill_id?: string | null
+          slug?: string
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
         ]
@@ -198,6 +271,50 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      skills: {
+        Row: {
+          body: string
+          created_at: string
+          description: string
+          group_id: string | null
+          id: string
+          name: string
+          slug: string
+          source: string | null
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          description?: string
+          group_id?: string | null
+          id?: string
+          name: string
+          slug: string
+          source?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          description?: string
+          group_id?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          source?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skills_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

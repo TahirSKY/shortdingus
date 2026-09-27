@@ -1,0 +1,2 @@
+ALTER TABLE public.asset_analyses DROP CONSTRAINT asset_analyses_tool_check;
+ALTER TABLE public.asset_analyses ADD CONSTRAINT asset_analyses_tool_check CHECK (tool = ANY (ARRAY['gemini-video','gemini-image','gemini-words','assembly-transcript','manual']));

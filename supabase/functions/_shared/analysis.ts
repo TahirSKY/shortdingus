@@ -111,6 +111,57 @@ export async function runImage(analysisId: string, asset: any) {
 }
 
 
+const FILLERS = new Set(["um", "uh", "erm", "ah", "hmm", "like", "basically", "actually", "literally"]);
+
+/** Word-by-word timing for voice/video: words, caption-ready lines and cut suggestions. */
+export async function runWords(analysisId: string, asset: any) {
+  const db = admin();
+  try {
+    const key = Deno.env.get("LOVABLE_API_KEY");
+    if (!key) throw new Error("AI is not configured.");
+    const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 1800);
+    if (error || !signed) throw new Error("Could not open the file.");
+    let media: Record<string, unknown>;
+    if (asset.kind === "video") media = { type: "video_url", video_url: { url: signed.signedUrl } };
+    else {
+      const r = await fetch(signed.signedUrl);
+      const buf = new Uint8Array(await r.arrayBuffer());
+      let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      const fmt = String(asset.mime_type || "").includes("wav") ? "wav" : "mp3";
+      media = { type: "input_audio", input_audio: { data: btoa(bin), format: fmt } };
+    }
+    const prompt = `Transcribe every spoken word with timing. Return ONLY JSON: {"text": string, "words": [{"w": string, "start": number, "end": number}]}. Times in seconds, in order, one entry per word including filler words (um, uh). If nothing is spoken return {"text":"","words":[]}.`;
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" },
+      body: JSON.stringify({ model: "google/gemini-3.8-flash", stream: true, response_format: { type: "json_object" },
+        messages: [{ role: "user", content: [{ type: "text", text: prompt }, media] }] }),
+    });
+    if (res.status === 402) throw new Error("AI credits are used up. Add credits and try again.");
+    if (res.status === 429) throw new Error("AI is busy right now. Try again in a minute.");
+    if (!res.ok) throw new Error(`AI request failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
+    const parsed = parseJsonObject(await readSseText(res));
+    const words = (Array.isArray(parsed.words) ? parsed.words : []).map((x: any) => ({ w: String(x?.w ?? "").trim(), start: Math.max(0, Number(x?.start) || 0), end: Math.max(0, Number(x?.end) || 0) }))
+      .filter((x: any) => x.w).map((x: any) => ({ ...x, end: Math.max(x.start, x.end) })).sort((a: any, b: any) => a.start - b.start);
+    const cuts: { start: number; end: number; reason: string }[] = [];
+    for (let i = 0; i < words.length; i++) {
+      const bare = words[i].w.toLowerCase().replace(/[^a-z]/g, "");
+      if (["um", "uh", "erm", "ah", "hmm"].includes(bare)) cuts.push({ start: words[i].start, end: words[i].end, reason: `filler "${words[i].w}"` });
+      if (i > 0 && words[i].start - words[i - 1].end > 0.6) cuts.push({ start: words[i - 1].end + 0.1, end: words[i].start - 0.1, reason: "silence" });
+    }
+    const lines: { text: string; start: number; end: number }[] = [];
+    let cur: any[] = [];
+    for (const w of words) { cur.push(w); if (cur.length >= 4 || /[.!?,]$/.test(w.w)) { lines.push({ text: cur.map((c) => c.w).join(" "), start: cur[0].start, end: cur[cur.length - 1].end }); cur = []; } }
+    if (cur.length) lines.push({ text: cur.map((c) => c.w).join(" "), start: cur[0].start, end: cur[cur.length - 1].end });
+    const text = String(parsed.text || words.map((x: any) => x.w).join(" ")).slice(0, 20000);
+    const summary = words.length ? `${words.length} words, ${cuts.length} suggested cuts.` : "No speech found.";
+    await db.from("asset_analyses").update({ status: "complete", summary, report: { text, words, caption_lines: lines, cuts, fillers_checked: [...FILLERS] }, error_message: null }).eq("id", analysisId);
+  } catch (e) {
+    console.error("[analyze-asset:words]", e);
+    await db.from("asset_analyses").update({ status: "error", error_message: (e as Error).message?.slice(0, 300) || "Transcription failed." }).eq("id", analysisId);
+  }
+}
+
 /** Start an analysis row for an image/video asset and return the background job promise (or null). */
 export async function startAnalysis(asset: any): Promise<Promise<void> | null> {
   if (!asset?.storage_path || !["image", "video"].includes(asset.kind)) return null;

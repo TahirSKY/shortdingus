@@ -128,3 +128,18 @@ export default function Video() {
 ```
 
 Render by pasting the code into the app's `/playground`.
+
+## Hubs, projects and skills (start here)
+
+A **hub** (formerly "group") is a niche, e.g. `horror`. It holds **skills** (instructions), a **library** (reusable sfx, music, clips, logos, characters — each with `role` and `tags`) and a **style guide**. A **project** inside it is one video.
+
+```
+GET /project-manifest?slug=<hub>&project=<project>
+```
+Returns `read_first` steps, `hub.style_guide`, `shared_style_guide`, `project` (stage, plan, chosen skill), `skills` (full bodies — shared + hub), `library` (hub + `shared-library` hub, with analyses), `project_files` and `endpoints`. Follow `read_first`.
+
+- Write into a project: add `project=<project slug>`, plus optional `role` (sfx, music, clip, image, logo, character, voice, script, plan, shot, code, render, reference, other) and `tags` (comma list) to `agent-create` / `asset-ingest`. Omit `project` to add to the hub library.
+- Create or update a project: `POST /project-update` `{ token, slug, project?, name?, stage?, plan?, notes?, skill? }`. No `project` + `name` = create. Stages: idea, script, assets, voice, edit, check, render, done.
+- Plan shape: `{ "title", "duration_s", "parts": [{ "part": "hook|setup|quiz|reveal|twist|loop", "start", "end", "voice", "on_screen", "sfx": [] }] }` — see skill `retention-structure`.
+- Word timing: `POST /analyze-asset { assetId, tool: "gemini-words" }` on audio/video → report `{ text, words:[{w,start,end}], caption_lines, cuts }`.
+- Render: save the single-file Remotion composition as `kind=code role=code`; the user presses "Preview & render" on the project page (or call `render-video`).

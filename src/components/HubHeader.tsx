@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { to: "/", label: "Groups" },
+  { to: "/", label: "Hubs" },
   { to: "/playground", label: "Playground" },
   { to: "/renders", label: "Renders" },
   { to: "/examples", label: "Examples" },
