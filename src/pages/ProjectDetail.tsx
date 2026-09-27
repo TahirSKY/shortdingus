@@ -1,65 +1,52 @@
+import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clapperboard, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Clapperboard, Trash2, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import HubHeader from "@/components/HubHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
-import AssetPanel from "@/features/hub/AssetPanel";
+import AssetPanel, { AnalysisView } from "@/features/hub/AssetPanel";
 import { CopyRow, EditableText } from "@/features/hub/shared";
 import {
-  PARTS, STAGES, type PlanPart, type Project, deleteProject, getGroup, getProject, listAssets, listSkills, projectManifestUrl, updateProject,
+  STAGES, type AssetGroup, type Project, assetUrl, deleteProject, getGroup, getProject, listAssets, listSkills, projectManifestUrl, updateProject, uploadFile,
 } from "@/features/hub/api";
 
-const HINTS: Record<string, string> = {
-  hook: "0–3.4s · frame 0 fully composed, first word < 0.5s",
-  setup: "just enough context",
-  quiz: "pose the question, hold a beat",
-  reveal: "2–4 steps, each on a spoken word",
-  twist: "a second surprise",
-  loop: "last frame ≈ frame 0, last line flows into the first",
-};
-
-function warnings(parts: PlanPart[]) {
-  const w: string[] = [];
-  const missing = PARTS.filter((p) => !parts.find((x) => x.part === p && (x.voice || x.on_screen)));
-  if (missing.length) w.push(`Missing: ${missing.join(", ")}`);
-  const hook = parts.find((x) => x.part === "hook");
-  if (hook?.end != null && hook.end > 3.5) w.push(`Hook ends at ${hook.end}s — keep it under ~3.4s`);
-  return w;
-}
-
-function PlanEditor({ project, onSave }: { project: Project; onSave: (plan: Project["plan"]) => void }) {
-  const parts = project.plan?.parts || [];
-  const get = (p: string): PlanPart => parts.find((x) => x.part === p) || { part: p };
-  const set = (p: string, patch: Partial<PlanPart>) => {
-    const next = PARTS.map((name) => (name === p ? { ...get(name), ...patch } : get(name))).filter((x) => x.part === p || x.voice || x.on_screen || x.start != null);
-    onSave({ ...project.plan, parts: next });
+function VoiceoverPanel({ group, projectId }: { group: AssetGroup; projectId: string }) {
+  const qc = useQueryClient();
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const { data } = useQuery({
+    queryKey: ["assets", group.id, projectId],
+    queryFn: () => listAssets(group.id, projectId),
+    refetchInterval: (q) => (q.state.data?.analyses.some((a) => a.status === "running" || a.status === "pending") ? 5000 : false),
+  });
+  const voices = (data?.assets || []).filter((a) => a.role === "voice" && (a.kind === "audio" || a.kind === "video"));
+  const upload = async (files: FileList) => {
+    setBusy(true);
+    try { for (const f of Array.from(files)) await uploadFile(group, f, projectId, "voice"); toast.success("Uploaded — transcribing now"); qc.invalidateQueries({ queryKey: ["assets", group.id, projectId] }); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
   };
-  const warn = warnings(parts);
   return (
-    <div>
-      {warn.length > 0 && <div className="mb-3 flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><div>{warn.map((x) => <p key={x}>{x}</p>)}</div></div>}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {PARTS.map((name, i) => {
-          const part = get(name);
-          return (
-            <div key={name} className="rounded-lg border border-border p-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-sm font-medium capitalize">{i + 1}. {name}</h3>
-                <div className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
-                  <input type="number" step="0.1" min="0" defaultValue={part.start ?? ""} onBlur={(e) => e.target.value !== String(part.start ?? "") && set(name, { start: e.target.value === "" ? undefined : Number(e.target.value) })} className="w-12 bg-transparent text-right outline-none" placeholder="0" />s–
-                  <input type="number" step="0.1" min="0" defaultValue={part.end ?? ""} onBlur={(e) => e.target.value !== String(part.end ?? "") && set(name, { end: e.target.value === "" ? undefined : Number(e.target.value) })} className="w-12 bg-transparent text-right outline-none" placeholder="0" />s
-                </div>
-              </div>
-              <p className="mb-2 text-[11px] text-muted-foreground">{HINTS[name]}</p>
-              <EditableText multiline value={part.voice || ""} onSave={(voice) => set(name, { voice })} placeholder="Voice line…" className="text-xs" />
-              <EditableText multiline value={part.on_screen || ""} onSave={(on_screen) => set(name, { on_screen })} placeholder="On screen…" className="mt-2 text-xs" />
-            </div>
-          );
-        })}
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex-1 text-xs text-muted-foreground">Upload your voiceover. It's transcribed automatically with word-by-word timing that you and your agent can use.</p>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => ref.current?.click()}><Mic className="mr-1 h-3.5 w-3.5" /> {busy ? "Uploading…" : "Upload voiceover"}</Button>
+        <input ref={ref} type="file" hidden multiple accept="audio/*,video/*" onChange={(e) => e.target.files && upload(e.target.files)} />
       </div>
+      {voices.length === 0 ? <p className="text-sm text-muted-foreground">No voiceover yet.</p> : voices.map((v) => {
+        const tr = (data?.analyses || []).filter((x) => x.asset_id === v.id && (x.tool === "assembly-transcript" || x.tool === "gemini-words"));
+        return (
+          <div key={v.id} className="rounded border border-border p-3">
+            <div className="flex flex-wrap items-center gap-3"><span className="text-sm">{v.name}</span>
+              {v.kind === "audio" ? <audio src={assetUrl(v.id)} controls preload="none" className="h-8" /> : <video src={assetUrl(v.id)} controls preload="none" className="h-24 rounded" />}
+            </div>
+            <div className="mt-2 space-y-2">{tr.length ? tr.map((x) => <AnalysisView key={x.id} a={x} defaultOpen />) : <p className="text-xs text-muted-foreground">No transcript yet — use the transcribe button in Project files.</p>}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -118,8 +105,8 @@ export default function ProjectDetail() {
         <EditableText multiline value={project.notes} onSave={(notes) => save({ notes })} placeholder="The idea, angle, anything the agent should know about this video…" className="mt-3" />
 
         <section className="mt-10">
-          <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Story plan · six parts</h2>
-          <PlanEditor project={project} onSave={(plan) => save({ plan })} />
+          <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Voiceover</h2>
+          <VoiceoverPanel group={group} projectId={project.id} />
         </section>
 
         <section className="mt-10">
