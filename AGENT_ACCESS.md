@@ -140,8 +140,8 @@ Returns `read_first` steps, `hub.style_guide`, `shared_style_guide`, `project` (
 
 - Write into a project: add `project=<project slug>`, plus optional `role` (sfx, music, clip, image, logo, character, voice, script, plan, shot, code, render, reference, other) and `tags` (comma list) to `agent-create` / `asset-ingest`. Omit `project` to add to the hub library.
 - Create or update a project: `POST /project-update` `{ token, slug, project?, name?, stage?, plan?, notes?, skill? }`. No `project` + `name` = create. Stages: idea, script, assets, voice, edit, check, render, done.
-- Plan shape: `{ "title", "duration_s", "parts": [{ "part": "hook|setup|quiz|reveal|twist|loop", "start", "end", "voice", "on_screen", "sfx": [] }] }` — see skill `retention-structure`.
-- Word timing: `POST /analyze-asset { assetId, tool: "gemini-words" }` on audio/video → report `{ text, words:[{w,start,end}], caption_lines, cuts }`.
+- `project.plan` is free-form JSON — any shape you and the user agree on. Nothing in the hub enforces a structure or length.
+- Voiceover transcripts: audio (and role=voice video) is auto-transcribed by AssemblyAI → analysis `tool: "assembly-transcript"`, report `{ text, words:[{w,start,end}], utterances, caption_lines, cuts }` (seconds). Re-run: `POST /analyze-asset { assetId, tool: "assembly-transcript" }`. `gemini-words` still works as an alternative.
 - Render: save the single-file Remotion composition as `kind=code role=code`; the user presses "Preview & render" on the project page (or call `render-video`).
 
 ## Auto cut-outs (opt-in per hub)
