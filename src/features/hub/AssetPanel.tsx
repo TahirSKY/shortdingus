@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, ExternalLink, Trash2, ScanSearch, ChevronDown, Upload, AudioLines } from "lucide-react";
+import { Copy, ExternalLink, Trash2, ScanSearch, ChevronDown, Upload, AudioLines, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   ASSET_KINDS, ROLES, type Analysis, type Asset, type AssetGroup, type AssetKind, addTextAsset, assetUrl, deleteAsset,
-  fmtBytes, fmtTime, listAssets, relTime, runAnalysis, updateAssetTags, uploadFile,
+  fmtBytes, fmtTime, listAssets, makeCutout, relTime, runAnalysis, updateAssetTags, uploadFile,
 } from "@/features/hub/api";
 
 const copy = (text: string) => { navigator.clipboard.writeText(text); toast.success("Copied"); };
@@ -81,7 +81,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
   const { data: content, refetch } = useQuery({
     queryKey: ["assets", group.id, projectId],
     queryFn: () => listAssets(group.id, projectId),
-    refetchInterval: (q) => (q.state.data?.analyses.some((a) => a.status === "running" || a.status === "pending") ? 5000 : false),
+    refetchInterval: (q) => (q.state.data?.analyses.some((a) => a.status === "running" || a.status === "pending") || q.state.data?.assets.some((a) => (a.meta as any)?.creating) ? 5000 : false),
   });
   const refresh = useCallback(() => { refetch(); qc.invalidateQueries({ queryKey: ["groups"] }); }, [refetch, qc]);
 
@@ -158,6 +158,9 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
                   <div className="flex shrink-0 gap-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy link" onClick={() => copy(assetUrl(a.id))}><Copy className="h-3.5 w-3.5" /></Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7" title="Open" asChild><a href={assetUrl(a.id)} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a></Button>
+                    {a.kind === "image" && a.storage_path && !a.tags?.includes("cutout") && <Button size="icon" variant="ghost" className="h-7 w-7" title="Make cut-out (transparent background)" disabled={busy} onClick={async () => {
+                      try { await makeCutout(a.id, true); refresh(); toast.success("Cut-out started"); } catch (e) { toast.error((e as Error).message); }
+                    }}><Scissors className="h-3.5 w-3.5" /></Button>}
                     {(a.kind === "video" || (a.kind === "image" && !(a.meta as any)?.creating)) && <Button size="icon" variant="ghost" className="h-7 w-7" title="Describe / analyse" disabled={busy} onClick={async () => {
                       try { await runAnalysis(a.id); refresh(); toast.success("Analysis started"); } catch (e) { toast.error((e as Error).message); }
                     }}><ScanSearch className="h-3.5 w-3.5" /></Button>}
