@@ -1,5 +1,5 @@
 import { admin, cors, isUuid, json } from "../_shared/hub.ts";
-import { expireStale, runGemini, runImage, runWords } from "../_shared/analysis.ts";
+import { expireStale, runAssembly, runGemini, runImage, runWords } from "../_shared/analysis.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
