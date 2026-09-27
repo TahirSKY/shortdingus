@@ -100,6 +100,9 @@ export async function uploadFile(group: AssetGroup, file: File, projectId: strin
   await touch(group.id);
   if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));
   if (kind === "image" && group.auto_cutout) makeCutout(id).catch((e) => console.warn("Auto cut-out failed to start", e));
+  if ((kind === "audio" || kind === "video") && (role === "voice" || (kind === "audio" && projectId && role !== "sfx" && role !== "music")))
+    runAnalysis(id, "assembly-transcript").catch((e) => console.warn("Auto-transcript failed to start", e));
+  return id;
 }
 
 export async function makeCutout(assetId: string, force = false) {
