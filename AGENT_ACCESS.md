@@ -146,3 +146,9 @@ Returns `read_first` steps, `hub.style_guide`, `shared_style_guide`, `project` (
 
 ## Auto cut-outs (opt-in per hub)
 Hubs with `auto_cutout: true` (shown in the manifest's hub object; VOX is on) automatically get a transparent-PNG copy of every new image, whichever way it arrives. The copy is named `<name>-cutout.png`, tagged `cutout`, keeps the original's project and role, and has `meta.source_asset_id` pointing to the original. While it's being made `meta.creating` is true and its URL returns 409; on failure `meta.error` holds the reason. For collage layers, use the `cutout` file; the original is always kept.
+
+## Search stock footage and memes (no clicks)
+- `GET /functions/v1/footage-search?token=…&q=rocket+launch&type=video&orientation=portrait` → Pexels results with `download_url`.
+- `GET /functions/v1/meme-search?token=…&q=mind+blown` → GIPHY results with `mp4_url`.
+- Save a pick: `agent-create?token=…&slug=<hub>&project=<p>&kind=video&role=stock|meme&sourceUrl=<url>`. It is auto-described.
+- Mascot clips: library assets with `role=mascot`, tagged `vertical`/`horizontal`; listed under `mascot_clips` in the project manifest. Play muted over the voiceover.

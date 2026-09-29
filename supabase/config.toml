@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.make-cutout]
 verify_jwt = false
+
+[functions.footage-search]
+verify_jwt = false
+
+[functions.meme-search]
+verify_jwt = false

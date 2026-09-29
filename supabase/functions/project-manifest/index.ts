@@ -53,12 +53,18 @@ Deno.serve(async (req) => {
     projects: projects || [],
     skills: (skills || []).map((s: any) => ({ slug: s.slug, name: s.name, scope: s.group_id ? "hub" : "shared", description: s.description, body: s.body })),
     library: (library || []).map((a: any) => fileOut(a, an)),
+    mascot_clips: {
+      vertical: (library || []).filter((a: any) => a.role === "mascot" && (a.tags || []).includes("vertical")).map((a: any) => ({ id: a.id, name: a.name, url: assetUrl(a.id), duration_seconds: a.duration_seconds })),
+      horizontal: (library || []).filter((a: any) => a.role === "mascot" && (a.tags || []).includes("horizontal")).map((a: any) => ({ id: a.id, name: a.name, url: assetUrl(a.id), duration_seconds: a.duration_seconds })),
+    },
     project_files: (projFiles || []).map((a: any) => fileOut(a, an)),
     endpoints: {
       create: `${BASE()}/agent-create  (GET/POST: token, slug=${hub.slug}${project ? `, project=${project.slug}` : ""}, kind, role, tags, prompt|inlineContent|sourceUrl)`,
       ingest: `${BASE()}/asset-ingest  (POST JSON, same fields)`,
       update_project: `${BASE()}/project-update  (POST JSON: token, slug, project, stage?, plan?, notes?, name?, skill?)`,
       word_timing: `${BASE()}/analyze-asset  (POST JSON: assetId, tool: "gemini-words") — words, caption_lines, cuts`,
+      footage_search: `${BASE()}/footage-search  (GET/POST: token, q, type=video|photo, orientation=portrait|landscape) — Pexels stock; save picks via create with sourceUrl, role=stock`,
+      meme_search: `${BASE()}/meme-search  (GET/POST: token, q, type=gifs|stickers) — GIPHY; save mp4_url via create with sourceUrl, role=meme`,
       render: `${BASE()}/render-video then ${BASE()}/check-render-progress (poll every 10s)`,
     },
     generated_at: new Date().toISOString(),

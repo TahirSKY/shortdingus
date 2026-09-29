@@ -76,13 +76,13 @@ export function kindFromFile(file: File): AssetKind {
 }
 
 function mediaDuration(file: File, kind: AssetKind) {
-  if (kind !== "video" && kind !== "audio") return Promise.resolve(null);
-  return new Promise<number | null>((resolve) => {
+  if (kind !== "video" && kind !== "audio") return Promise.resolve({ duration: null as number | null, w: 0, h: 0 });
+  return new Promise<{ duration: number | null; w: number; h: number }>((resolve) => {
     const el = document.createElement(kind === "video" ? "video" : "audio");
     const url = URL.createObjectURL(file);
     el.preload = "metadata";
-    el.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(Number.isFinite(el.duration) ? el.duration : null); };
-    el.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    el.onloadedmetadata = () => { URL.revokeObjectURL(url); const v = el as HTMLVideoElement; resolve({ duration: Number.isFinite(el.duration) ? el.duration : null, w: v.videoWidth || 0, h: v.videoHeight || 0 }); };
+    el.onerror = () => { URL.revokeObjectURL(url); resolve({ duration: null, w: 0, h: 0 }); };
     el.src = url;
   });
 }
@@ -90,12 +90,15 @@ function mediaDuration(file: File, kind: AssetKind) {
 export async function uploadFile(group: AssetGroup, file: File, projectId: string | null = null, role: string | null = null) {
   const kind = kindFromFile(file);
   const id = crypto.randomUUID();
-  const duration = await mediaDuration(file, kind);
+  const dims = await mediaDuration(file, kind);
+  const duration = dims.duration;
+  const tags = dims.w && dims.h ? [dims.h > dims.w ? "vertical" : dims.w > dims.h ? "horizontal" : "square"] : [];
+  if (!role && kind === "video" && /mascot/i.test(file.name)) role = "mascot";
   const path = `groups/${group.slug}/${id}-${safeFile(file.name)}`;
   const mime = file.type || (file.name.endsWith(".json") ? "application/json" : "text/plain");
   const up = await supabase.storage.from("hub-media").upload(path, file, { contentType: mime, upsert: false });
   if (up.error) throw up.error;
-  const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: duration, project_id: projectId, role });
+  const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: duration, project_id: projectId, role, tags });
   if (error) { await supabase.storage.from("hub-media").remove([path]); throw error; }
   await touch(group.id);
   if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));
@@ -151,7 +154,7 @@ export async function updateAssetTags(id: string, role: string | null, tags: str
 }
 
 // ---- Projects & skills ----
-export const ROLES = ["sfx", "music", "clip", "image", "logo", "character", "voice", "script", "plan", "shot", "code", "render", "reference", "other"] as const;
+export const ROLES = ["sfx", "music", "clip", "image", "logo", "character", "voice", "script", "plan", "shot", "code", "render", "reference", "mascot", "stock", "meme", "other"] as const;
 export const STAGES = ["idea", "script", "assets", "voice", "edit", "check", "render", "done"] as const;
 export const PARTS = ["hook", "setup", "quiz", "reveal", "twist", "loop"] as const;
 export interface PlanPart { part: string; start?: number; end?: number; on_screen?: string; voice?: string; sfx?: string[] }
