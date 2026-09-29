@@ -19,7 +19,7 @@ export const safeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9.\
 
 export const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
 
-export const ROLES = ["sfx", "music", "clip", "image", "logo", "character", "voice", "script", "plan", "shot", "code", "render", "reference", "other"] as const;
+export const ROLES = ["sfx", "music", "clip", "image", "logo", "character", "voice", "script", "plan", "shot", "code", "render", "reference", "mascot", "stock", "meme", "other"] as const;
 
 /** Resolve optional project/role/tags params into extra asset columns. */
 export async function assetTarget(db: any, groupId: string, p: Record<string, any>): Promise<{ extra: Record<string, unknown> } | { error: string; status: number }> {
