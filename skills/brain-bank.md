@@ -29,3 +29,8 @@ Brain Bank explains ideas in short (vertical 9:16) and long (horizontal 16:9) vi
 - Every visual should earn its place against the line being spoken.
 - Retention ideas (hook, curiosity gap, twist, loop) live in `retention-structure` — use them when they fit.
 - Before rendering, run the practical checks in `final-check` and view frames at phone size.
+
+## Writing the code (so it previews and renders)
+- Start the file with `/* REMOTION_CONFIG { "fps": 30, "durationInFrames": N, "width": 1080, "height": 1920 } */` (1920x1080 for horizontal).
+- Copy file IDs exactly from the agent link; never type or guess one. A single wrong character makes the render fail.
+- Write readable code: one idea per line, clear names (`VOICE`, `MASCOT_MOMENTS`), grouped constants. Never squash it into long one-liners — the user reviews it.
