@@ -1,0 +1,2 @@
+update public.assets set role='voice' where id='3248f29a-05ff-4109-b6eb-87472646c6f9';
+update public.assets a set role='mascot' from public.asset_groups g where g.id=a.group_id and g.slug='brain-bank' and a.kind='video' and a.project_id is null and a.role is null;
