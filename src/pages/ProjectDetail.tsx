@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { findMissingAssets, missingMessage } from "@/lib/check-asset-links";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clapperboard, Trash2, Mic } from "lucide-react";
