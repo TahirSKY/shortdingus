@@ -210,7 +210,8 @@ export async function runAssembly(analysisId: string, asset: any) {
   }
 }
 
-const isVoice = (a: any) => a.kind === "audio" ? !["sfx", "music"].includes(a.role) : a.kind === "video" && a.role === "voice";
+// Every video gets a transcript (AssemblyAI returns empty words when there is no speech); audio unless it's sfx/music.
+const isVoice = (a: any) => a.kind === "audio" ? !["sfx", "music"].includes(a.role) : a.kind === "video";
 
 /** Start background analyses for a new asset (description for images/videos, transcript for voice). */
 export async function startAnalysis(asset: any): Promise<Promise<void> | null> {
