@@ -14,6 +14,7 @@ import { detectConfig } from "@/lib/detect-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { RenderSettings, RenderMode } from "@/components/FormatSelector";
+import { findMissingAssets, missingMessage, functionErrorMessage } from "@/lib/check-asset-links";
 
 const Playground = () => {
   const navigate = useNavigate();
@@ -123,6 +124,8 @@ const Playground = () => {
 
     // Video render — existing flow
     try {
+      const missing = await findMissingAssets(code);
+      if (missing.length) throw new Error(missingMessage(missing));
       const { data, error: renderError } = await supabase.functions.invoke("render-video", {
         body: {
           code,
@@ -134,7 +137,7 @@ const Playground = () => {
       });
 
       if (renderError || data?.error) {
-        throw new Error(data?.error || renderError?.message || "Failed to start render");
+        throw new Error(data?.error || (renderError ? await functionErrorMessage(renderError, "Failed to start render") : "Failed to start render"));
       }
 
       const { renderId, bucketName } = data;

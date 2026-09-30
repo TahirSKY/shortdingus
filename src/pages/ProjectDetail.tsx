@@ -69,6 +69,8 @@ export default function ProjectDetail() {
     const { assets } = await listAssets(group.id, project.id);
     const code = [...assets].reverse().find((a) => a.kind === "code" && a.inline_content);
     if (!code) return toast.error("No video code in this project yet. Ask the agent to save its Remotion code here (role: code).");
+    const missing = await findMissingAssets(code.inline_content!);
+    if (missing.length) toast.warning(missingMessage(missing), { duration: 10000 });
     sessionStorage.setItem("playground-code", code.inline_content!);
     navigate("/playground");
   };
