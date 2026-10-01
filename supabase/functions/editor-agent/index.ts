@@ -1,5 +1,5 @@
 import { createOpenAI } from "npm:@ai-sdk/openai@4.0.83";
-import { convertToModelMessages, createUIMessageStreamResponse, stepCountIs, streamText, tool, type UIMessage } from "npm:ai@7.0.126";
+import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, stepCountIs, streamText, tool, type UIMessage } from "npm:ai@7.0.126";
 import { z } from "npm:zod@3.25.76";
 import { admin, assetUrl, cors, json } from "../_shared/hub.ts";
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId, withLovableAiGatewayRunIdHeader } from "../_shared/run-id.ts";
@@ -62,6 +62,11 @@ function latestCode(files: any[]) {
   return [...files].reverse().find((a) => a.kind === "code" && a.inline_content) || null;
 }
 
+const DRAFT_ROLE = "code-draft";
+const isDraft = (a: any) => a.role === DRAFT_ROLE;
+const draftParts = (files: any[]) => files.filter(isDraft).sort((a, b) => Number(a.meta?.part) - Number(b.meta?.part));
+const textOf = (m: UIMessage) => (m.parts || []).map((p: any) => (p.type === "text" ? p.text : "")).join("").trim();
+
 function systemPrompt(ctx: NonNullable<Awaited<ReturnType<typeof loadContext>>>) {
   const { project, hub, skills, library, files, analyses } = ctx;
   const chosen = skills.find((s: any) => s.id === project.skill_id) || skills.find((s: any) => s.slug === hub.slug);
@@ -70,7 +75,7 @@ function systemPrompt(ctx: NonNullable<Awaited<ReturnType<typeof loadContext>>>)
 
 HOW WE WORK
 1. Proposal first. Read the voiceover transcript and assets, then propose: angle, structure, which mascot/library moments, visuals per section, sound moments. Discuss. Do NOT write code until the user clearly approves ("approve", "go", "build it").
-2. Build: call write_code once with the full file.
+2. Build: write the full file with write_code_part, in order, in 2-5 parts of up to ~250 lines each (for example: 1 config header, imports, asset constants and timing data; 2 shared helper components; 3+ scenes; last the main composition). Each part continues exactly where the previous one ended, and the parts are joined with a newline into one file. Set final=true on the last part — that saves the finished version. Plan the whole file before part 1 so the parts fit together. Do not reduce quality or detail because the file is written in parts. Use write_code only for short files (under ~200 lines) or a full rewrite the user asks for.
 3. Edits: ALWAYS use edit_code with small exact find/replace pairs. Change only what the user asked. Never rewrite the whole file for an edit. Call read_code first if unsure of exact text.
 4. Keep replies short and concrete. After a build or edit, say in one or two lines what changed.
 5. Never generate images without the user's explicit OK in this chat (they cost credits). Prefer library assets, cut-outs, stock (search_footage) and memes (search_memes) first. Never generate voice — the user supplies voiceovers.
