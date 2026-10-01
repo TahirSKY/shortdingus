@@ -1,5 +1,5 @@
 import { createOpenAI } from "npm:@ai-sdk/openai@4.0.83";
-import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "npm:ai@7.0.126";
+import { convertToModelMessages, createUIMessageStreamResponse, stepCountIs, streamText, tool, type UIMessage } from "npm:ai@7.0.126";
 import { z } from "npm:zod@3.25.76";
 import { admin, assetUrl, cors, json } from "../_shared/hub.ts";
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId, withLovableAiGatewayRunIdHeader } from "../_shared/run-id.ts";
