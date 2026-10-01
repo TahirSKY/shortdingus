@@ -167,9 +167,11 @@ function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGrou
             </Message>
           ))}
           {status === "submitted" && <Shimmer>Thinking…</Shimmer>}
+          {busy && progress && <Shimmer>{progress.tool === "build_video" ? `Writing the build plan… ${Math.round(progress.chars / 100) / 10}k characters` : `Writing ${progress.tool.replace(/_/g, " ")}… ${Math.round(progress.chars / 100) / 10}k characters`}</Shimmer>}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
+      <BuildCard projectId={project.id} onDone={onCodeChanged} />
       <div className="border-t border-border p-3">
         <PromptInput onSubmit={(msg) => { const t = (msg.text || "").trim(); if (!t || busy) return; sendMessage({ text: t }); setText(""); }}>
           <PromptInputTextarea autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="Tell the editor what you want…" />
