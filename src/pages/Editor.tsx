@@ -20,6 +20,15 @@ import { type AssetGroup, type Project, deleteAsset, getGroup, getProject, listA
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/editor-agent`;
 const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const MODELS = [
+  ["openai/gpt-6-astra", "GPT-6 Astra (best)"],
+  ["openai/gpt-6-sol", "GPT-6 Sol"],
+  ["openai/gpt-6-luna", "GPT-6 Luna (cheap)"],
+  ["openai/gpt-5.6-terra", "GPT-5.6 Terra"],
+  ["openai/gpt-5.6-luna", "GPT-5.6 Luna (cheap)"],
+  ["google/gemini-3.1-pro-preview", "Gemini 3.1 Pro"],
+  ["google/gemini-3.8-flash", "Gemini 3.8 Flash (cheap)"],
+];
 
 async function loadMessages(projectId: string): Promise<UIMessage[]> {
   const { data, error } = await supabase.from("editor_messages" as any).select("ui_message").eq("project_id", projectId).order("created_at");
@@ -80,10 +89,13 @@ function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGrou
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{ tool: string; chars: number } | null>(null);
   const lastEvent = useRef(Date.now());
+  const [model, setModel] = useState(() => localStorage.getItem("editor-model") || MODELS[0][0]);
+  const modelRef = useRef(model);
+  useEffect(() => { modelRef.current = model; localStorage.setItem("editor-model", model); }, [model]);
   const transport = useMemo(() => new DefaultChatTransport({
     api: ENDPOINT,
     headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
-    body: { projectId: project.id },
+    body: () => ({ projectId: project.id, model: modelRef.current }),
   }), [project.id]);
   const { messages, sendMessage, status, stop, setMessages } = useChat({
     id: project.id,
@@ -185,6 +197,9 @@ function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGrou
           const shared = window.confirm("Share this style with every hub? (Cancel = this hub only)");
           sendMessage({ text: `Save the current video as a style reference named "${name.trim()}"${shared ? ", shared with every hub" : ""}.${note.trim() ? ` What I like: ${note.trim()}` : ""}` });
         }}><Bookmark className="h-4 w-4" />Save style</PromptInputButton>
+              <select aria-label="AI model" title="Which AI writes and edits this video" value={model} disabled={busy} onChange={(e) => setModel(e.target.value)} className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground">
+                {MODELS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              </select>
               <span className="text-xs text-muted-foreground">{usage.input ? `AI used: ${Math.round(usage.input / 1000)}k read · ${Math.round(usage.output / 1000)}k written` : ""}</span>
             </PromptInputTools>
             <PromptInputSubmit status={status} onStop={stop} disabled={!busy && !text.trim()} />

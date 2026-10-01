@@ -175,6 +175,7 @@ export type Database = {
           error: string | null
           id: string
           lines: number
+          model: string | null
           part: number
           project_id: string
           status: string
@@ -189,6 +190,7 @@ export type Database = {
           error?: string | null
           id?: string
           lines?: number
+          model?: string | null
           part?: number
           project_id: string
           status?: string
@@ -203,6 +205,7 @@ export type Database = {
           error?: string | null
           id?: string
           lines?: number
+          model?: string | null
           part?: number
           project_id?: string
           status?: string

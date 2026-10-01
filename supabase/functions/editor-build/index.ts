@@ -1,9 +1,8 @@
 // Background video builder. Writes the video file one part per invocation (non-streaming, so it stays
 // far under the function's CPU limit), saves progress in editor_builds, then calls itself for the next part.
-import { createOpenAI } from "npm:@ai-sdk/openai@4.0.83";
 import { generateText } from "npm:ai@7.0.126";
 import { admin, cors, json } from "../_shared/hub.ts";
-import { GATEWAY, MODEL, clip, knowledge, loadContext, saveVersion } from "../_shared/editor-context.ts";
+import { clip, editorModel, knowledge, loadContext, pickModel, saveVersion } from "../_shared/editor-context.ts";
 
 const MAX_PARTS = 8;
 const STALE_MS = 4 * 60 * 1000;
@@ -38,12 +37,13 @@ async function runPart(buildId: string) {
   const part = build.part + 1;
   try {
     const key = Deno.env.get("LOVABLE_API_KEY")!;
-    const provider = createOpenAI({ baseURL: GATEWAY, apiKey: key, headers: { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" } });
+    const { model, providerOptions } = editorModel(pickModel(build.model), key, `build-${buildId}`);
     const soFar = build.code as string;
+    // Everything that stays the same across parts comes first, so later parts reuse the prompt cache.
     const system = `You are the in-house video editor for the "${ctx.hub.title}" hub, writing the Remotion code for the project "${ctx.project.name}". You write high-quality, competitive short-form video code: polished motion, every visual timed to the voiceover words, nothing that feels like a slideshow.
 
 You are writing ONE complete single-file video, in parts. Each reply is the next part of the file, raw code only (no markdown fences, no commentary). Parts are joined with a newline, so continue exactly where the file so far ends — never repeat code already written, never restart. Write roughly 200-350 lines per part, ending at a clean boundary (end of a constant, component or function). When the file is complete, the last line of your reply must be exactly: ${END}
-${part === 1 ? `This is part 1. Start with the REMOTION_CONFIG comment, then a short /* BUILD OUTLINE */ comment listing the sections of the file in order, then begin writing.` : `This is part ${part}. Follow the BUILD OUTLINE at the top of the file.`}
+Part 1 starts with the REMOTION_CONFIG comment, then a short /* BUILD OUTLINE */ comment listing the sections of the file in order. Later parts follow that outline.
 Do not cut quality or detail to finish sooner — use as many parts as the video needs (at most ${MAX_PARTS}).
 
 ${knowledge(ctx)}`;
@@ -53,14 +53,8 @@ ${await conversation(db, build.project_id)}
 BUILD BRIEF FROM THE EDITOR
 ${build.brief}
 
-${soFar ? `FILE SO FAR (${soFar.split("\n").length} lines, parts 1-${build.part}):\n${soFar}\n\nWrite part ${part}, continuing exactly from the last line above.` : "Write part 1."}`;
-    const { text } = await generateText({
-      model: provider.responses(MODEL),
-      system,
-      prompt,
-      maxOutputTokens: 24000,
-      providerOptions: { openai: { reasoningEffort: "medium", store: false } },
-    });
+${soFar ? `FILE SO FAR (${soFar.split("\n").length} lines):\n${soFar}\n\nThis is part ${part}. Write it, continuing exactly from the last line above.` : "This is part 1. Write it."}`;
+    const { text } = await generateText({ model, system, prompt, providerOptions });
     let chunk = stripFences(text).replace(/\s+$/, "");
     const finished = chunk.includes(END) || part >= MAX_PARTS;
     chunk = chunk.replace(END, "").replace(/\s+$/, "");

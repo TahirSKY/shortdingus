@@ -1,8 +1,31 @@
 // Shared context for the editor agent (chat) and the background video builder.
+import { createOpenAI } from "npm:@ai-sdk/openai@4.0.83";
+import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@3.0.62";
 import { assetUrl } from "./hub.ts";
 
 export const MODEL = "openai/gpt-6-astra";
 export const GATEWAY = "https://ai.gateway.lovable.dev/v1";
+// Models the user may pick in the editor. OpenAI ones run on Responses, Google ones on chat completions.
+export const EDITOR_MODELS = [
+  "openai/gpt-6-astra", "openai/gpt-6-sol", "openai/gpt-6-luna",
+  "openai/gpt-5.6-terra", "openai/gpt-5.6-luna",
+  "google/gemini-3.1-pro-preview", "google/gemini-3.8-flash",
+];
+export const pickModel = (m: unknown) => (typeof m === "string" && EDITOR_MODELS.includes(m) ? m : MODEL);
+
+// Returns the model plus its provider options. cacheKey keeps repeat requests on the same prompt cache.
+export function editorModel(id: string, key: string, cacheKey: string, fetchFn?: typeof fetch) {
+  const headers = { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" };
+  if (id.startsWith("openai/")) {
+    const provider = createOpenAI({ baseURL: GATEWAY, apiKey: key, headers, fetch: fetchFn });
+    return {
+      model: provider.responses(id),
+      providerOptions: { openai: { forceReasoning: true, reasoningEffort: "medium", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"], promptCacheKey: cacheKey } } as any,
+    };
+  }
+  const provider = createOpenAICompatible({ name: "lovable", baseURL: GATEWAY, apiKey: key, headers, fetch: fetchFn });
+  return { model: provider.chatModel(id), providerOptions: { lovable: { reasoningEffort: "medium" } } as any };
+}
 export const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 export const clip = (s: unknown, n: number) => { const t = typeof s === "string" ? s : JSON.stringify(s ?? ""); return t.length > n ? t.slice(0, n) + "…" : t; };
