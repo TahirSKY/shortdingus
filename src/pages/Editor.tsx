@@ -27,26 +27,95 @@ async function loadMessages(projectId: string): Promise<UIMessage[]> {
   return (data || []).map((r: any) => r.ui_message as UIMessage);
 }
 
+type Build = { id: string; status: "running" | "done" | "failed"; part: number; lines: number; error: string | null; version: number | null; updated_at: string };
+const STALE_MS = 4 * 60 * 1000;
+
+async function latestBuild(projectId: string): Promise<Build | null> {
+  const { data, error } = await supabase.from("editor_builds" as any).select("id, status, part, lines, error, version, updated_at").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1);
+  if (error) throw error;
+  return ((data as any[]) || [])[0] || null;
+}
+
+function BuildCard({ projectId, onDone }: { projectId: string; onDone: () => void }) {
+  const qc = useQueryClient();
+  const [resuming, setResuming] = useState(false);
+  const { data: build } = useQuery({
+    queryKey: ["editor-build", projectId],
+    queryFn: () => latestBuild(projectId),
+    refetchInterval: (q) => (q.state.data?.status === "running" ? 4000 : false),
+  });
+  const prevStatus = useRef<string | undefined>();
+  useEffect(() => {
+    if (prevStatus.current === "running" && build?.status === "done") { onDone(); toast.success(`Version ${build.version} is ready.`); }
+    prevStatus.current = build?.status;
+  }, [build?.status, build?.version, onDone]);
+  if (!build) return null;
+  const stale = build.status === "running" && Date.now() - new Date(build.updated_at).getTime() > STALE_MS;
+  const showContinue = build.status === "failed" || stale;
+  if (build.status === "done" && !build.error) return null;
+  const resume = async () => {
+    setResuming(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/editor-build`, { method: "POST", headers: { "Content-Type": "application/json", apikey: KEY, Authorization: `Bearer ${KEY}` }, body: JSON.stringify({ buildId: build.id, resume: true }) });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || `Couldn't continue (${res.status}).`);
+      qc.invalidateQueries({ queryKey: ["editor-build", projectId] });
+    } catch (e) { toast.error((e as Error).message); } finally { setResuming(false); }
+  };
+  return (
+    <div className="mx-3 mb-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
+      {build.status === "running" && !stale && <Shimmer>{build.part ? `Building your video… part ${build.part} written, about ${build.lines} lines so far` : "Building your video… writing part 1"}</Shimmer>}
+      {stale && <p>The build hasn't moved for a few minutes ({build.lines} lines saved).</p>}
+      {build.status === "failed" && <p className="text-destructive">{build.error || "The build stopped."} {build.lines ? `(${build.lines} lines saved)` : ""}</p>}
+      {build.status === "done" && build.error && <p className="text-destructive">Version {build.version}: {build.error}</p>}
+      {showContinue && <Button size="sm" variant="secondary" className="mt-2" disabled={resuming} onClick={resume}>{resuming ? "Continuing…" : "Continue the build"}</Button>}
+    </div>
+  );
+}
+
 function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGroup; project: Project; initial: UIMessage[]; onCodeChanged: () => void }) {
+  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ tool: string; chars: number } | null>(null);
+  const lastEvent = useRef(Date.now());
   const transport = useMemo(() => new DefaultChatTransport({
     api: ENDPOINT,
     headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
     body: { projectId: project.id },
   }), [project.id]);
-  const { messages, sendMessage, status, stop } = useChat({
+  const { messages, sendMessage, status, stop, setMessages } = useChat({
     id: project.id,
     messages: initial,
     transport,
+    onData: (part: any) => { lastEvent.current = Date.now(); if (part?.type === "data-progress") setProgress(part.data); },
     onError: (e) => toast.error(e.message || "The editor agent hit a problem."),
-    onFinish: () => onCodeChanged(),
+    onFinish: () => { setProgress(null); onCodeChanged(); qc.invalidateQueries({ queryKey: ["editor-build", project.id] }); },
   });
   const busy = status === "submitted" || status === "streaming";
+  useEffect(() => { lastEvent.current = Date.now(); }, [messages]);
+  useEffect(() => { if (!busy) setProgress(null); }, [busy]);
 
-  const toolDone = messages.flatMap((m) => m.parts).filter((p: any) => (p.type === "tool-write_code" || p.type === "tool-edit_code") && p.state === "output-available").length;
-  useEffect(() => { if (toolDone) onCodeChanged(); }, [toolDone, onCodeChanged]);
+  // If the connection goes quiet, stop listening and reload the saved chat — the server keeps working and saves the reply.
+  useEffect(() => {
+    if (!busy) return;
+    const t = setInterval(async () => {
+      if (Date.now() - lastEvent.current < 60000) return;
+      clearInterval(t);
+      stop();
+      toast("Lost the live connection — reloading the chat. The editor keeps working in the background.");
+      for (let i = 0; i < 12; i++) {
+        await new Promise((r) => setTimeout(r, 10000));
+        const saved = await loadMessages(project.id).catch(() => null);
+        if (saved?.length && saved[saved.length - 1].role === "assistant") { setMessages(saved); onCodeChanged(); qc.invalidateQueries({ queryKey: ["editor-build", project.id] }); return; }
+      }
+    }, 5000);
+    return () => clearInterval(t);
+  }, [busy, stop, setMessages, project.id, onCodeChanged, qc]);
+
+  const toolDone = messages.flatMap((m) => m.parts).filter((p: any) => (p.type === "tool-build_video" || p.type === "tool-edit_code" || p.type === "tool-write_code") && p.state === "output-available").length;
+  useEffect(() => { if (toolDone) { onCodeChanged(); qc.invalidateQueries({ queryKey: ["editor-build", project.id] }); } }, [toolDone, onCodeChanged, qc, project.id]);
 
   const usage = messages.reduce((acc, m: any) => ({ input: acc.input + (m.metadata?.usage?.input || 0), output: acc.output + (m.metadata?.usage?.output || 0) }), { input: 0, output: 0 });
 
