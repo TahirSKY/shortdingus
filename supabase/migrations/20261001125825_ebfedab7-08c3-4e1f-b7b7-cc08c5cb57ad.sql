@@ -1,0 +1,1 @@
+ALTER TABLE public.editor_builds ADD COLUMN code text NOT NULL DEFAULT '';

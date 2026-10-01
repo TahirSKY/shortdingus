@@ -170,6 +170,7 @@ export type Database = {
       editor_builds: {
         Row: {
           brief: string
+          code: string
           created_at: string
           error: string | null
           id: string
@@ -183,6 +184,7 @@ export type Database = {
         }
         Insert: {
           brief?: string
+          code?: string
           created_at?: string
           error?: string | null
           id?: string
@@ -196,6 +198,7 @@ export type Database = {
         }
         Update: {
           brief?: string
+          code?: string
           created_at?: string
           error?: string | null
           id?: string
