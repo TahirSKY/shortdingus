@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.meme-search]
 verify_jwt = false
+
+[functions.editor-agent]
+verify_jwt = false

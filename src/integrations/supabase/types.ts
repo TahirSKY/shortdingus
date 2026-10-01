@@ -167,6 +167,41 @@ export type Database = {
           },
         ]
       }
+      editor_messages: {
+        Row: {
+          created_at: string
+          id: string
+          msg_id: string
+          project_id: string
+          role: string
+          ui_message: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          msg_id: string
+          project_id: string
+          role: string
+          ui_message: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          msg_id?: string
+          project_id?: string
+          role?: string
+          ui_message?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "editor_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
