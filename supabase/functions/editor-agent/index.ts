@@ -151,6 +151,32 @@ Deno.serve(async (req) => {
         return r.error ? r : { id: r.id, url: r.url, status: "creating — ready in ~30-60s" };
       },
     }),
+    save_style_reference: tool({
+      description: "Save the current video's look as a reusable style reference. First read_code, then write a style card (markdown): fonts, colors, caption style, image treatment (e.g. taped photos, paper, shadows), backgrounds/textures, transitions and motion feel, pacing habits, sound habits, plus the key code techniques that create the look. Describe style, not this video's story or timings.",
+      inputSchema: z.object({ name: z.string(), card: z.string(), summary: z.string(), user_note: z.string().nullable(), shared: z.boolean() }),
+      execute: async ({ name, card, summary, user_note, shared }) => {
+        const { data: code } = await db.from("assets").select("id").eq("project_id", project.id).eq("kind", "code").order("created_at", { ascending: false }).limit(1);
+        let groupId = hub.id;
+        if (shared) { const { data: s } = await db.from("asset_groups").select("id").eq("slug", "shared-library").maybeSingle(); if (s) groupId = s.id; }
+        const { data, error } = await db.from("assets").insert({
+          group_id: groupId, project_id: null, kind: "text", role: "style-reference", tags: ["style-reference"], name, inline_content: card,
+          mime_type: "text/markdown", size_bytes: new TextEncoder().encode(card).byteLength,
+          meta: { summary: summary.slice(0, 300), user_note, source_code_asset_id: code?.[0]?.id ?? null, source_project_id: project.id },
+        }).select("id").single();
+        return error ? { error: error.message } : { saved: true, id: data.id, where: shared ? "shared library (all hubs)" : `${hub.title} hub` };
+      },
+    }),
+    read_style_reference: tool({
+      description: "Load a saved style reference: its style card plus the source video's code, to learn techniques. Adapt to the new video; never copy structure, timings or text.",
+      inputSchema: z.object({ id: z.string() }),
+      execute: async ({ id }) => {
+        const { data: ref } = await db.from("assets").select("name, inline_content, meta").eq("id", id).eq("role", "style-reference").maybeSingle();
+        if (!ref) return { error: "No such style reference." };
+        let source = "";
+        if (ref.meta?.source_code_asset_id) { const { data: c } = await db.from("assets").select("inline_content").eq("id", ref.meta.source_code_asset_id).maybeSingle(); source = c?.inline_content || ""; }
+        return { name: ref.name, card: ref.inline_content, user_note: ref.meta?.user_note, source_code: clip(source, 30000) };
+      },
+    }),
     update_project: tool({
       description: "Update the project's stage and/or notes (e.g. save the approved proposal).",
       inputSchema: z.object({ stage: z.enum(["idea", "script", "assets", "voice", "edit", "check", "render", "done"]).nullable(), notes: z.string().nullable() }),
