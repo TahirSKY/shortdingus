@@ -178,6 +178,13 @@ function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGrou
           <PromptInputFooter>
             <PromptInputTools>
               <PromptInputButton disabled={uploading} onClick={() => fileRef.current?.click()}><Paperclip className="h-4 w-4" />{uploading ? "Uploading…" : "Add files"}</PromptInputButton>
+        <PromptInputButton disabled={busy} onClick={() => {
+          const name = window.prompt("Name this style (e.g. Taped evidence board)");
+          if (!name?.trim()) return;
+          const note = window.prompt("What do you like about it? (optional)") || "";
+          const shared = window.confirm("Share this style with every hub? (Cancel = this hub only)");
+          sendMessage({ text: `Save the current video as a style reference named "${name.trim()}"${shared ? ", shared with every hub" : ""}.${note.trim() ? ` What I like: ${note.trim()}` : ""}` });
+        }}><Bookmark className="h-4 w-4" />Save style</PromptInputButton>
               <span className="text-xs text-muted-foreground">{usage.input ? `AI used: ${Math.round(usage.input / 1000)}k read · ${Math.round(usage.output / 1000)}k written` : ""}</span>
             </PromptInputTools>
             <PromptInputSubmit status={status} onStop={stop} disabled={!busy && !text.trim()} />
@@ -229,13 +236,6 @@ export default function Editor() {
           <Button size="sm" variant={tab === "chat" ? "secondary" : "ghost"} onClick={() => setTab("chat")}>Chat</Button>
           <Button size="sm" variant={tab === "preview" ? "secondary" : "ghost"} onClick={() => setTab("preview")}>Preview</Button>
         </div>
-        <Button size="sm" variant="ghost" disabled={!code || busy} onClick={() => {
-          const name = window.prompt("Name this style (e.g. Taped evidence board)");
-          if (!name?.trim()) return;
-          const note = window.prompt("What do you like about it? (optional)") || "";
-          const shared = window.confirm("Share this style with every hub? (Cancel = this hub only)");
-          sendMessage({ text: `Save the current video as a style reference named "${name.trim()}"${shared ? ", shared with every hub" : ""}.${note.trim() ? ` What I like: ${note.trim()}` : ""}` });
-        }}><Bookmark className="mr-1 h-3.5 w-3.5" />Save style</Button>
         <Button size="sm" variant="ghost" disabled={codes.length < 2 || latest?.meta?.source !== "editor"} onClick={undo}><Undo2 className="mr-1 h-3.5 w-3.5" />Undo</Button>
         <Button size="sm" disabled={!code} onClick={render}><Clapperboard className="mr-1 h-3.5 w-3.5" />Render</Button>
       </header>
