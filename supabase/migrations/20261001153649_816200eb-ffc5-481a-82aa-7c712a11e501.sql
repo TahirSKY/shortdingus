@@ -1,0 +1,1 @@
+ALTER TABLE public.editor_builds ADD COLUMN IF NOT EXISTS model text;
