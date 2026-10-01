@@ -2,3 +2,5 @@
 - Skills live in `skills` (group_id null = shared) and their source markdown in `/skills`; re-import with `bun ./scripts/import-skills.ts <repo-path>`. Why: one editable source agents can also read from GitHub.
 - The `shared-library` hub is included in every project manifest. Why: cross-niche sounds/music without copying.
 - Cut-outs: `_shared/cutout.ts` (edge flood-fill of white via deno.land imagescript, AI edit fallback), gated by `asset_groups.auto_cutout`; cut-outs are separate assets tagged `cutout` with `meta.source_asset_id`. Why: free, deterministic on generated white-background images; npm imagescript fails in the edge runtime.
+- `render-video` strips `backdrop-filter` from code before sending it to Lambda. Why: Lambda Chrome renders without a GPU, so backdrop blur costs seconds per frame and renders time out.
+- `render-video` resolves fps/frames itself (REMOTION_CONFIG → compositionConfig, arithmetic allowed) and prepends a plain-number `/* compositionConfig = {...} */` comment. Why: the S3 bundle reads the first compositionConfig with a digits-only regex, so `2015 / 30` seconds became 2015 seconds.

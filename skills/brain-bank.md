@@ -34,3 +34,4 @@ Brain Bank explains ideas in short (vertical 9:16) and long (horizontal 16:9) vi
 - Start the file with `/* REMOTION_CONFIG { "fps": 30, "durationInFrames": N, "width": 1080, "height": 1920 } */` (1920x1080 for horizontal).
 - Copy file IDs exactly from the agent link; never type or guess one. A single wrong character makes the render fail.
 - Write readable code: one idea per line, clear names (`VOICE`, `MASCOT_MOMENTS`), grouped constants. Never squash it into long one-liners — the user reviews it.
+- Never use `backdropFilter` (frosted-glass blur). The render machines have no graphics card, so it makes every frame take seconds and the render times out. It is removed automatically before rendering. Use a solid or semi-transparent background instead. Keep `filter: blur(...)` small and rare for the same reason.
