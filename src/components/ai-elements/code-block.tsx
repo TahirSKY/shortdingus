@@ -372,7 +372,7 @@ export const CodeBlockActions = ({
 );
 
 export const CodeBlockContent = ({
-  code,
+  code: rawCode,
   language,
   showLineNumbers = false,
 }: {
@@ -380,6 +380,8 @@ export const CodeBlockContent = ({
   language: BundledLanguage;
   showLineNumbers?: boolean;
 }) => {
+  // Tool inputs can be undefined while streaming (JSON.stringify(undefined) → undefined).
+  const code = typeof rawCode === "string" ? rawCode : "";
   // Memoized raw tokens for immediate display
   const rawTokens = useMemo(() => createRawTokens(code), [code]);
 
