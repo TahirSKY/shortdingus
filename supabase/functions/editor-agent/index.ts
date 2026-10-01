@@ -96,7 +96,7 @@ ${clip(project.notes || "(none)", 2000)}
 PLAN: ${clip(project.plan || {}, 2000)}
 
 PROJECT FILES
-${files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, analyses, a.role === "voice")).join("\n") || "(none)"}
+${files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, analyses, true)).join("\n") || "(none)"}
 
 HUB + SHARED LIBRARY
 ${library.map((a: any) => describe(a, analyses, false)).join("\n") || "(none)"}
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     list_files: tool({
       description: "List the project's files again (fresh), including newly added ones and their analyses.",
       inputSchema: z.object({}),
-      execute: async () => { const c = await loadContext(db, projectId); return { files: c!.files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, c!.analyses, a.role === "voice")).join("\n") }; },
+      execute: async () => { const c = await loadContext(db, projectId); return { files: c!.files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, c!.analyses, true)).join("\n") }; },
     }),
     search_footage: tool({
       description: "Search Pexels stock footage or photos.",
