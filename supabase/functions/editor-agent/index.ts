@@ -236,10 +236,15 @@ Deno.serve(async (req) => {
     providerOptions: { openai: { forceReasoning: true, reasoningEffort: "medium", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
   });
 
-  const response = result.toUIMessageStreamResponse({
+  // Save the conversation so far up front, so a crash mid-build never loses the user's message.
+  {
+    const base = Date.now() - messages.length;
+    await db.from("editor_messages").upsert(messages.map((m, i) => ({ project_id: project.id, msg_id: m.id, role: m.role, ui_message: m, created_at: new Date(base + i).toISOString() })), { onConflict: "project_id,msg_id" });
+  }
+
+  const uiStream = result.toUIMessageStream({
     originalMessages: messages,
     sendReasoning: true,
-    headers,
     messageMetadata: ({ part }) => part.type === "finish" ? { usage: { input: part.totalUsage?.inputTokens ?? 0, output: part.totalUsage?.outputTokens ?? 0 } } : undefined,
     onError: (e: any) => {
       const status = e?.statusCode ?? e?.status;
@@ -256,5 +261,11 @@ Deno.serve(async (req) => {
       if (error) console.error("[editor-agent] save failed", error.message);
     },
   });
+  // Tool-input deltas for a full video file are thousands of tiny events; dropping them keeps
+  // the function under its CPU limit. The tool card still shows the full input once it's complete.
+  const slim = uiStream.pipeThrough(new TransformStream({
+    transform(chunk: any, ctl) { if (chunk?.type !== "tool-input-delta") ctl.enqueue(chunk); },
+  }));
+  const response = createUIMessageStreamResponse({ stream: slim, headers });
   return withLovableAiGatewayRunIdHeader(response, runIdFetch);
 });
