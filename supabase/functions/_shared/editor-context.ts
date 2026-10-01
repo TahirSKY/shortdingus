@@ -77,8 +77,11 @@ PLAN: ${clip(project.plan || {}, 2000)}
 PROJECT FILES
 ${projectFiles(ctx)}
 
+STYLE REFERENCES (saved looks from past videos; load one with read_style_reference only when the user names it or agrees to your suggestion. Borrow fonts, colors, textures, image treatment and motion feel — never copy structure, timings or text.)
+${library.filter((a: any) => a.role === "style-reference").map((a: any) => `- ${a.name} | id ${a.id} | ${clip(a.meta?.summary || "", 160)}`).join("\n") || "(none)"}
+
 HUB + SHARED LIBRARY
-${library.map((a: any) => describe(a, ctx.analyses, false)).join("\n") || "(none)"}`;
+${library.filter((a: any) => a.role !== "style-reference").map((a: any) => describe(a, ctx.analyses, false)).join("\n") || "(none)"}`;
 }
 
 /** Save code as a new project code version after checking every referenced file id exists. */

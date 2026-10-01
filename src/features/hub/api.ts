@@ -154,7 +154,7 @@ export async function updateAssetTags(id: string, role: string | null, tags: str
 }
 
 // ---- Projects & skills ----
-export const ROLES = ["sfx", "music", "clip", "image", "logo", "character", "voice", "script", "plan", "shot", "code", "render", "reference", "mascot", "stock", "meme", "other"] as const;
+export const ROLES = ["sfx", "music", "clip", "image", "logo", "character", "voice", "script", "plan", "shot", "code", "render", "reference", "style-reference", "mascot", "stock", "meme", "other"] as const;
 export const STAGES = ["idea", "script", "assets", "voice", "edit", "check", "render", "done"] as const;
 export const PARTS = ["hook", "setup", "quiz", "reveal", "twist", "loop"] as const;
 export interface PlanPart { part: string; start?: number; end?: number; on_screen?: string; voice?: string; sfx?: string[] }

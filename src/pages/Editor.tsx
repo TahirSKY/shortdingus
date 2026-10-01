@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowLeft, Clapperboard, Paperclip, Undo2, Scissors } from "lucide-react";
+import { ArrowLeft, Bookmark, Clapperboard, Paperclip, Undo2, Scissors } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -178,6 +178,13 @@ function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGrou
           <PromptInputFooter>
             <PromptInputTools>
               <PromptInputButton disabled={uploading} onClick={() => fileRef.current?.click()}><Paperclip className="h-4 w-4" />{uploading ? "Uploading…" : "Add files"}</PromptInputButton>
+        <PromptInputButton disabled={busy} onClick={() => {
+          const name = window.prompt("Name this style (e.g. Taped evidence board)");
+          if (!name?.trim()) return;
+          const note = window.prompt("What do you like about it? (optional)") || "";
+          const shared = window.confirm("Share this style with every hub? (Cancel = this hub only)");
+          sendMessage({ text: `Save the current video as a style reference named "${name.trim()}"${shared ? ", shared with every hub" : ""}.${note.trim() ? ` What I like: ${note.trim()}` : ""}` });
+        }}><Bookmark className="h-4 w-4" />Save style</PromptInputButton>
               <span className="text-xs text-muted-foreground">{usage.input ? `AI used: ${Math.round(usage.input / 1000)}k read · ${Math.round(usage.output / 1000)}k written` : ""}</span>
             </PromptInputTools>
             <PromptInputSubmit status={status} onStop={stop} disabled={!busy && !text.trim()} />
