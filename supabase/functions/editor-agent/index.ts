@@ -183,6 +183,35 @@ Deno.serve(async (req) => {
       inputSchema: z.object({ code: z.string(), summary: z.string() }),
       execute: async ({ code, summary }) => saveVersion(code, summary),
     }),
+    write_code_part: tool({
+      description: "Write the full video file in parts, in order (part 1, 2, 3...). Each part is saved as it's done; the part with final=true joins all parts into one file and saves it as the new version. Part 1 starts a fresh build.",
+      inputSchema: z.object({ part: z.number().int().min(1).max(12), code: z.string(), final: z.boolean(), summary: z.string() }),
+      execute: async ({ part, code, final, summary }) => {
+        const { data: rows } = await db.from("assets").select("id, meta, inline_content").eq("project_id", project.id).eq("role", DRAFT_ROLE);
+        let drafts = (rows || []).sort((a: any, b: any) => Number(a.meta?.part) - Number(b.meta?.part));
+        if (part === 1 && drafts.length) {
+          await db.from("assets").delete().in("id", drafts.map((d: any) => d.id));
+          drafts = [];
+        }
+        const have = drafts.map((d: any) => Number(d.meta?.part));
+        const same = drafts.find((d: any) => Number(d.meta?.part) === part);
+        if (same) await db.from("assets").delete().eq("id", same.id);
+        else if (part !== (have.length ? Math.max(...have) + 1 : 1)) return { error: `Expected part ${have.length ? Math.max(...have) + 1 : 1} next (saved parts: ${have.join(", ") || "none"}). Nothing saved.` };
+        const { error } = await db.from("assets").insert({
+          group_id: hub.id, project_id: project.id, kind: "text", role: DRAFT_ROLE, name: `build-part-${part}.tsx`, inline_content: code,
+          mime_type: "text/plain", size_bytes: new TextEncoder().encode(code).byteLength, meta: { part, draft: true, source: "editor" },
+        });
+        if (error) return { error: `Could not save part ${part}: ${error.message}` };
+        if (!final) return { saved_part: part, lines: code.split("\n").length, next: part + 1 };
+        const { data: all } = await db.from("assets").select("id, meta, inline_content").eq("project_id", project.id).eq("role", DRAFT_ROLE);
+        const ordered = (all || []).sort((a: any, b: any) => Number(a.meta?.part) - Number(b.meta?.part));
+        const full = ordered.map((d: any) => d.inline_content).join("\n");
+        const saved = await saveVersion(full, summary);
+        if ("error" in saved) return { ...saved, note: "Parts are kept. Fix the problem with write_code_part for the part that has it (same part number replaces it), then call the last part again with final=true." };
+        await db.from("assets").delete().in("id", ordered.map((d: any) => d.id));
+        return { ...saved, parts: ordered.length };
+      },
+    }),
     edit_code: tool({
       description: "Change only specific parts of the current code. Each find must match the current code exactly once (include enough surrounding text). All edits apply together.",
       inputSchema: z.object({ edits: z.array(z.object({ find: z.string(), replace: z.string() })), summary: z.string() }),
@@ -205,7 +234,7 @@ Deno.serve(async (req) => {
     list_files: tool({
       description: "List the project's files again (fresh), including newly added ones and their analyses.",
       inputSchema: z.object({}),
-      execute: async () => { const c = await loadContext(db, projectId); return { files: c!.files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, c!.analyses, true)).join("\n") }; },
+      execute: async () => { const c = await loadContext(db, projectId); return { files: c!.files.filter((a: any) => a.kind !== "code" && !isDraft(a)).map((a: any) => describe(a, c!.analyses, true)).join("\n") }; },
     }),
     search_footage: tool({
       description: "Search Pexels stock footage or photos.",
