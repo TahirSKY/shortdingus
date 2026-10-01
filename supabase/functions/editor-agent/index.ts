@@ -1,8 +1,7 @@
-import { createOpenAI } from "npm:@ai-sdk/openai@4.0.83";
 import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, stepCountIs, streamText, tool, type UIMessage } from "npm:ai@7.0.126";
 import { z } from "npm:zod@3.25.76";
 import { admin, cors, json } from "../_shared/hub.ts";
-import { GATEWAY, MODEL, clip, knowledge, latestCode, loadContext, projectFiles, saveVersion, type EditorContext } from "../_shared/editor-context.ts";
+import { clip, editorModel, pickModel, knowledge, latestCode, loadContext, projectFiles, saveVersion, type EditorContext } from "../_shared/editor-context.ts";
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId, withLovableAiGatewayRunIdHeader } from "../_shared/run-id.ts";
 
 const FN = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
@@ -52,6 +51,7 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "Body must be JSON." }, 400); }
   const projectId = String(body?.projectId || "");
+  const modelId = pickModel(body?.model);
   const incoming = body?.messages as UIMessage[];
   if (!/^[0-9a-f-]{36}$/i.test(projectId) || !Array.isArray(incoming) || !incoming.length) return json({ error: "projectId and messages are required." }, 400);
   // A resent message (same text right after itself, e.g. a retry) replaces the earlier copy.
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       execute: async ({ brief, summary }) => {
         const { data: running } = await db.from("editor_builds").select("id, updated_at").eq("project_id", project.id).eq("status", "running").limit(1);
         if (running?.length && Date.now() - new Date(running[0].updated_at).getTime() < 4 * 60 * 1000) return { error: "A build is already running for this project. Wait for it to finish." };
-        const { data, error } = await db.from("editor_builds").insert({ project_id: project.id, brief, summary: summary.slice(0, 300) }).select("id").single();
+        const { data, error } = await db.from("editor_builds").insert({ project_id: project.id, model: modelId, brief, summary: summary.slice(0, 300) }).select("id").single();
         if (error) return { error: `Could not start the build: ${error.message}` };
         const res = await fetch(`${FN()}/editor-build`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ buildId: data.id, expect: 0 }) });
         if (!res.ok) return { error: `Could not start the build (${res.status}).` };
@@ -192,8 +192,10 @@ Deno.serve(async (req) => {
 
   const recent = messages.slice(-KEEP_MESSAGES);
   const modelMessages = await convertToModelMessages(recent, { tools, ignoreIncompleteToolCalls: true });
+  // Reasoning saved from one model can't be replayed to another; drop it when the chosen model differs.
+  if (!modelId.startsWith("openai/")) for (const m of modelMessages as any[]) if (Array.isArray(m.content)) m.content = m.content.filter((c: any) => c.type !== "reasoning");
   const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(req));
-  const provider = createOpenAI({ baseURL: GATEWAY, apiKey: key, headers: { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" }, fetch: runIdFetch.fetch });
+  const { model, providerOptions } = editorModel(modelId, key, `chat-${project.id}`, runIdFetch.fetch);
 
   // Progress of the tool input being written (e.g. the video code), sent to the page every few seconds.
   const progress = { tool: "", chars: 0, lines: 0 };
@@ -216,13 +218,13 @@ Deno.serve(async (req) => {
 
   // No abortSignal: once started, a build finishes and saves even if the page disconnects.
   const result = streamText({
-    model: provider.responses(MODEL),
+    model,
     system: systemPrompt(ctx),
     messages: modelMessages,
     tools,
     stopWhen: stepCountIs(50),
     experimental_transform: dropToolDeltas,
-    providerOptions: { openai: { forceReasoning: true, reasoningEffort: "medium", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
+    providerOptions,
   });
 
   const toRows = (list: UIMessage[]) => {
