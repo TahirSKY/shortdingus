@@ -101,12 +101,22 @@ ${clip(project.notes || "(none)", 2000)}
 PLAN: ${clip(project.plan || {}, 2000)}
 
 PROJECT FILES
-${files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, analyses, true)).join("\n") || "(none)"}
+${files.filter((a: any) => a.kind !== "code" && !isDraft(a)).map((a: any) => describe(a, analyses, true)).join("\n") || "(none)"}
 
 HUB + SHARED LIBRARY
 ${library.map((a: any) => describe(a, analyses, false)).join("\n") || "(none)"}
 
-CURRENT CODE: ${code ? `${code.name} (version ${code.meta?.version ?? "?"}, ${code.inline_content.split("\n").length} lines) — call read_code to see it.` : "none yet."}`;
+CURRENT CODE: ${code ? `${code.name} (version ${code.meta?.version ?? "?"}, ${code.inline_content.split("\n").length} lines) — call read_code to see it.` : "none yet."}${draftBlock(files)}`;
+}
+
+function draftBlock(files: any[]) {
+  const parts = draftParts(files);
+  if (!parts.length) return "";
+  const last = Number(parts[parts.length - 1].meta?.part);
+  return `
+
+BUILD IN PROGRESS: parts 1-${last} of a new build are already saved (below). If the user asks to continue the build, call write_code_part starting with part ${last + 1}, continuing exactly where part ${last} ends, and set final=true on the last part. Do not rewrite the saved parts.
+${parts.map((p: any) => `--- part ${p.meta?.part} ---\n${p.inline_content}`).join("\n")}`;
 }
 
 Deno.serve(async (req) => {
@@ -115,8 +125,18 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "Body must be JSON." }, 400); }
   const projectId = String(body?.projectId || "");
-  const messages = body?.messages as UIMessage[];
-  if (!/^[0-9a-f-]{36}$/i.test(projectId) || !Array.isArray(messages) || !messages.length) return json({ error: "projectId and messages are required." }, 400);
+  const incoming = body?.messages as UIMessage[];
+  if (!/^[0-9a-f-]{36}$/i.test(projectId) || !Array.isArray(incoming) || !incoming.length) return json({ error: "projectId and messages are required." }, 400);
+  // A resent message (same text right after itself, e.g. a retry) replaces the earlier copy.
+  const messages: UIMessage[] = [];
+  const dropped: string[] = [];
+  for (const m of incoming) {
+    const prev = messages[messages.length - 1];
+    if (m.role === "user" && prev?.role === "user" && textOf(prev) === textOf(m)) {
+      if (prev.id) dropped.push(prev.id);
+      messages[messages.length - 1] = m;
+    } else messages.push(m);
+  }
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) return json({ error: "AI is not configured." }, 500);
 
