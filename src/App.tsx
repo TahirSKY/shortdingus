@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Editor from "./pages/Editor";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/" element={<Groups />} />
           <Route path="/groups/:slug" element={<GroupDetail />} />
           <Route path="/groups/:slug/p/:project" element={<ProjectDetail />} />
+          <Route path="/groups/:slug/p/:project/editor" element={<Editor />} />
           <Route path="/playground" element={<Playground />} />
           <Route path="/examples" element={<Examples />} />
           <Route path="/result" element={<RenderResult />} />
