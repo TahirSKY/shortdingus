@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
   const recent = messages.slice(-KEEP_MESSAGES);
   const modelMessages = await convertToModelMessages(recent, { tools, ignoreIncompleteToolCalls: true });
   // Reasoning saved from one model can't be replayed to another; drop it when the chosen model differs.
-  if (!modelId.startsWith("openai/")) for (const m of modelMessages as any[]) if (Array.isArray(m.content)) m.content = m.content.filter((c: any) => c.type !== "reasoning");
+  if (modelId !== MODEL) for (const m of modelMessages as any[]) if (Array.isArray(m.content)) m.content = m.content.filter((c: any) => c.type !== "reasoning");
   const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(req));
   const { model, providerOptions } = editorModel(modelId, key, `chat-${project.id}`, runIdFetch.fetch);
 
