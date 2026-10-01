@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { findMissingAssets, missingMessage } from "@/lib/check-asset-links";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clapperboard, Trash2, Mic } from "lucide-react";
+import { ArrowLeft, Clapperboard, Trash2, Mic, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -99,7 +99,8 @@ export default function ProjectDetail() {
             <SelectContent><SelectItem value="none">Agent chooses the skill</SelectItem>{skills.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
           </Select>
           <div className="flex-1" />
-          <Button size="sm" onClick={openInPlayground}><Clapperboard className="mr-1 h-3.5 w-3.5" /> Preview & render</Button>
+          <Button size="sm" asChild><Link to={`/groups/${group.slug}/p/${project.slug}/editor`}><Scissors className="mr-1 h-3.5 w-3.5" /> Editor</Link></Button>
+          <Button size="sm" variant="secondary" onClick={openInPlayground}><Clapperboard className="mr-1 h-3.5 w-3.5" /> Preview & render</Button>
           <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
             if (!confirm(`Delete project "${project.name}" and its files?`)) return;
             await deleteProject(project); qc.invalidateQueries({ queryKey: ["projects", group.id] }); navigate(`/groups/${group.slug}`);
