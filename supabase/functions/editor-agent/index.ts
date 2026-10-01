@@ -42,10 +42,17 @@ function describe(a: any, analyses: any[], full: boolean) {
   const lines = [`- ${a.name} | id ${a.id} | ${a.kind}${a.role ? ` role=${a.role}` : ""}${a.tags?.length ? ` tags=${a.tags.join(",")}` : ""}${a.duration_seconds ? ` ${Number(a.duration_seconds).toFixed(1)}s` : ""} | url ${assetUrl(a.id)}`];
   const m = a.meta || {};
   if (m.peak_time != null) lines.push(`  sound: peak ${m.peak_time}s, trim ${m.trim_start ?? 0}-${m.trim_end ?? "end"}`);
+  if (a.inline_content) lines.push(full ? `  content:\n${a.inline_content}` : `  content: ${clip(a.inline_content, 300)}`);
+  let wordsShown = false;
   for (const x of an) {
     if (x.tool === "assembly-transcript" || x.tool === "gemini-words") {
-      if (full && x.report?.words) lines.push(`  transcript words [w,start,end]: ${JSON.stringify(x.report.words.map((w: any) => [w.w ?? w.text, w.start, w.end]))}`);
-      else lines.push(`  transcript: ${clip(x.report?.text || x.summary, 300)}`);
+      const words = x.report?.words;
+      if (full && words?.length && !wordsShown) {
+        wordsShown = true;
+        lines.push(`  transcript (${x.tool}) full text: ${x.report?.text || x.summary || ""}`);
+        lines.push(`  transcript words [w,start_s,end_s]: ${JSON.stringify(words.map((w: any) => [w.w ?? w.text, w.start, w.end]))}`);
+        if (x.report?.cuts?.length) lines.push(`  suggested cuts: ${JSON.stringify(x.report.cuts)}`);
+      } else if (!full || !wordsShown) lines.push(`  transcript: ${clip(x.report?.text || x.summary, 300)}`);
     } else lines.push(`  ${x.tool}: ${clip(x.summary, 350)}${x.report?.beats?.length ? ` beats: ${clip(x.report.beats.map((b: any) => `${b.start}-${b.end} ${b.label}`).join("; "), 400)}` : ""}`);
   }
   return lines.join("\n");
@@ -89,7 +96,7 @@ ${clip(project.notes || "(none)", 2000)}
 PLAN: ${clip(project.plan || {}, 2000)}
 
 PROJECT FILES
-${files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, analyses, a.role === "voice")).join("\n") || "(none)"}
+${files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, analyses, true)).join("\n") || "(none)"}
 
 HUB + SHARED LIBRARY
 ${library.map((a: any) => describe(a, analyses, false)).join("\n") || "(none)"}
@@ -173,7 +180,7 @@ Deno.serve(async (req) => {
     list_files: tool({
       description: "List the project's files again (fresh), including newly added ones and their analyses.",
       inputSchema: z.object({}),
-      execute: async () => { const c = await loadContext(db, projectId); return { files: c!.files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, c!.analyses, a.role === "voice")).join("\n") }; },
+      execute: async () => { const c = await loadContext(db, projectId); return { files: c!.files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, c!.analyses, true)).join("\n") }; },
     }),
     search_footage: tool({
       description: "Search Pexels stock footage or photos.",
