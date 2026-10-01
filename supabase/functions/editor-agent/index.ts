@@ -226,46 +226,82 @@ Deno.serve(async (req) => {
   const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(req));
   const provider = createOpenAI({ baseURL: GATEWAY, apiKey: key, headers: { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" }, fetch: runIdFetch.fetch });
 
+  // Progress of the tool input being written (e.g. the video code), sent to the page every few seconds.
+  const progress = { tool: "", chars: 0, lines: 0 };
+  // Drop tool-input deltas before the UI stream sees them: the UI stream re-parses the whole growing
+  // tool input as JSON on every delta, which for a full video file blows the function's CPU limit.
+  // The finished tool call still carries the complete input.
+  const dropToolDeltas = () => new TransformStream<any, any>({
+    transform(chunk, ctl) {
+      if (chunk?.type === "tool-input-delta") {
+        const d = String(chunk.delta ?? "");
+        progress.chars += d.length;
+        progress.lines += d.split("\\n").length - 1;
+        return;
+      }
+      if (chunk?.type === "tool-input-start") Object.assign(progress, { tool: chunk.toolName, chars: 0, lines: 0 });
+      if (chunk?.type === "tool-call") progress.tool = "";
+      ctl.enqueue(chunk);
+    },
+  });
+
+  // No abortSignal: once started, a build finishes and saves even if the page disconnects.
   const result = streamText({
     model: provider.responses(MODEL),
     system: systemPrompt(ctx),
     messages: modelMessages,
     tools,
     stopWhen: stepCountIs(50),
-    abortSignal: req.signal,
+    experimental_transform: dropToolDeltas,
     providerOptions: { openai: { forceReasoning: true, reasoningEffort: "medium", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
   });
 
+  const toRows = (list: UIMessage[]) => {
+    const base = Date.now() - list.length;
+    return list.filter((m) => m.id).map((m, i) => ({ project_id: project.id, msg_id: m.id, role: m.role, ui_message: m, created_at: new Date(base + i).toISOString() }));
+  };
   // Save the conversation so far up front, so a crash mid-build never loses the user's message.
-  {
-    const base = Date.now() - messages.length;
-    await db.from("editor_messages").upsert(messages.map((m, i) => ({ project_id: project.id, msg_id: m.id, role: m.role, ui_message: m, created_at: new Date(base + i).toISOString() })), { onConflict: "project_id,msg_id" });
-  }
+  if (dropped.length) await db.from("editor_messages").delete().eq("project_id", project.id).in("msg_id", dropped);
+  await db.from("editor_messages").upsert(toRows(messages), { onConflict: "project_id,msg_id" });
 
-  const uiStream = result.toUIMessageStream({
+  let timer: number | undefined;
+  const stream = createUIMessageStream({
     originalMessages: messages,
-    sendReasoning: true,
-    messageMetadata: ({ part }) => part.type === "finish" ? { usage: { input: part.totalUsage?.inputTokens ?? 0, output: part.totalUsage?.outputTokens ?? 0 } } : undefined,
-    onError: (e: any) => {
-      const status = e?.statusCode ?? e?.status;
-      if (status === 402) return "AI credits are used up. Add credits in Settings → Plans & credits, then try again.";
-      if (status === 429) return "The AI is busy right now. Wait a minute and try again.";
-      if (status === 403) return `The AI request was refused: ${clip(e?.responseBody || e?.message, 200)}`;
-      console.error("[editor-agent]", e);
-      return `Something went wrong: ${clip(e?.message, 200)}`;
+    generateId: () => crypto.randomUUID(),
+    execute: ({ writer }) => {
+      timer = setInterval(() => {
+        if (progress.tool) writer.write({ type: "data-progress", data: { ...progress }, transient: true } as any);
+      }, 3000);
+      writer.merge(result.toUIMessageStream({
+        sendReasoning: true,
+        messageMetadata: ({ part }) => part.type === "finish" ? { usage: { input: part.totalUsage?.inputTokens ?? 0, output: part.totalUsage?.outputTokens ?? 0 } } : undefined,
+        onError: (e: any) => {
+          const status = e?.statusCode ?? e?.status;
+          if (status === 402) return "AI credits are used up. Add credits in Settings → Plans & credits, then try again.";
+          if (status === 429) return "The AI is busy right now. Wait a minute and try again.";
+          if (status === 403) return `The AI request was refused: ${clip(e?.responseBody || e?.message, 200)}`;
+          console.error("[editor-agent]", e);
+          return `Something went wrong: ${clip(e?.message, 200)}`;
+        },
+      }));
     },
+    onError: (e: any) => { console.error("[editor-agent] stream", e); return `Something went wrong: ${clip(e?.message, 200)}`; },
     onFinish: async ({ messages: all }) => {
-      const base = Date.now() - all.length;
-      const rows = all.map((m, i) => ({ project_id: project.id, msg_id: m.id, role: m.role, ui_message: m, created_at: new Date(base + i).toISOString() }));
-      const { error } = await db.from("editor_messages").upsert(rows, { onConflict: "project_id,msg_id" });
+      clearInterval(timer);
+      const { error } = await db.from("editor_messages").upsert(toRows(all as UIMessage[]), { onConflict: "project_id,msg_id" });
       if (error) console.error("[editor-agent] save failed", error.message);
     },
   });
-  // Tool-input deltas for a full video file are thousands of tiny events; dropping them keeps
-  // the function under its CPU limit. The tool card still shows the full input once it's complete.
-  const slim = uiStream.pipeThrough(new TransformStream({
-    transform(chunk: any, ctl) { if (chunk?.type !== "tool-input-delta") ctl.enqueue(chunk); },
-  }));
-  const response = createUIMessageStreamResponse({ stream: slim, headers });
+
+  const response = createUIMessageStreamResponse({
+    stream,
+    headers,
+    keepAliveMs: 15000,
+    // Keep reading a copy of the stream on the server so the run finishes and saves even if the page goes away.
+    consumeSseStream: ({ stream: copy }) => {
+      const done = copy.pipeTo(new WritableStream()).catch(() => {});
+      (globalThis as any).EdgeRuntime?.waitUntil?.(done);
+    },
+  });
   return withLovableAiGatewayRunIdHeader(response, runIdFetch);
 });
