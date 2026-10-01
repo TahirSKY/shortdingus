@@ -129,6 +129,62 @@ function ensureDefaultExport(code: string): string {
   return code;
 }
 
+/** Evaluates plain arithmetic like `2015 / 30`; anything else → NaN. */
+function num(expr: string | undefined): number {
+  if (!expr) return NaN;
+  const e = expr.trim();
+  if (!/^[\d\s.+\-*/()]+$/.test(e)) return NaN;
+  try { return Number(new Function(`return (${e});`)()); } catch { return NaN; }
+}
+
+function readKey(block: string, key: string): number {
+  const m = block.match(new RegExp(`["']?${key}["']?\\s*[:=]\\s*([^,\\n}]+)`));
+  return num(m?.[1]);
+}
+
+/**
+ * Work out the real fps and frame count, same order as the app preview:
+ * REMOTION_CONFIG header → compositionConfig → values sent by the app.
+ */
+function resolveTiming(code: string, bodyFps: number, bodySeconds: number) {
+  const header = code.match(/\/\*\s*(?:__)?REMOTION_CONFIG(?:__)?\s*([\s\S]*?)\*\//i)?.[1];
+  const cfg = code.match(/compositionConfig\s*=\s*\{([^}]+)\}/)?.[1];
+  const ok = (n: number) => isFinite(n) && n > 0;
+  let fps = NaN, frames = NaN, seconds = NaN;
+  for (const block of [header, cfg]) {
+    if (!block) continue;
+    if (!ok(fps)) fps = readKey(block, "fps");
+    if (!ok(frames)) frames = readKey(block, "durationInFrames");
+    if (!ok(seconds)) seconds = readKey(block, "durationInSeconds");
+  }
+  if (!ok(fps)) fps = ok(bodyFps) ? bodyFps : 30;
+  fps = clamp(Math.round(fps), 1, 60);
+  if (!ok(frames)) frames = Math.ceil((ok(seconds) ? seconds : ok(bodySeconds) ? bodySeconds : 10) * fps);
+  return { fps, durationInFrames: clamp(Math.floor(frames), 1, 300 * fps) };
+}
+
+/**
+ * The Lambda bundle reads length/size from the first `compositionConfig = {...}` in the
+ * code with a plain-number regex, so `durationInSeconds: 2015 / 30` became 2015 SECONDS
+ * (a 33-minute render). A leading comment with plain numbers is matched first.
+ */
+function pinBundleConfig(code: string, c: { durationInFrames: number; fps: number; width: number; height: number }) {
+  const pin = `/* compositionConfig = { durationInFrames: ${c.durationInFrames}, fps: ${c.fps}, width: ${c.width}, height: ${c.height} } */`;
+  // Keep a leading `// --- file:` marker or `@jsxRuntime` pragma first.
+  const lead = code.match(/^(?:\/\/ --- file:[^\n]*\n)?(?:\/\*\* @jsxRuntime classic \*\/\n)?/)?.[0] ?? "";
+  return `${lead}${pin}\n${code.slice(lead.length)}`;
+}
+
+/**
+ * Remove backdrop-filter. Lambda's Chrome has no GPU, so every frame re-blurs
+ * everything behind the element in software — seconds per frame, renders time out.
+ */
+function stripSlowCss(code: string): string {
+  return code
+    .replace(/\b(?:Webkit|webkit)?[bB]ackdropFilter\s*:\s*(['"`])[^'"`\n]*\1\s*,?/g, "")
+    .replace(/-?(?:webkit-)?backdrop-filter\s*:\s*[^;"'`}\n]*;?/g, "");
+}
+
 /**
  * Ensure Babel uses classic JSX runtime (React.createElement) not automatic (jsx-runtime).
  * The Lambda bundle's manual require() doesn't map react/jsx-runtime, so automatic fails.
@@ -169,13 +225,17 @@ Deno.serve(async (req) => {
     const compositionId: string = String(body.compositionId ?? "MyVideo");
     const codec: string = String(body.codec ?? "h264");
     const debug: boolean = Boolean(body.debug);
-    const durationInSeconds: number = clamp(Number(body.durationInSeconds) || 10, 1, 300);
-    const fps: number = clamp(Number(body.fps) || 30, 1, 120);
-
-    // Prepare code for Lambda's pickEntryFile contract (strip Root.tsx, ensure export default)
-    const code = prepareCodeForLambda(rawCode);
-
     const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.youtube;
+    const timing = resolveTiming(rawCode, Number(body.fps), Number(body.durationInSeconds));
+    const { fps, durationInFrames } = timing;
+    const durationInSeconds = durationInFrames / fps;
+
+    // Prepare code for Lambda's pickEntryFile contract (strip Root.tsx, ensure export default),
+    // then pin the length/size the bundle will read (see pinBundleConfig).
+    const code = pinBundleConfig(
+      stripSlowCss(prepareCodeForLambda(rawCode)),
+      { durationInFrames, fps, width: dims.width, height: dims.height },
+    );
 
     const inputProps: Record<string, unknown> = {
       code,
@@ -183,6 +243,7 @@ Deno.serve(async (req) => {
       width: dims.width,
       height: dims.height,
       durationInSeconds,
+      durationInFrames,
       fps,
       debug,
     };
