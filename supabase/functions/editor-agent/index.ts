@@ -1,18 +1,16 @@
 import { createOpenAI } from "npm:@ai-sdk/openai@4.0.83";
 import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, stepCountIs, streamText, tool, type UIMessage } from "npm:ai@7.0.126";
 import { z } from "npm:zod@3.25.76";
-import { admin, assetUrl, cors, json } from "../_shared/hub.ts";
+import { admin, cors, json } from "../_shared/hub.ts";
+import { GATEWAY, MODEL, clip, knowledge, latestCode, loadContext, projectFiles, saveVersion, type EditorContext } from "../_shared/editor-context.ts";
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId, withLovableAiGatewayRunIdHeader } from "../_shared/run-id.ts";
 
-const MODEL = "openai/gpt-6-astra";
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const FN = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
-const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const KEEP_MESSAGES = 30;
 const headers = { ...cors, "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-lovable-aig-run-id" };
 
-const clip = (s: unknown, n: number) => { const t = typeof s === "string" ? s : JSON.stringify(s ?? ""); return t.length > n ? t.slice(0, n) + "…" : t; };
 const numbered = (code: string) => code.split("\n").map((l, i) => `${String(i + 1).padStart(4)}| ${l}`).join("\n");
+const textOf = (m: UIMessage) => (m.parts || []).map((p: any) => (p.type === "text" ? p.text : "")).join("").trim();
 
 async function callFn(name: string, body: Record<string, unknown>) {
   const res = await fetch(`${FN()}/${name}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: Deno.env.get("HUB_WRITE_TOKEN"), ...body }) });
@@ -22,101 +20,30 @@ async function callFn(name: string, body: Record<string, unknown>) {
   return data;
 }
 
-async function loadContext(db: any, projectId: string) {
-  const { data: project } = await db.from("projects").select("*").eq("id", projectId).maybeSingle();
-  if (!project) return null;
-  const { data: hub } = await db.from("asset_groups").select("*").eq("id", project.group_id).single();
-  const { data: shared } = await db.from("asset_groups").select("id").eq("slug", "shared-library").maybeSingle();
-  const hubIds = [hub.id, ...(shared && shared.id !== hub.id ? [shared.id] : [])];
-  const [{ data: skills }, { data: library }, { data: files }, { data: analyses }] = await Promise.all([
-    db.from("skills").select("id, slug, name, description, body, group_id").or(`group_id.is.null,group_id.eq.${hub.id}`).order("name"),
-    db.from("assets").select("id, kind, name, role, tags, duration_seconds, meta, mime_type, group_id").in("group_id", hubIds).is("project_id", null).order("created_at"),
-    db.from("assets").select("id, kind, name, role, tags, duration_seconds, meta, mime_type, inline_content, created_at").eq("project_id", project.id).order("created_at"),
-    db.from("asset_analyses").select("asset_id, tool, summary, report").in("group_id", hubIds).eq("status", "complete"),
-  ]);
-  return { project, hub, skills: skills || [], library: library || [], files: files || [], analyses: analyses || [] };
+function buildStatus(ctx: EditorContext) {
+  const b = ctx.build;
+  if (!b) return "";
+  if (b.status === "running") return `\nBUILD IN PROGRESS: the background builder is writing the video (part ${b.part + 1}, ${b.lines} lines so far). Do not start another build; tell the user it's still building and the preview appears when it's done.`;
+  if (b.status === "failed") return `\nLAST BUILD STOPPED after ${b.part} part(s): ${b.error}. The user can press Continue in the build card, or you can call build_video again.`;
+  if (b.error) return `\nLAST BUILD NOTE: ${b.error} Fix with edit_code.`;
+  return "";
 }
 
-function describe(a: any, analyses: any[], full: boolean) {
-  const an = analyses.filter((x) => x.asset_id === a.id);
-  const lines = [`- ${a.name} | id ${a.id} | ${a.kind}${a.role ? ` role=${a.role}` : ""}${a.tags?.length ? ` tags=${a.tags.join(",")}` : ""}${a.duration_seconds ? ` ${Number(a.duration_seconds).toFixed(1)}s` : ""} | url ${assetUrl(a.id)}`];
-  const m = a.meta || {};
-  if (m.peak_time != null) lines.push(`  sound: peak ${m.peak_time}s, trim ${m.trim_start ?? 0}-${m.trim_end ?? "end"}`);
-  if (a.inline_content) lines.push(full ? `  content:\n${a.inline_content}` : `  content: ${clip(a.inline_content, 300)}`);
-  let wordsShown = false;
-  for (const x of an) {
-    if (x.tool === "assembly-transcript" || x.tool === "gemini-words") {
-      const words = x.report?.words;
-      if (full && words?.length && !wordsShown) {
-        wordsShown = true;
-        lines.push(`  transcript (${x.tool}) full text: ${x.report?.text || x.summary || ""}`);
-        lines.push(`  transcript words [w,start_s,end_s]: ${JSON.stringify(words.map((w: any) => [w.w ?? w.text, w.start, w.end]))}`);
-        if (x.report?.cuts?.length) lines.push(`  suggested cuts: ${JSON.stringify(x.report.cuts)}`);
-      } else if (!full || !wordsShown) lines.push(`  transcript: ${clip(x.report?.text || x.summary, 300)}`);
-    } else lines.push(`  ${x.tool}: ${clip(x.summary, 350)}${x.report?.beats?.length ? ` beats: ${clip(x.report.beats.map((b: any) => `${b.start}-${b.end} ${b.label}`).join("; "), 400)}` : ""}`);
-  }
-  return lines.join("\n");
-}
-
-function latestCode(files: any[]) {
-  return [...files].reverse().find((a) => a.kind === "code" && a.inline_content) || null;
-}
-
-const DRAFT_ROLE = "code-draft";
-const isDraft = (a: any) => a.role === DRAFT_ROLE;
-const draftParts = (files: any[]) => files.filter(isDraft).sort((a, b) => Number(a.meta?.part) - Number(b.meta?.part));
-const textOf = (m: UIMessage) => (m.parts || []).map((p: any) => (p.type === "text" ? p.text : "")).join("").trim();
-
-function systemPrompt(ctx: NonNullable<Awaited<ReturnType<typeof loadContext>>>) {
-  const { project, hub, skills, library, files, analyses } = ctx;
-  const chosen = skills.find((s: any) => s.id === project.skill_id) || skills.find((s: any) => s.slug === hub.slug);
-  const code = latestCode(files);
-  return `You are the in-house video editor and producer for the "${hub.title}" hub, working on the project "${project.name}". You build Remotion videos with the user through chat.
+function systemPrompt(ctx: EditorContext) {
+  const code = latestCode(ctx.files);
+  return `You are the in-house video editor and producer for the "${ctx.hub.title}" hub, working on the project "${ctx.project.name}". You build high-quality, competitive Remotion videos with the user through chat.
 
 HOW WE WORK
-1. Proposal first. Read the voiceover transcript and assets, then propose: angle, structure, which mascot/library moments, visuals per section, sound moments. Discuss. Do NOT write code until the user clearly approves ("approve", "go", "build it").
-2. Build: write the full file with write_code_part, in order, in 2-5 parts of up to ~250 lines each (for example: 1 config header, imports, asset constants and timing data; 2 shared helper components; 3+ scenes; last the main composition). Each part continues exactly where the previous one ended, and the parts are joined with a newline into one file. Set final=true on the last part — that saves the finished version. Plan the whole file before part 1 so the parts fit together. Do not reduce quality or detail because the file is written in parts. Use write_code only for short files (under ~200 lines) or a full rewrite the user asks for.
-3. Edits: ALWAYS use edit_code with small exact find/replace pairs. Change only what the user asked. Never rewrite the whole file for an edit. Call read_code first if unsure of exact text.
-4. Keep replies short and concrete. After a build or edit, say in one or two lines what changed.
+1. Proposal first. Read the voiceover transcript and assets, then propose: angle, structure, which mascot/library moments, visuals per section, sound moments. Discuss. Do NOT build until the user clearly approves ("approve", "go", "build it").
+2. Build: call build_video once with a detailed brief. A background builder (same model, same knowledge, and it sees this conversation) writes the full file in parts and saves it; the preview appears when it's done, usually in a few minutes. The brief is the builder's spec, so make it complete: every section with start/end seconds from the word timings, which exact asset ids go where, mascot moments, captions style, motion ideas, sound effects on exact words, colors and type. Then tell the user in one line that the build is running.
+3. Edits: ALWAYS use edit_code with small exact find/replace pairs. Change only what the user asked. Call read_code first if unsure of exact text. For a full rewrite the user asks for, use build_video again.
+4. Keep replies short and concrete. After an edit, say in one or two lines what changed.
 5. Never generate images without the user's explicit OK in this chat (they cost credits). Prefer library assets, cut-outs, stock (search_footage) and memes (search_memes) first. Never generate voice — the user supplies voiceovers.
 6. This is a toolbox, not a template. No fixed lengths or structures; follow the user.
 
-REMOTION RULES (renders fail otherwise)
-- Single file, no local imports. Start with /* REMOTION_CONFIG { "fps": 30, "durationInFrames": N, "width": 1080, "height": 1920 } */ (1920x1080 for horizontal). Use plain numbers there.
-- Export a default component; never name a component MyVideo.
-- Use asset URLs exactly as listed below (copy ids exactly). Never Unsplash. Mute mascot clips: <OffthreadVideo src={...} muted />.
-- Never use backdropFilter. Keep filter: blur small and rare.
-- Readable code: clear constant names (VOICE, MASCOT_MOMENTS, ...), one idea per line.
-- Time everything to the voiceover word timings (seconds × fps).
+${knowledge(ctx)}
 
-HUB STYLE GUIDE
-${clip(hub.style_guide || "(none)", 4000)}
-
-MAIN SKILL${chosen ? ` (${chosen.name})\n${clip(chosen.body, 9000)}` : ": none"}
-
-OTHER SKILLS (call read_skill to load one): ${skills.filter((s: any) => s !== chosen).map((s: any) => `${s.slug} — ${clip(s.description, 120)}`).join(" | ")}
-
-PROJECT NOTES
-${clip(project.notes || "(none)", 2000)}
-PLAN: ${clip(project.plan || {}, 2000)}
-
-PROJECT FILES
-${files.filter((a: any) => a.kind !== "code" && !isDraft(a)).map((a: any) => describe(a, analyses, true)).join("\n") || "(none)"}
-
-HUB + SHARED LIBRARY
-${library.map((a: any) => describe(a, analyses, false)).join("\n") || "(none)"}
-
-CURRENT CODE: ${code ? `${code.name} (version ${code.meta?.version ?? "?"}, ${code.inline_content.split("\n").length} lines) — call read_code to see it.` : "none yet."}${draftBlock(files)}`;
-}
-
-function draftBlock(files: any[]) {
-  const parts = draftParts(files);
-  if (!parts.length) return "";
-  const last = Number(parts[parts.length - 1].meta?.part);
-  return `
-
-BUILD IN PROGRESS: parts 1-${last} of a new build are already saved (below). If the user asks to continue the build, call write_code_part starting with part ${last + 1}, continuing exactly where part ${last} ends, and set final=true on the last part. Do not rewrite the saved parts.
-${parts.map((p: any) => `--- part ${p.meta?.part} ---\n${p.inline_content}`).join("\n")}`;
+CURRENT CODE: ${code ? `${code.name} (version ${code.meta?.version ?? "?"}, ${code.inline_content.split("\n").length} lines) — call read_code to see it.` : "none yet."}${buildStatus(ctx)}`;
 }
 
 Deno.serve(async (req) => {
@@ -145,23 +72,6 @@ Deno.serve(async (req) => {
   if (!ctx) return json({ error: "Project not found." }, 404);
   const { project, hub } = ctx;
 
-  const saveVersion = async (code: string, summary: string) => {
-    const ids = [...new Set(code.match(UUID) || [])].map((s) => s.toLowerCase());
-    if (ids.length) {
-      const { data } = await db.from("assets").select("id, storage_path, inline_content").in("id", ids);
-      const ok = new Set((data || []).filter((a: any) => a.storage_path || a.inline_content).map((a: any) => a.id));
-      const missing = ids.filter((i) => !ok.has(i));
-      if (missing.length) return { error: `Not saved: these file ids don't exist: ${missing.join(", ")}. Copy ids exactly from the file list.` };
-    }
-    const { data: prev } = await db.from("assets").select("meta").eq("project_id", project.id).eq("kind", "code").order("created_at", { ascending: false }).limit(1);
-    const version = (Number(prev?.[0]?.meta?.version) || 0) + 1;
-    const { data, error } = await db.from("assets").insert({
-      group_id: hub.id, project_id: project.id, kind: "code", role: "code", name: `editor-v${version}.tsx`, inline_content: code,
-      mime_type: "text/plain", size_bytes: new TextEncoder().encode(code).byteLength, meta: { version, summary: summary.slice(0, 300), source: "editor" },
-    }).select("id").single();
-    if (error) return { error: `Could not save: ${error.message}` };
-    return { saved: true, version, id: data.id, lines: code.split("\n").length, summary };
-  };
   const current = async () => {
     const { data } = await db.from("assets").select("inline_content, meta").eq("project_id", project.id).eq("kind", "code").not("inline_content", "is", null).order("created_at", { ascending: false }).limit(1);
     return data?.[0]?.inline_content as string | undefined;
@@ -178,38 +88,17 @@ Deno.serve(async (req) => {
         return { total_lines: lines.length, code: lines.slice((from || 1) - 1, to || lines.length).join("\n") };
       },
     }),
-    write_code: tool({
-      description: "Save a complete new version of the video file. Use only for the first build or when the user asks for a full rewrite.",
-      inputSchema: z.object({ code: z.string(), summary: z.string() }),
-      execute: async ({ code, summary }) => saveVersion(code, summary),
-    }),
-    write_code_part: tool({
-      description: "Write the full video file in parts, in order (part 1, 2, 3...). Each part is saved as it's done; the part with final=true joins all parts into one file and saves it as the new version. Part 1 starts a fresh build.",
-      inputSchema: z.object({ part: z.number().int().min(1).max(12), code: z.string(), final: z.boolean(), summary: z.string() }),
-      execute: async ({ part, code, final, summary }) => {
-        const { data: rows } = await db.from("assets").select("id, meta, inline_content").eq("project_id", project.id).eq("role", DRAFT_ROLE);
-        let drafts = (rows || []).sort((a: any, b: any) => Number(a.meta?.part) - Number(b.meta?.part));
-        if (part === 1 && drafts.length) {
-          await db.from("assets").delete().in("id", drafts.map((d: any) => d.id));
-          drafts = [];
-        }
-        const have = drafts.map((d: any) => Number(d.meta?.part));
-        const same = drafts.find((d: any) => Number(d.meta?.part) === part);
-        if (same) await db.from("assets").delete().eq("id", same.id);
-        else if (part !== (have.length ? Math.max(...have) + 1 : 1)) return { error: `Expected part ${have.length ? Math.max(...have) + 1 : 1} next (saved parts: ${have.join(", ") || "none"}). Nothing saved.` };
-        const { error } = await db.from("assets").insert({
-          group_id: hub.id, project_id: project.id, kind: "text", role: DRAFT_ROLE, name: `build-part-${part}.tsx`, inline_content: code,
-          mime_type: "text/plain", size_bytes: new TextEncoder().encode(code).byteLength, meta: { part, draft: true, source: "editor" },
-        });
-        if (error) return { error: `Could not save part ${part}: ${error.message}` };
-        if (!final) return { saved_part: part, lines: code.split("\n").length, next: part + 1 };
-        const { data: all } = await db.from("assets").select("id, meta, inline_content").eq("project_id", project.id).eq("role", DRAFT_ROLE);
-        const ordered = (all || []).sort((a: any, b: any) => Number(a.meta?.part) - Number(b.meta?.part));
-        const full = ordered.map((d: any) => d.inline_content).join("\n");
-        const saved = await saveVersion(full, summary);
-        if ("error" in saved) return { ...saved, note: "Parts are kept. Fix the problem with write_code_part for the part that has it (same part number replaces it), then call the last part again with final=true." };
-        await db.from("assets").delete().in("id", ordered.map((d: any) => d.id));
-        return { ...saved, parts: ordered.length };
+    build_video: tool({
+      description: "Start the background build of the complete video file from a detailed brief. Returns right away; the finished version is saved automatically in a few minutes.",
+      inputSchema: z.object({ brief: z.string().min(200), summary: z.string() }),
+      execute: async ({ brief, summary }) => {
+        const { data: running } = await db.from("editor_builds").select("id, updated_at").eq("project_id", project.id).eq("status", "running").limit(1);
+        if (running?.length && Date.now() - new Date(running[0].updated_at).getTime() < 4 * 60 * 1000) return { error: "A build is already running for this project. Wait for it to finish." };
+        const { data, error } = await db.from("editor_builds").insert({ project_id: project.id, brief, summary: summary.slice(0, 300) }).select("id").single();
+        if (error) return { error: `Could not start the build: ${error.message}` };
+        const res = await fetch(`${FN()}/editor-build`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ buildId: data.id, expect: 0 }) });
+        if (!res.ok) return { error: `Could not start the build (${res.status}).` };
+        return { started: true, buildId: data.id, note: "Building in the background; the preview updates when it's done." };
       },
     }),
     edit_code: tool({
@@ -217,13 +106,13 @@ Deno.serve(async (req) => {
       inputSchema: z.object({ edits: z.array(z.object({ find: z.string(), replace: z.string() })), summary: z.string() }),
       execute: async ({ edits, summary }) => {
         let code = await current();
-        if (!code) return { error: "No code yet — use write_code." };
+        if (!code) return { error: "No code yet — use build_video." };
         for (const [i, e] of edits.entries()) {
           const n = e.find ? code.split(e.find).length - 1 : 0;
           if (n !== 1) return { error: `Edit ${i + 1}: find text matched ${n} times (needs exactly 1). Nothing saved. Use read_code and include more context.` };
           code = code.replace(e.find, () => e.replace);
         }
-        return saveVersion(code, summary);
+        return saveVersion(db, ctx, code, summary);
       },
     }),
     read_skill: tool({
@@ -234,7 +123,7 @@ Deno.serve(async (req) => {
     list_files: tool({
       description: "List the project's files again (fresh), including newly added ones and their analyses.",
       inputSchema: z.object({}),
-      execute: async () => { const c = await loadContext(db, projectId); return { files: c!.files.filter((a: any) => a.kind !== "code" && !isDraft(a)).map((a: any) => describe(a, c!.analyses, true)).join("\n") }; },
+      execute: async () => { const c = await loadContext(db, projectId); return { files: projectFiles(c!) }; },
     }),
     search_footage: tool({
       description: "Search Pexels stock footage or photos.",
