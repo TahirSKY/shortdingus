@@ -167,6 +167,56 @@ export type Database = {
           },
         ]
       }
+      editor_builds: {
+        Row: {
+          brief: string
+          created_at: string
+          error: string | null
+          id: string
+          lines: number
+          part: number
+          project_id: string
+          status: string
+          summary: string
+          updated_at: string
+          version: number | null
+        }
+        Insert: {
+          brief?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          lines?: number
+          part?: number
+          project_id: string
+          status?: string
+          summary?: string
+          updated_at?: string
+          version?: number | null
+        }
+        Update: {
+          brief?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          lines?: number
+          part?: number
+          project_id?: string
+          status?: string
+          summary?: string
+          updated_at?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "editor_builds_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editor_messages: {
         Row: {
           created_at: string
