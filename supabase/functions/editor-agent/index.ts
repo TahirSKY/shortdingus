@@ -1,7 +1,7 @@
 import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, stepCountIs, streamText, tool, type UIMessage } from "npm:ai@7.0.126";
 import { z } from "npm:zod@3.25.76";
 import { admin, cors, json } from "../_shared/hub.ts";
-import { clip, editorModel, pickModel, knowledge, latestCode, loadContext, projectFiles, saveVersion, type EditorContext } from "../_shared/editor-context.ts";
+import { MODEL, clip, editorModel, pickModel, knowledge, latestCode, loadContext, projectFiles, saveVersion, type EditorContext } from "../_shared/editor-context.ts";
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId, withLovableAiGatewayRunIdHeader } from "../_shared/run-id.ts";
 
 const FN = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
