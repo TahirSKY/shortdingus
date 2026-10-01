@@ -243,7 +243,8 @@ Deno.serve(async (req) => {
       return `Something went wrong: ${clip(e?.message, 200)}`;
     },
     onFinish: async ({ messages: all }) => {
-      const rows = all.map((m) => ({ project_id: project.id, msg_id: m.id, role: m.role, ui_message: m }));
+      const base = Date.now() - all.length;
+      const rows = all.map((m, i) => ({ project_id: project.id, msg_id: m.id, role: m.role, ui_message: m, created_at: new Date(base + i).toISOString() }));
       const { error } = await db.from("editor_messages").upsert(rows, { onConflict: "project_id,msg_id" });
       if (error) console.error("[editor-agent] save failed", error.message);
     },
