@@ -25,18 +25,42 @@ export function AnalysisView({ a, defaultOpen = false }: { a: Analysis; defaultO
   const beats = r?.beats || [];
   const words = r?.words || [];
   const lines = r?.caption_lines || [];
+  const timeline = r?.timeline || [];
+  const moments = r?.reaction_moments || [];
+  const edits = r?.edit_events || [];
+  const notes: string[] = r?.style_notes || [];
+  const deep = timeline.length + moments.length + edits.length + notes.length > 0;
+  const label = beats.length ? `${beats.length} beats`
+    : deep ? [timeline.length && `${timeline.length} timeline entries`, moments.length && `${moments.length} reaction moments`, edits.length && `${edits.length} edit events`].filter(Boolean).join(" · ") || "style notes"
+    : `transcript + ${r?.cuts?.length || 0} cuts`;
   return (
     <div className="text-sm">
       <p className="text-muted-foreground">{TOOL_LABEL[a.tool] || ""}{a.summary}</p>
-      {(beats.length > 0 || words.length > 0) && (
+      {(beats.length > 0 || words.length > 0 || deep) && (
         <button onClick={() => setOpen(!open)} className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-          <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} /> {beats.length ? `${beats.length} beats` : `transcript + ${r.cuts?.length || 0} cuts`}
+          <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} /> {label}
         </button>
       )}
       {open && beats.length > 0 && (
         <ul className="mt-2 space-y-1 font-mono text-xs">
           {beats.map((b: any, i: number) => <li key={i}><span className="text-muted-foreground">{fmtTime(b.start)} – {fmtTime(b.end)}</span> {b.label} — <span className="text-muted-foreground">{b.detail}</span></li>)}
         </ul>
+      )}
+      {open && notes.length > 0 && (
+        <div className="mt-2 text-xs"><p className="font-medium">How this editor works</p>
+          <ul className="list-disc pl-4 text-muted-foreground">{notes.map((n, i) => <li key={i}>{n}</li>)}</ul></div>
+      )}
+      {open && edits.length > 0 && (
+        <div className="mt-2 text-xs"><p className="font-medium">Edit events{r.popin_count != null ? ` (${r.popin_count} character pop-ins)` : ""}</p>
+          <ul className="space-y-0.5 font-mono">{edits.map((e: any, i: number) => <li key={i}><span className="text-muted-foreground">{fmtTime(e.time)}{e.end != null ? `–${fmtTime(e.end)}` : ""}</span> <Badge variant="outline" className="px-1 text-[10px]">{e.type}</Badge> {e.detail}</li>)}</ul></div>
+      )}
+      {open && moments.length > 0 && (
+        <div className="mt-2 text-xs"><p className="font-medium">Reaction moments</p>
+          <ul className="space-y-1">{moments.map((m: any, i: number) => <li key={i}><span className="font-mono text-muted-foreground">{fmtTime(m.time)}</span> <Badge variant="outline" className="px-1 text-[10px]">{m.why}{m.intensity ? ` ${"!".repeat(m.intensity)}` : ""}</Badge> {m.what} — <span className="text-muted-foreground">{m.suggested_reaction}</span></li>)}</ul></div>
+      )}
+      {open && timeline.length > 0 && (
+        <div className="mt-2 text-xs"><p className="font-medium">Timeline</p>
+          <ul className="space-y-1 font-mono">{timeline.map((t: any, i: number) => <li key={i}><span className="text-muted-foreground">{fmtTime(t.start)}–{fmtTime(t.end)}</span> {t.action}{t.expression ? ` · ${t.expression}` : ""}{t.speech ? <span> · “{t.speech}”</span> : null}{t.text_on_screen ? <span className="text-muted-foreground"> · text: {t.text_on_screen}</span> : null}{t.audio ? <span className="text-muted-foreground"> · {t.audio}</span> : null}</li>)}</ul></div>
       )}
       {open && words.length > 0 && (
         <div className="mt-2 space-y-2 text-xs">
