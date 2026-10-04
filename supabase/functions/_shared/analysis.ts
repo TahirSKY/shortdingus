@@ -241,6 +241,7 @@ export async function runReaction(analysisId: string, asset: any, tool: "gemini-
   try {
     const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 3600);
     if (error || !signed) throw new Error("Could not open the video.");
+    if (Number(asset.size_bytes) > 20_000_000) throw new Error(`This video is ${(Number(asset.size_bytes) / 1048576).toFixed(0)} MB; the AI can only watch videos under about 19 MB. Re-export it smaller (e.g. 480p) and upload again.`);
     const duration = Number(asset.duration_seconds) || 0;
     const windows: [number, number][] = [];
     if (duration > WINDOW * 1.25) for (let s = 0; s < duration; s += WINDOW) windows.push([s, Math.min(duration, s + WINDOW)]);
