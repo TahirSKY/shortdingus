@@ -177,6 +177,20 @@ Deno.serve(async (req) => {
         return { name: ref.name, card: ref.inline_content, user_note: ref.meta?.user_note, source_code: clip(source, 30000) };
       },
     }),
+    save_script: tool({
+      description: "Save a written script to the project as a new version (markdown). Include the timeline of source moments and pop-ins, and a clean numbered voiceover read at the end.",
+      inputSchema: z.object({ title: z.string(), script: z.string() }),
+      execute: async ({ title, script }) => {
+        const { count } = await db.from("assets").select("id", { count: "exact", head: true }).eq("project_id", project.id).eq("role", "script");
+        const v = (count || 0) + 1;
+        const { data, error } = await db.from("assets").insert({
+          group_id: hub.id, project_id: project.id, kind: "text", role: "script", tags: ["script"], name: `script-v${v} ${title}`.slice(0, 120),
+          inline_content: script, mime_type: "text/markdown", size_bytes: new TextEncoder().encode(script).byteLength, meta: { version: v, source: "editor" },
+        }).select("id").single();
+        if (!error) await db.from("projects").update({ stage: "script" }).eq("id", project.id);
+        return error ? { error: error.message } : { saved: true, id: data.id, version: v };
+      },
+    }),
     update_project: tool({
       description: "Update the project's stage and/or notes (e.g. save the approved proposal).",
       inputSchema: z.object({ stage: z.enum(["idea", "script", "assets", "voice", "edit", "check", "render", "done"]).nullable(), notes: z.string().nullable() }),

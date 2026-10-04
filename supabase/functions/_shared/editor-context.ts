@@ -63,6 +63,9 @@ export function describe(a: any, analyses: any[], full: boolean) {
         lines.push(`  transcript words [w,start_s,end_s]: ${JSON.stringify(words.map((w: any) => [w.w ?? w.text, w.start, w.end]))}`);
         if (x.report?.cuts?.length) lines.push(`  suggested cuts: ${JSON.stringify(x.report.cuts)}`);
       } else if (!full || !wordsShown) lines.push(`  transcript: ${clip(x.report?.text || x.summary, 300)}`);
+    } else if (x.tool === "gemini-reaction" || x.tool === "gemini-edit-style") {
+      if (full) lines.push(`  ${x.tool}: ${JSON.stringify(x.report)}`);
+      else lines.push(`  ${x.tool}: ${clip(x.summary, 350)}${x.tool === "gemini-edit-style" ? ` | ${clip(JSON.stringify({ style_notes: x.report?.style_notes, popins: (x.report?.edit_events || []).filter((e: any) => e.type === "character_popin") }), 2500)}` : ""}`);
     } else lines.push(`  ${x.tool}: ${clip(x.summary, 350)}${x.report?.beats?.length ? ` beats: ${clip(x.report.beats.map((b: any) => `${b.start}-${b.end} ${b.label}`).join("; "), 400)}` : ""}`);
   }
   return lines.join("\n");
