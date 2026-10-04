@@ -33,14 +33,14 @@ type P = {
 };
 
 const POSES: Record<PoseName, P> = {
-  smug:    { lidL: .48, lidR: .36, tiltL: -6, tiltR: 8, browLy: 4, browLr: 6, browRy: -14, browRr: -14, lookX: .45, lookY: .15, pupil: 1, mW: 62, mSmile: 14, mOpen: 0, arms: 0, tilt: -3, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
-  sideEye: { lidL: .56, lidR: .52, tiltL: 0, tiltR: 0, browLy: 6, browLr: 2, browRy: 2, browRr: -4, lookX: -1, lookY: .1, pupil: 1, mW: 34, mSmile: 1, mOpen: 0, arms: 0, tilt: 4, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
-  stare:   { lidL: .32, lidR: .3, tiltL: 0, tiltR: 0, browLy: 4, browLr: 0, browRy: 4, browRr: 0, lookX: 0, lookY: 0, pupil: .6, mW: 30, mSmile: -1, mOpen: 0, arms: 0, tilt: 0, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
-  judging: { lidL: .6, lidR: .42, tiltL: -8, tiltR: 0, browLy: 8, browLr: 10, browRy: -18, browRr: -18, lookX: .2, lookY: .3, pupil: .9, mW: 30, mSmile: -8, mOpen: 0, arms: 0, tilt: 6, bounce: 0, tremble: 0, stretch: -.02, flush: 0 },
-  laugh:   { lidL: .82, lidR: .78, tiltL: 10, tiltR: -10, browLy: -10, browLr: -6, browRy: -12, browRr: 6, lookX: 0, lookY: 0, pupil: 1, mW: 72, mSmile: 18, mOpen: .85, arms: 0, tilt: -2, bounce: 1, tremble: 0, stretch: 0, flush: .15 },
-  angry:   { lidL: .42, lidR: .42, tiltL: 20, tiltR: -20, browLy: 10, browLr: 22, browRy: 8, browRr: 22, lookX: 0, lookY: .1, pupil: .7, mW: 52, mSmile: -12, mOpen: .32, arms: 0, tilt: 0, bounce: 0, tremble: 1, stretch: -.03, flush: 1 },
-  shocked: { lidL: 0, lidR: 0, tiltL: 0, tiltR: 0, browLy: -24, browLr: -8, browRy: -26, browRr: 8, lookX: 0, lookY: -.1, pupil: .5, mW: 26, mSmile: 0, mOpen: 1, arms: 1, tilt: 0, bounce: 0, tremble: .25, stretch: .08, flush: 0 },
-  talk:    { lidL: .4, lidR: .32, tiltL: -4, tiltR: 4, browLy: 0, browLr: 4, browRy: -8, browRr: -8, lookX: .2, lookY: 0, pupil: 1, mW: 52, mSmile: 8, mOpen: 0, arms: 0, tilt: -2, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  smug:    { lidL: .48, lidR: .36, tiltL: -6, tiltR: 8, browLy: 4, browLr: 6, browRy: -14, browRr: -14, lookX: .45, lookY: .15, pupil: 1, mW: 81, mSmile: 14, mOpen: 0, arms: 0, tilt: -3, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  sideEye: { lidL: .4, lidR: .36, tiltL: 0, tiltR: 0, browLy: 6, browLr: 2, browRy: 2, browRr: -4, lookX: -1, lookY: .1, pupil: 1, mW: 44, mSmile: 1, mOpen: 0, arms: 0, tilt: 4, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  stare:   { lidL: .32, lidR: .3, tiltL: 0, tiltR: 0, browLy: 4, browLr: 0, browRy: 4, browRr: 0, lookX: 0, lookY: 0, pupil: .6, mW: 39, mSmile: -1, mOpen: 0, arms: 0, tilt: 0, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  judging: { lidL: .6, lidR: .42, tiltL: -8, tiltR: 0, browLy: 8, browLr: 10, browRy: -18, browRr: -18, lookX: .2, lookY: .3, pupil: .9, mW: 39, mSmile: -8, mOpen: 0, arms: 0, tilt: 6, bounce: 0, tremble: 0, stretch: -.02, flush: 0 },
+  laugh:   { lidL: .82, lidR: .78, tiltL: 10, tiltR: -10, browLy: -10, browLr: -6, browRy: -12, browRr: 6, lookX: 0, lookY: 0, pupil: 1, mW: 94, mSmile: 18, mOpen: .85, arms: 0, tilt: -2, bounce: 1, tremble: 0, stretch: 0, flush: .15 },
+  angry:   { lidL: .42, lidR: .42, tiltL: 20, tiltR: -20, browLy: 10, browLr: 22, browRy: 8, browRr: 22, lookX: 0, lookY: .1, pupil: .7, mW: 68, mSmile: -12, mOpen: .32, arms: 0, tilt: 0, bounce: 0, tremble: 1, stretch: -.03, flush: 1 },
+  shocked: { lidL: 0, lidR: 0, tiltL: 0, tiltR: 0, browLy: -24, browLr: -8, browRy: -26, browRr: 8, lookX: 0, lookY: -.1, pupil: .5, mW: 44, mSmile: 0, mOpen: 1, arms: 1, tilt: 0, bounce: 0, tremble: .25, stretch: .08, flush: 0 },
+  talk:    { lidL: .4, lidR: .32, tiltL: -4, tiltR: 4, browLy: 0, browLr: 4, browRy: -8, browRr: -8, lookX: .2, lookY: 0, pupil: 1, mW: 68, mSmile: 8, mOpen: 0, arms: 0, tilt: -2, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
 };
 
 const BLEND = 6;
@@ -191,7 +191,7 @@ export const GremlinBean: React.FC<{
     </g>
   );
 
-  const BODY_D = "M204 44 C286 42 330 112 336 202 C343 298 362 360 332 410 C304 456 246 462 198 460 C142 458 86 446 71 396 C56 346 80 300 80 232 C80 122 122 46 204 44 Z";
+  const BODY_D = "M204 54 C294 52 340 122 346 210 C354 300 380 362 346 416 C316 460 250 466 200 464 C138 462 70 452 54 402 C38 352 68 300 68 238 C68 130 114 56 204 54 Z";
 
   return (
     <div style={{ width: size, height: size * 1.25, transform: `translate(${shake}px, ${laughHop + talkBob}px) scaleX(${flip ? -1 : 1})`, ...style }}>
@@ -213,7 +213,7 @@ export const GremlinBean: React.FC<{
           {/* body */}
           <path d={BODY_D} fill={`url(#${id}-g)`} />
           <g clipPath={`url(#${id}-body)`}>
-            <path d={BODY_D} fill="#e8383a" opacity={p.flush * 0.28} />
+            <path d={BODY_D} fill="#e8383a" opacity={p.flush * 0.14} />
             <ellipse cx={142} cy={118} rx={34} ry={54} fill="#fff" opacity={0.18} transform="rotate(-18 142 118)" />
             <path d="M300 160 C330 260 326 360 280 446 L360 470 L360 120 Z" fill={BODY_SHADE} opacity={0.35} />
             <g stroke={INK} strokeWidth={2.4} strokeLinecap="round" opacity={0.35} fill="none">
@@ -226,7 +226,7 @@ export const GremlinBean: React.FC<{
           <path d={BODY_D} fill="none" stroke={INK} strokeWidth={7} strokeLinejoin="round" />
           {/* hair strand */}
           <g transform={`rotate(${hair} 214 50)`}>
-            <path d="M212 52 C214 22 246 2 282 10 C298 14 304 26 296 34 C292 22 270 16 252 22 C236 28 226 40 222 54 Z" fill={INK} />
+            <path d="M206 60 C206 26 240 0 284 6 C304 9 314 22 306 34 C300 24 280 18 262 22 C238 28 226 44 226 62 Z" fill={INK} />
           </g>
           {/* face */}
           {eye(150, 176, 38, 34, "#eef0c4", p.lidL, p.tiltL, "eL")}
