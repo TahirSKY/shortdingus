@@ -280,7 +280,7 @@ Include every character appearance (position, size, how it enters/leaves, what i
 
 /** Which video analysis a new asset gets, based on its hub's analysis mode and tags. */
 export async function videoTool(db: any, asset: any): Promise<"gemini-video" | "gemini-reaction" | "gemini-edit-style"> {
-  if ((asset.tags || []).includes("reference")) return "gemini-edit-style";
+  if (asset.role === "reference" || (asset.tags || []).includes("reference")) return "gemini-edit-style";
   const { data: g } = await db.from("asset_groups").select("analysis_mode").eq("id", asset.group_id).maybeSingle();
   return g?.analysis_mode === "reaction" ? "gemini-reaction" : "gemini-video";
 }
