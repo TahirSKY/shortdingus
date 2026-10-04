@@ -38,7 +38,7 @@ export async function loadContext(db: any, projectId: string) {
   const hubIds = [hub.id, ...(shared && shared.id !== hub.id ? [shared.id] : [])];
   const [{ data: skills }, { data: library }, { data: files }, { data: analyses }, { data: builds }] = await Promise.all([
     db.from("skills").select("id, slug, name, description, body, group_id").or(`group_id.is.null,group_id.eq.${hub.id}`).order("name"),
-    db.from("assets").select("id, kind, name, role, tags, duration_seconds, meta, mime_type, group_id").in("group_id", hubIds).is("project_id", null).order("created_at"),
+    db.from("assets").select("id, kind, name, role, tags, duration_seconds, meta, mime_type, group_id, inline_content").in("group_id", hubIds).is("project_id", null).order("created_at"),
     db.from("assets").select("id, kind, name, role, tags, duration_seconds, meta, mime_type, inline_content, created_at").eq("project_id", project.id).order("created_at"),
     db.from("asset_analyses").select("asset_id, tool, summary, report").in("group_id", hubIds).eq("status", "complete"),
     db.from("editor_builds").select("id, status, part, lines, error, version, updated_at").eq("project_id", project.id).order("created_at", { ascending: false }).limit(1),
@@ -106,8 +106,11 @@ ${projectFiles(ctx)}
 STYLE REFERENCES (saved looks from past videos; load one with read_style_reference only when the user names it or agrees to your suggestion. Borrow fonts, colors, textures, image treatment and motion feel — never copy structure, timings or text.)
 ${library.filter((a: any) => a.role === "style-reference").map((a: any) => `- ${a.name} | id ${a.id} | ${clip(a.meta?.summary || "", 160)}`).join("\n") || "(none)"}
 
+CHARACTERS (reusable code — copy the component into the video as-is and drive it with props; never redraw it)
+${library.filter((a: any) => a.role === "character" && a.inline_content).map((a: any) => `--- ${a.name} | id ${a.id}\n${a.inline_content}`).join("\n") || "(none)"}
+
 HUB + SHARED LIBRARY
-${library.filter((a: any) => a.role !== "style-reference").map((a: any) => describe(a, ctx.analyses, false)).join("\n") || "(none)"}`;
+${library.filter((a: any) => a.role !== "style-reference" && a.role !== "character").map((a: any) => describe(a, ctx.analyses, false)).join("\n") || "(none)"}`;
 }
 
 /** Save code as a new project code version after checking every referenced file id exists. */
