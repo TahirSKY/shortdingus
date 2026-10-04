@@ -1,5 +1,5 @@
 import { admin, cors, isUuid, json } from "../_shared/hub.ts";
-import { expireStale, runAssembly, runGemini, runImage, runWords } from "../_shared/analysis.ts";
+import { expireStale, runAssembly, runGemini, runImage, runReaction, runWords, videoTool } from "../_shared/analysis.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -31,12 +31,13 @@ Deno.serve(async (req) => {
     return json({ analysis: row }, 202);
   }
   const isImage = asset.kind === "image";
-  const useTool = isImage ? "gemini-image" : tool;
-  if (useTool !== "gemini-video" && useTool !== "gemini-image") return json({ error: "Unknown tool." }, 400);
+  let useTool = isImage ? "gemini-image" : tool;
+  if (asset.kind === "video" && useTool === "gemini-video") useTool = await videoTool(db, asset);
+  if (!["gemini-video", "gemini-image", "gemini-reaction", "gemini-edit-style"].includes(useTool)) return json({ error: "Unknown tool." }, 400);
   if (!["video", "image"].includes(asset.kind) || !asset.storage_path) return json({ error: "Only uploaded videos or images can be analysed." }, 400);
   const { data: row, error } = await db.from("asset_analyses")
     .insert({ asset_id: asset.id, group_id: asset.group_id, tool: useTool, status: "running" }).select().single();
   if (error || !row) return json({ error: "Could not start analysis." }, 500);
-  EdgeRuntime.waitUntil(isImage ? runImage(row.id, asset) : runGemini(row.id, asset));
+  EdgeRuntime.waitUntil(isImage ? runImage(row.id, asset) : useTool === "gemini-video" ? runGemini(row.id, asset) : runReaction(row.id, asset, useTool as any));
   return json({ analysis: row }, 202);
 });

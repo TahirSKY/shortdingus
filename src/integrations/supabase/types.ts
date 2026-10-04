@@ -70,6 +70,7 @@ export type Database = {
       }
       asset_groups: {
         Row: {
+          analysis_mode: string
           auto_cutout: boolean
           created_at: string
           id: string
@@ -80,6 +81,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          analysis_mode?: string
           auto_cutout?: boolean
           created_at?: string
           id?: string
@@ -90,6 +92,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          analysis_mode?: string
           auto_cutout?: boolean
           created_at?: string
           id?: string

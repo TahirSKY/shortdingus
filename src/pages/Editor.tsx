@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowLeft, Bookmark, Clapperboard, Paperclip, Undo2, Scissors } from "lucide-react";
+import { ArrowLeft, Bookmark, Clapperboard, FileText, Paperclip, Undo2, Scissors } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -197,6 +197,11 @@ function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGrou
           const shared = window.confirm("Share this style with every hub? (Cancel = this hub only)");
           sendMessage({ text: `Save the current video as a style reference named "${name.trim()}"${shared ? ", shared with every hub" : ""}.${note.trim() ? ` What I like: ${note.trim()}` : ""}` });
         }}><Bookmark className="h-4 w-4" />Save style</PromptInputButton>
+        <PromptInputButton disabled={busy} onClick={() => {
+          const extra = window.prompt("Anything to add for the script? Jokes, context, angle (optional)");
+          if (extra === null) return;
+          sendMessage({ text: `Create the script now. Use the hub skill, the full source video analysis (timeline + reaction moments), the transcript, any reference edit-style reports and my project notes.${extra.trim() ? ` My extra notes/jokes: ${extra.trim()}` : ""} Pick the best reaction moments (spoken and silent), write each pop-in with its source time, then a clean numbered voiceover read. Save it with save_script and show it to me.` });
+        }}><FileText className="h-4 w-4" />Create script</PromptInputButton>
               <select aria-label="AI model" title="Which AI writes and edits this video" value={model} disabled={busy} onChange={(e) => setModel(e.target.value)} className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground">
                 {MODELS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select>
