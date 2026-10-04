@@ -1,0 +1,12 @@
+import { createClient } from "@supabase/supabase-js";
+import { readFileSync } from "fs";
+const env = Object.fromEntries(readFileSync(".env","utf8").split("\n").filter(l=>l.includes("=")).map(l=>{const i=l.indexOf("=");return [l.slice(0,i),l.slice(i+1).replace(/^"|"$/g,"")]}));
+const db = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY);
+const t = readFileSync("skills/reaction-menace.md","utf8"); const m = t.match(/^---\n([\s\S]*?)\n---\n?/)!;
+const desc = m[1].split("\n").find(l=>l.startsWith("description:"))!.slice(12).trim();
+const { data: hub } = await db.from("asset_groups").select("id").eq("slug","reactions").single();
+const row = { slug: "reaction-menace", name: "Make a menace reaction video", description: desc, body: t.slice(m[0].length), source: "shortdingus", group_id: hub!.id };
+const { data: ex } = await db.from("skills").select("id").eq("slug","reaction-menace").maybeSingle();
+const r = ex ? await db.from("skills").update(row).eq("id", ex.id).select("id").single() : await db.from("skills").insert(row).select("id").single();
+console.log(r.error?.message || "ok");
+console.log((await db.from("projects").update({ skill_id: r.data!.id }).eq("group_id", hub!.id)).error?.message || "linked");

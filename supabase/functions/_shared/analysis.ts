@@ -213,6 +213,78 @@ export async function runAssembly(analysisId: string, asset: any) {
 // Every video gets a transcript (AssemblyAI returns empty words when there is no speech); audio unless it's sfx/music.
 const isVoice = (a: any) => a.kind === "audio" ? !["sfx", "music"].includes(a.role) : a.kind === "video";
 
+const REACTION_MODELS = ["google/gemini-3.1-pro-preview", "google/gemini-3.8-flash"];
+const WINDOW = 120; // seconds per analysis chunk so long videos are fully covered
+
+async function geminiJson(prompt: string, url: string) {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) throw new Error("AI is not configured.");
+  let last = "";
+  for (const model of REACTION_MODELS) {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" },
+      body: JSON.stringify({ model, stream: true, response_format: { type: "json_object" },
+        messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "video_url", video_url: { url } }] }] }),
+    });
+    if (res.status === 402) throw new Error("AI credits are used up. Add credits and try again.");
+    if (res.status === 403) throw new Error(`AI access denied (403): ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) { last = `AI request failed on ${model} (${res.status}).`; continue; }
+    try { return { model, data: parseJsonObject(await readSseText(res)) }; } catch (e) { last = `${model}: ${(e as Error).message}`; }
+  }
+  throw new Error(last || "AI request failed.");
+}
+
+/** Deep analysis for reaction hubs: dense timeline + reaction moments, or an edit-style report for reference clips. */
+export async function runReaction(analysisId: string, asset: any, tool: "gemini-reaction" | "gemini-edit-style") {
+  const db = admin();
+  try {
+    const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 3600);
+    if (error || !signed) throw new Error("Could not open the video.");
+    const duration = Number(asset.duration_seconds) || 0;
+    const windows: [number, number][] = [];
+    if (duration > WINDOW * 1.25) for (let s = 0; s < duration; s += WINDOW) windows.push([s, Math.min(duration, s + WINDOW)]);
+    else windows.push([0, duration || 0]);
+    const timeline: any[] = [], moments: any[] = [], edits: any[] = [], notes: string[] = [];
+    let model = "";
+    for (const [a, b] of windows) {
+      const range = windows.length > 1 ? `Only cover ${a.toFixed(0)}s to ${b.toFixed(0)}s of this ${duration.toFixed(0)}s video (absolute times). ` : (duration ? `The video is ${duration.toFixed(1)}s long. ` : "");
+      const prompt = tool === "gemini-reaction"
+        ? `${range}You are logging a source video for a reaction-video editor who cannot see it. Be exhaustive and precise. Return ONLY JSON:
+{"summary": string, "timeline": [{"start": number, "end": number, "shot": string, "on_screen": string, "action": string, "expression": string, "text_on_screen": string, "audio": string, "speech": string}], "reaction_moments": [{"time": number, "end": number, "what": string, "why": "sus"|"cringe"|"funny"|"shocking"|"dumb"|"wholesome"|"other", "suggested_reaction": string, "intensity": 1|2|3}]}
+Rules: a new timeline entry at every cut or notable change (aim for every 1-3 seconds); "speech" only words actually spoken; "suggested_reaction" can be silent (side-eye, stare, freeze + zoom, mute) or a roast idea. Times in seconds. Valid JSON only.`
+        : `${range}This is a reference reaction video from another channel. Analyse HOW it is edited, not the story. Return ONLY JSON:
+{"summary": string, "edit_events": [{"time": number, "end": number, "type": "character_popin"|"zoom"|"freeze"|"sfx"|"caption"|"meme_overlay"|"cut"|"music"|"other", "detail": string}], "style_notes": [string]}
+Include every character appearance (position, size, how it enters/leaves, what it does, mouth movement), every zoom/freeze, audible SFX, caption style. Times in seconds. Valid JSON only.`;
+      const r = await geminiJson(prompt, signed.signedUrl);
+      model = r.model;
+      const d = r.data;
+      if (d.summary) notes.push(String(d.summary).slice(0, 1500));
+      for (const x of d.timeline || []) timeline.push(x);
+      for (const x of d.reaction_moments || []) moments.push(x);
+      for (const x of d.edit_events || []) edits.push(x);
+      for (const x of d.style_notes || []) notes.push(`style: ${String(x).slice(0, 400)}`);
+    }
+    const byTime = (k: string) => (p: any, q: any) => (Number(p[k]) || 0) - (Number(q[k]) || 0);
+    timeline.sort(byTime("start")); moments.sort(byTime("time")); edits.sort(byTime("time"));
+    const summary = notes.filter((n) => !n.startsWith("style:")).join(" ").slice(0, 4000) || notes.join(" ").slice(0, 4000);
+    const report = tool === "gemini-reaction"
+      ? { summary, timeline: timeline.slice(0, 600), reaction_moments: moments.slice(0, 200), model, windows }
+      : { summary, edit_events: edits.slice(0, 600), style_notes: notes.filter((n) => n.startsWith("style:")).map((n) => n.slice(7)), popin_count: edits.filter((e) => e.type === "character_popin").length, model, windows };
+    await db.from("asset_analyses").update({ status: "complete", summary, report, error_message: null }).eq("id", analysisId);
+  } catch (e) {
+    console.error("[analyze-asset:reaction]", e);
+    await db.from("asset_analyses").update({ status: "error", error_message: (e as Error).message?.slice(0, 300) || "Analysis failed." }).eq("id", analysisId);
+  }
+}
+
+/** Which video analysis a new asset gets, based on its hub's analysis mode and tags. */
+export async function videoTool(db: any, asset: any): Promise<"gemini-video" | "gemini-reaction" | "gemini-edit-style"> {
+  if ((asset.tags || []).includes("reference")) return "gemini-edit-style";
+  const { data: g } = await db.from("asset_groups").select("analysis_mode").eq("id", asset.group_id).maybeSingle();
+  return g?.analysis_mode === "reaction" ? "gemini-reaction" : "gemini-video";
+}
+
 /** Start background analyses for a new asset (description for images/videos, transcript for voice). */
 export async function startAnalysis(asset: any): Promise<Promise<void> | null> {
   if (!asset?.storage_path) return null;
@@ -221,10 +293,10 @@ export async function startAnalysis(asset: any): Promise<Promise<void> | null> {
   await expireStale(db);
   const jobs: Promise<void>[] = [];
   if (["image", "video"].includes(asset.kind)) {
-    const tool = asset.kind === "image" ? "gemini-image" : "gemini-video";
+    const tool = asset.kind === "image" ? "gemini-image" : await videoTool(db, asset);
     const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
     if (error || !row) console.error("[auto-analysis] insert failed", error);
-    else jobs.push(asset.kind === "image" ? runImage(row.id, asset) : runGemini(row.id, asset));
+    else jobs.push(tool === "gemini-image" ? runImage(row.id, asset) : tool === "gemini-video" ? runGemini(row.id, asset) : runReaction(row.id, asset, tool));
   }
   if (isVoice(asset)) {
     const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool: "assembly-transcript", status: "running" }).select().single();
