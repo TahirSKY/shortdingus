@@ -30,6 +30,6 @@ Clips tagged `reference` (e.g. Ryth videos) have a **gemini-edit-style** report:
 - Captions for the key source quote and for his punchline. Keep text in the phone-safe area.
 
 ## The character
-Not designed yet. Until a character asset exists, use a simple placeholder (a coloured circle with eyes) built in SVG, so the timing can be judged. When the character exists it will be an SVG with poses (idle, side-eye, laugh, angry, shocked) and mouth shapes — animate the mouth from the voice word timings.
+**Gremlin Bean** — a smug lime-green bean with crossed arms, one curl of hair, mismatched eyes and two buck teeth. Its full code is in the library (role `character`, shown under CHARACTERS). Copy the `GremlinBean` component into the video unchanged and drive it with props: `poses` (smug, sideEye, stare, judging, laugh, angry, shocked, talk — switch at the beat, they blend), `words` (voice word timings, seconds local to its Sequence → mouth flaps), `enterAt`/`exitAt` (springy pop-in/out), `look`, `flip`, `size`. Give each instance a unique `id`. Pop him in from a corner or bottom edge, often cropped by the frame. Silent reactions = pose + no words.
 
 Useful other skills: suggest-sfx, retention-structure (hook ideas), final-check.
