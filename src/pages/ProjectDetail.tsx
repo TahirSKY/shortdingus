@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import HubHeader from "@/components/HubHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { ChatPane, loadMessages } from "@/pages/Editor";
 import AssetPanel, { AnalysisView } from "@/features/hub/AssetPanel";
 import { CopyRow, EditableText } from "@/features/hub/shared";
 import {
@@ -49,6 +50,20 @@ function VoiceoverPanel({ group, projectId }: { group: AssetGroup; projectId: st
         );
       })}
     </div>
+  );
+}
+
+function ScriptChat({ group, project }: { group: AssetGroup; project: Project }) {
+  const qc = useQueryClient();
+  const { data: initial } = useQuery({ queryKey: ["editor-messages", project.id], queryFn: () => loadMessages(project.id), staleTime: Infinity, refetchOnWindowFocus: false });
+  return (
+    <section className="mt-10">
+      <h2 className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">Script chat</h2>
+      <p className="mb-3 text-xs text-muted-foreground">Talk to the agent about the script — add jokes, context, then press Create script. Same conversation as the Editor.</p>
+      <div className="h-[560px] overflow-hidden rounded-lg border border-border">
+        {initial ? <ChatPane group={group} project={project} initial={initial} onCodeChanged={() => qc.invalidateQueries({ queryKey: ["assets", group.id, project.id] })} /> : <div className="p-4 text-sm text-muted-foreground">Loading chat…</div>}
+      </div>
+    </section>
   );
 }
 
@@ -107,6 +122,8 @@ export default function ProjectDetail() {
           }}><Trash2 className="h-3.5 w-3.5" /></Button>
         </div>
         <EditableText multiline value={project.notes} onSave={(notes) => save({ notes })} placeholder="The idea, angle, anything the agent should know about this video…" className="mt-3" />
+
+        <ScriptChat group={group} project={project} />
 
         <section className="mt-10">
           <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">Voiceover</h2>

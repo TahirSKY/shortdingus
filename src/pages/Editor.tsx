@@ -30,7 +30,7 @@ const MODELS = [
   ["google/gemini-3.8-flash", "Gemini 3.8 Flash (cheap)"],
 ];
 
-async function loadMessages(projectId: string): Promise<UIMessage[]> {
+export async function loadMessages(projectId: string): Promise<UIMessage[]> {
   const { data, error } = await supabase.from("editor_messages" as any).select("ui_message").eq("project_id", projectId).order("created_at");
   if (error) throw error;
   return (data || []).map((r: any) => r.ui_message as UIMessage);
@@ -82,7 +82,7 @@ function BuildCard({ projectId, onDone }: { projectId: string; onDone: () => voi
   );
 }
 
-function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGroup; project: Project; initial: UIMessage[]; onCodeChanged: () => void }) {
+export function ChatPane({ group, project, initial, onCodeChanged }: { group: AssetGroup; project: Project; initial: UIMessage[]; onCodeChanged: () => void }) {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
