@@ -180,36 +180,41 @@ export const GremlinBean: React.FC<{
   const tooth = (x: number) => {
     const tt = (x - L[0]) / (R[0] - L[0]);
     const y = q(L[1], topC[1], R[1], tt) - 2;
-    return <path d={`M${x - 7} ${y} L${x + 7} ${y} L${x + 6.5} ${y + 15} Q${x} ${y + 18} ${x - 6.5} ${y + 15} Z`} fill="#fbf7e6" stroke={INK} strokeWidth={3.2} strokeLinejoin="round" />;
+    return <path d={`M${x - 8} ${y} L${x + 8} ${y} L${x + 3} ${y + 17} Q${x} ${y + 20} ${x - 3} ${y + 17} Z`} fill="#fbf7e6" stroke={INK} strokeWidth={3.2} strokeLinejoin="round" />;
   };
 
   const tube = (d: string, k: string) => (
     <g key={k}>
-      <path d={d} fill="none" stroke={INK} strokeWidth={36} strokeLinecap="round" />
-      <path d={d} fill="none" stroke={BODY} strokeWidth={25} strokeLinecap="round" />
+      <path d={d} fill="none" stroke={INK} strokeWidth={36} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={BODY} strokeWidth={25} strokeLinecap="round" strokeLinejoin="round" />
     </g>
   );
-  const crossed = (
-    <g opacity={1 - p.arms}>
-      {tube("M88 300 Q118 352 262 326", "a1")}
-      <path d="M96 318 Q140 350 250 334" fill="none" stroke={BODY_SHADE} strokeWidth={5} opacity={0.5} strokeLinecap="round" />
-      {tube("M316 298 Q292 356 150 344", "a2")}
-      <circle cx={150} cy={344} r={15} fill={BODY} stroke={INK} strokeWidth={5.5} />
-      <path d="M142 336 Q136 344 143 352 M152 333 Q146 343 153 354" fill="none" stroke={INK} strokeWidth={3} strokeLinecap="round" />
+
+  // Two-segment arm from a shoulder; angles in degrees, mirrored for the right arm
+  const arm = (sx0: number, sy0: number, a1: number, a2: number, right: boolean, k: string) => {
+    const r = Math.PI / 180, m = right ? 1 : -1;
+    const ex = sx0 + m * Math.sin(a1 * r) * 72, ey = sy0 + Math.cos(a1 * r) * 72;
+    const hx = ex + m * Math.sin((a1 + a2) * r) * 62, hy = ey + Math.cos((a1 + a2) * r) * 62;
+    const fist = a2 > 30 || a1 > 120;
+    return (
+      <g key={k}>
+        {tube(`M${sx0} ${sy0} Q${(sx0 + ex) / 2 + m * 4} ${(sy0 + ey) / 2} ${ex} ${ey} L${hx} ${hy}`, k + "t")}
+        <circle cx={hx} cy={hy} r={17} fill={BODY} stroke={INK} strokeWidth={5.5} />
+        {fist
+          ? <path d={`M${hx - 8} ${hy - 6} Q${hx} ${hy - 10} ${hx + 8} ${hy - 6} M${hx - 9} ${hy + 2} Q${hx} ${hy - 2} ${hx + 9} ${hy + 2}`} fill="none" stroke={INK} strokeWidth={3} strokeLinecap="round" />
+          : <path d={`M${hx + m * 6} ${hy - 12} L${hx + m * 18} ${hy - 20} M${hx + m * 12} ${hy - 3} L${hx + m * 26} ${hy - 4} M${hx + m * 8} ${hy + 8} L${hx + m * 20} ${hy + 14}`} stroke={INK} strokeWidth={5} strokeLinecap="round" />}
+      </g>
+    );
+  };
+  // Arms move with the body: talk gestures, laugh bobs, angry shakes
+  const wig = talk * 14 * Math.sin(t * 7) + p.bounce * 8 * Math.sin(frame * 0.55) + p.tremble * 4 * Math.sin(frame * 3.3);
+  const arms = (
+    <g>
+      {arm(90, 292, p.aL1 + wig * 0.3, p.aL2, false, "aL")}
+      {arm(314, 290, p.aR1 + wig, p.aR2 - wig * 0.5, true, "aR")}
     </g>
   );
-  const raised = (
-    <g opacity={p.arms}>
-      {tube("M86 300 Q34 262 58 186", "r1")}
-      {tube("M318 298 Q370 262 346 186", "r2")}
-      {[[58, 180], [346, 180]].map(([hx, hy], i) => (
-        <g key={i}>
-          <circle cx={hx} cy={hy} r={17} fill={BODY} stroke={INK} strokeWidth={5.5} />
-          <path d={`M${hx - 8} ${hy - 12} L${hx - 10} ${hy - 26} M${hx} ${hy - 15} L${hx} ${hy - 30} M${hx + 8} ${hy - 12} L${hx + 11} ${hy - 25}`} stroke={INK} strokeWidth={5} strokeLinecap="round" />
-        </g>
-      ))}
-    </g>
-  );
+
 
   const BODY_D = "M204 54 C294 52 340 122 346 210 C354 300 380 362 346 416 C316 460 250 466 200 464 C138 462 70 452 54 402 C38 352 68 300 68 238 C68 130 114 56 204 54 Z";
 
