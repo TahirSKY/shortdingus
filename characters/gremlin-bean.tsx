@@ -12,7 +12,7 @@
 // />
 //   eyeShake={0.8} pupilScale={0.6}   // jittery eyeballs / tiny unhinged pupils (eye close-ups)
 // Poses: smug, menace, sideEye, stare, judging, point, laugh, angry, shocked, talk
-// Arms change per pose: hands on hips, loose at sides, hand on belly (laugh), chin (judging/menace), point, fists, thrown up
+// Arms change per pose: hands on hips, loose at sides, hand on belly (laugh), chest (judging/menace), point, fists, thrown up
 import React from "react";
 import { AbsoluteFill, Sequence, spring, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
 
@@ -38,12 +38,12 @@ type P = {
 // Arm presets [upper, bend]
 const HIP: [number, number] = [50, -110];   // hand on hip
 const SIDE: [number, number] = [12, -6];    // hanging loose
-const BELLY: [number, number] = [22, -112]; // hand on stomach (laughing)
+const BELLY: [number, number] = [0, -120];   // hand on stomach (laughing)
 const UP: [number, number] = [150, 20];     // thrown up
-const FIST: [number, number] = [70, 80];    // fist raised by the head
+const FIST: [number, number] = [95, 75];    // fist raised by the head
 const GEST: [number, number] = [62, 48];    // talking gesture
 const PNT: [number, number] = [100, -14];   // pointing out
-const CHIN: [number, number] = [28, -150];  // hand to chin, scheming
+const CHIN: [number, number] = [-10, -140]; // hand on chest, scheming
 const A = (l: [number, number], r: [number, number]) => ({ aL1: l[0], aL2: l[1], aR1: r[0], aR2: r[1] });
 
 const POSES: Record<PoseName, P> = {
@@ -165,7 +165,7 @@ export const GremlinBean: React.FC<{
   // Heavy, sharp brows — the main menace driver
   const brow = (cx: number, cy: number, dy: number, rot: number, mirror: boolean) => (
     <g transform={`translate(${cx} ${cy + dy}) scale(${mirror ? -1 : 1} 1) rotate(${rot})`}>
-      <path d="M-56 16 Q-12 -22 50 -8 L60 2 Q-4 -4 -52 26 Q-62 24 -56 16 Z" fill={INK} />
+      <path d="M-58 -8 Q-8 -14 50 12 L60 26 Q-4 6 -54 8 Q-64 0 -58 -8 Z" fill={INK} />
     </g>
   );
 
