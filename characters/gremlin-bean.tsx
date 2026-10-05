@@ -1,4 +1,4 @@
-/* REMOTION_CONFIG { fps: 30, durationInFrames: 420, width: 1080, height: 1920 } */
+/* REMOTION_CONFIG { fps: 30, durationInFrames: 480, width: 1080, height: 1920 } */
 // Gremlin Bean — reusable menace character for the Reactions hub.
 // Copy the GremlinBean component (everything above "DEMO") into any video.
 //
@@ -10,7 +10,9 @@
 //   look={[x, y]}                    // optional pupil override, -1..1
 //   flip                             // mirror (face the other way)
 // />
-// Poses: smug, sideEye, stare, judging, laugh, angry, shocked, talk
+//   eyeShake={0.8} pupilScale={0.6}   // jittery eyeballs / tiny unhinged pupils (eye close-ups)
+// Poses: smug, menace, sideEye, stare, judging, point, laugh, angry, shocked, talk
+// Arms change per pose: hands on hips, loose at sides, hand on belly (laugh), chin (judging/menace), point, fists, thrown up
 import React from "react";
 import { AbsoluteFill, Sequence, spring, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
 
@@ -288,7 +290,7 @@ const STEP = 45;
 export default function GremlinBeanDemo() {
   const frame = useCurrentFrame();
   const i = Math.min(DEMO.length - 1, Math.floor(frame / STEP));
-  const words = Array.from({ length: 6 }, (_, k) => ({ start: (7 * STEP) / 30 + 0.1 + k * 0.32, end: (7 * STEP) / 30 + 0.34 + k * 0.32 }));
+  const words = Array.from({ length: 6 }, (_, k) => ({ start: (9 * STEP) / 30 + 0.1 + k * 0.32, end: (9 * STEP) / 30 + 0.34 + k * 0.32 }));
   return (
     <AbsoluteFill style={{ background: "radial-gradient(circle at 50% 40%, #3a3550, #141220)", alignItems: "center", justifyContent: "center", fontFamily: "Space Grotesk, sans-serif" }}>
       <Sequence from={0}>
