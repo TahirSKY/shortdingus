@@ -269,8 +269,7 @@ export const GremlinBean: React.FC<{
           <path d={`M${R[0] - 4} ${R[1] - 8} Q${R[0] + 10} ${R[1] - 1} ${R[0] + 2} ${R[1] + 11}`} fill="none" stroke={INK} strokeWidth={4} strokeLinecap="round" opacity={sm > 4 ? 1 : 0} />
           <path d={`M${L[0] + 4} ${L[1] - 6} Q${L[0] - 8} ${L[1]} ${L[0] - 1} ${L[1] + 9}`} fill="none" stroke={INK} strokeWidth={3.5} strokeLinecap="round" opacity={sm > 10 ? 0.8 : 0} />
           {/* arms on top */}
-          {crossed}
-          {raised}
+          {arms}
         </g>
       </svg>
     </div>
@@ -279,8 +278,9 @@ export const GremlinBean: React.FC<{
 
 // ---------------------------------------------------------------- DEMO
 const DEMO: { pose: PoseName; label: string }[] = [
-  { pose: "smug", label: "smug" }, { pose: "sideEye", label: "sideEye" }, { pose: "stare", label: "stare" },
-  { pose: "judging", label: "judging" }, { pose: "laugh", label: "laugh" }, { pose: "angry", label: "angry" },
+  { pose: "smug", label: "smug" }, { pose: "menace", label: "menace" }, { pose: "sideEye", label: "sideEye" },
+  { pose: "stare", label: "stare" }, { pose: "judging", label: "judging" }, { pose: "point", label: "point" },
+  { pose: "laugh", label: "laugh" }, { pose: "angry", label: "angry" },
   { pose: "shocked", label: "shocked" }, { pose: "talk", label: "talk" },
 ];
 const STEP = 45;
