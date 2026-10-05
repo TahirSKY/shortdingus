@@ -22,25 +22,39 @@ const LID = "#93c23c";
 const MOUTH = "#3b1616";
 const TONGUE = "#e0646a";
 
-type PoseName = "smug" | "sideEye" | "stare" | "judging" | "laugh" | "angry" | "shocked" | "talk";
+type PoseName = "smug" | "sideEye" | "stare" | "judging" | "laugh" | "angry" | "shocked" | "talk" | "menace" | "point";
 type P = {
   lidL: number; lidR: number; tiltL: number; tiltR: number;
   browLy: number; browLr: number; browRy: number; browRr: number;
   lookX: number; lookY: number; pupil: number;
   mW: number; mSmile: number; mOpen: number;
-  arms: number; // 0 crossed, 1 raised
+  // arms: upper-arm angle from straight down (+ = outward/up) and elbow bend, per side
+  aL1: number; aL2: number; aR1: number; aR2: number;
   tilt: number; bounce: number; tremble: number; stretch: number; flush: number;
 };
 
+// Arm presets [upper, bend]
+const HIP: [number, number] = [50, -110];   // hand on hip
+const SIDE: [number, number] = [12, -6];    // hanging loose
+const BELLY: [number, number] = [22, -112]; // hand on stomach (laughing)
+const UP: [number, number] = [150, 20];     // thrown up
+const FIST: [number, number] = [70, 80];    // fist raised by the head
+const GEST: [number, number] = [62, 48];    // talking gesture
+const PNT: [number, number] = [100, -14];   // pointing out
+const CHIN: [number, number] = [28, -150];  // hand to chin, scheming
+const A = (l: [number, number], r: [number, number]) => ({ aL1: l[0], aL2: l[1], aR1: r[0], aR2: r[1] });
+
 const POSES: Record<PoseName, P> = {
-  smug:    { lidL: .48, lidR: .36, tiltL: -6, tiltR: 8, browLy: 4, browLr: 6, browRy: -14, browRr: -14, lookX: .45, lookY: .15, pupil: 1, mW: 81, mSmile: 14, mOpen: 0, arms: 0, tilt: -3, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
-  sideEye: { lidL: .4, lidR: .36, tiltL: 0, tiltR: 0, browLy: 6, browLr: 2, browRy: 2, browRr: -4, lookX: -1, lookY: .1, pupil: 1, mW: 44, mSmile: 1, mOpen: 0, arms: 0, tilt: 4, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
-  stare:   { lidL: .32, lidR: .3, tiltL: 0, tiltR: 0, browLy: 4, browLr: 0, browRy: 4, browRr: 0, lookX: 0, lookY: 0, pupil: .6, mW: 39, mSmile: -1, mOpen: 0, arms: 0, tilt: 0, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
-  judging: { lidL: .6, lidR: .42, tiltL: -8, tiltR: 0, browLy: 8, browLr: 10, browRy: -18, browRr: -18, lookX: .2, lookY: .3, pupil: .9, mW: 39, mSmile: -8, mOpen: 0, arms: 0, tilt: 6, bounce: 0, tremble: 0, stretch: -.02, flush: 0 },
-  laugh:   { lidL: .82, lidR: .78, tiltL: 10, tiltR: -10, browLy: -10, browLr: -6, browRy: -12, browRr: 6, lookX: 0, lookY: 0, pupil: 1, mW: 94, mSmile: 18, mOpen: .85, arms: 0, tilt: -2, bounce: 1, tremble: 0, stretch: 0, flush: .15 },
-  angry:   { lidL: .42, lidR: .42, tiltL: 20, tiltR: -20, browLy: 10, browLr: 22, browRy: 8, browRr: 22, lookX: 0, lookY: .1, pupil: .7, mW: 68, mSmile: -12, mOpen: .32, arms: 0, tilt: 0, bounce: 0, tremble: 1, stretch: -.03, flush: 1 },
-  shocked: { lidL: 0, lidR: 0, tiltL: 0, tiltR: 0, browLy: -24, browLr: -8, browRy: -26, browRr: 8, lookX: 0, lookY: -.1, pupil: .5, mW: 44, mSmile: 0, mOpen: 1, arms: 1, tilt: 0, bounce: 0, tremble: .25, stretch: .08, flush: 0 },
-  talk:    { lidL: .4, lidR: .32, tiltL: -4, tiltR: 4, browLy: 0, browLr: 4, browRy: -8, browRr: -8, lookX: .2, lookY: 0, pupil: 1, mW: 68, mSmile: 8, mOpen: 0, arms: 0, tilt: -2, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  smug:    { lidL: .5, lidR: .4, tiltL: -10, tiltR: 12, browLy: 8, browLr: 16, browRy: -12, browRr: -6, lookX: .45, lookY: .15, pupil: .85, mW: 84, mSmile: 15, mOpen: 0, ...A(HIP, HIP), tilt: -4, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  sideEye: { lidL: .46, lidR: .42, tiltL: -6, tiltR: 6, browLy: 8, browLr: 14, browRy: 4, browRr: 6, lookX: -1, lookY: .1, pupil: .8, mW: 44, mSmile: 2, mOpen: 0, ...A(HIP, SIDE), tilt: 4, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  stare:   { lidL: .36, lidR: .34, tiltL: -4, tiltR: 4, browLy: 8, browLr: 12, browRy: 8, browRr: 12, lookX: 0, lookY: 0, pupil: .5, mW: 39, mSmile: -1, mOpen: 0, ...A(SIDE, SIDE), tilt: 0, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  judging: { lidL: .62, lidR: .44, tiltL: -12, tiltR: 6, browLy: 10, browLr: 18, browRy: -18, browRr: -12, lookX: .2, lookY: .3, pupil: .75, mW: 39, mSmile: -8, mOpen: 0, ...A(HIP, CHIN), tilt: 6, bounce: 0, tremble: 0, stretch: -.02, flush: 0 },
+  laugh:   { lidL: .82, lidR: .78, tiltL: 14, tiltR: -14, browLy: -4, browLr: 14, browRy: -6, browRr: 14, lookX: 0, lookY: 0, pupil: 1, mW: 96, mSmile: 18, mOpen: .85, ...A(BELLY, GEST), tilt: -2, bounce: 1, tremble: 0, stretch: 0, flush: .15 },
+  angry:   { lidL: .44, lidR: .44, tiltL: 24, tiltR: -24, browLy: 12, browLr: 26, browRy: 10, browRr: 26, lookX: 0, lookY: .1, pupil: .55, mW: 70, mSmile: -12, mOpen: .32, ...A(FIST, FIST), tilt: 0, bounce: 0, tremble: 1, stretch: -.03, flush: 1 },
+  shocked: { lidL: 0, lidR: 0, tiltL: 0, tiltR: 0, browLy: -24, browLr: -8, browRy: -26, browRr: 8, lookX: 0, lookY: -.1, pupil: .4, mW: 44, mSmile: 0, mOpen: 1, ...A(UP, UP), tilt: 0, bounce: 0, tremble: .25, stretch: .08, flush: 0 },
+  talk:    { lidL: .44, lidR: .36, tiltL: -8, tiltR: 8, browLy: 4, browLr: 12, browRy: -8, browRr: -2, lookX: .2, lookY: 0, pupil: .9, mW: 70, mSmile: 8, mOpen: 0, ...A(HIP, GEST), tilt: -2, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
+  menace:  { lidL: .56, lidR: .5, tiltL: -16, tiltR: 16, browLy: 12, browLr: 24, browRy: 6, browRr: 22, lookX: 0, lookY: .25, pupil: .45, mW: 100, mSmile: 22, mOpen: .12, ...A(CHIN, HIP), tilt: 3, bounce: 0, tremble: 0, stretch: -.04, flush: 0 },
+  point:   { lidL: .44, lidR: .38, tiltL: -10, tiltR: 10, browLy: 6, browLr: 16, browRy: -10, browRr: -4, lookX: -.6, lookY: 0, pupil: .8, mW: 76, mSmile: 12, mOpen: .1, ...A(PNT, HIP), tilt: -5, bounce: 0, tremble: 0, stretch: 0, flush: 0 },
 };
 
 const BLEND = 6;
@@ -78,7 +92,9 @@ export const GremlinBean: React.FC<{
   size?: number; pose?: PoseName; poses?: { at: number; pose: PoseName }[];
   words?: { start: number; end: number }[]; enterAt?: number; exitAt?: number;
   look?: [number, number]; flip?: boolean; id?: string; style?: React.CSSProperties;
-}> = ({ size = 520, pose = "smug", poses, words, enterAt = 0, exitAt, look, flip, id = "gb", style }) => {
+  eyeShake?: number; // 0..1 pupils jitter (great for eye close-ups)
+  pupilScale?: number; // multiply pupil size (tiny = unhinged, big = puppy fake-innocent)
+}> = ({ size = 520, pose = "smug", poses, words, enterAt = 0, exitAt, look, flip, id = "gb", style, eyeShake = 0, pupilScale = 1 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const p = poseAt(frame, pose, poses);
@@ -120,8 +136,10 @@ export const GremlinBean: React.FC<{
   const eye = (ex: number, ey: number, rx: number, ry: number, sclera: string, lid: number, tiltDeg: number, key: string) => {
     const l = Math.min(1, Math.max(lid, blink));
     const lidY = ey - ry + l * 2 * ry;
-    const pr = 10 * p.pupil + 3;
-    const px = ex + lx * rx * 0.5, py = ey + ly * ry * 0.4 + 3;
+    const pr = (9 * p.pupil + 3) * pupilScale;
+    const jx = eyeShake * (Math.sin(frame * 3.7) * 5 + Math.sin(frame * 6.1) * 2.5);
+    const jy = eyeShake * (Math.cos(frame * 4.3) * 3);
+    const px = ex + lx * rx * 0.5 + jx, py = ey + ly * ry * 0.4 + 3 + jy;
     return (
       <g>
         <clipPath id={`${id}-${key}`}><ellipse cx={ex} cy={ey} rx={rx} ry={ry} /></clipPath>
@@ -136,14 +154,16 @@ export const GremlinBean: React.FC<{
           </g>
         </g>
         <ellipse cx={ex} cy={ey} rx={rx} ry={ry} fill="none" stroke={INK} strokeWidth={5.5} />
-        <path d={`M${ex - rx * 0.6} ${ey + ry + 9} Q${ex} ${ey + ry + 16} ${ex + rx * 0.7} ${ey + ry + 7}`} fill="none" stroke={INK} strokeWidth={3} strokeLinecap="round" opacity={0.55} />
+        <path d={`M${ex - rx * 0.6} ${ey + ry + 9} Q${ex} ${ey + ry + 16} ${ex + rx * 0.7} ${ey + ry + 7}`} fill="none" stroke={INK} strokeWidth={3.5} strokeLinecap="round" opacity={0.7} />
+        <path d={`M${ex - rx * 0.4} ${ey + ry + 17} Q${ex} ${ey + ry + 22} ${ex + rx * 0.45} ${ey + ry + 15}`} fill="none" stroke={INK} strokeWidth={2.5} strokeLinecap="round" opacity={0.35} />
       </g>
     );
   };
 
+  // Heavy, sharp brows — the main menace driver
   const brow = (cx: number, cy: number, dy: number, rot: number, mirror: boolean) => (
     <g transform={`translate(${cx} ${cy + dy}) scale(${mirror ? -1 : 1} 1) rotate(${rot})`}>
-      <path d="M-50 10 Q-8 -18 48 -6 Q52 -2 46 3 Q-6 -6 -46 16 Q-54 16 -50 10 Z" fill={INK} />
+      <path d="M-56 16 Q-12 -22 50 -8 L60 2 Q-4 -4 -52 26 Q-62 24 -56 16 Z" fill={INK} />
     </g>
   );
 
