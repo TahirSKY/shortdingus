@@ -182,7 +182,7 @@ export const GremlinBean: React.FC<{
   const tooth = (x: number) => {
     const tt = (x - L[0]) / (R[0] - L[0]);
     const y = q(L[1], topC[1], R[1], tt) - 2;
-    return <path d={`M${x - 8} ${y} L${x + 8} ${y} L${x + 3} ${y + 17} Q${x} ${y + 20} ${x - 3} ${y + 17} Z`} fill="#fbf7e6" stroke={INK} strokeWidth={3.2} strokeLinejoin="round" />;
+    return <path d={`M${x - 8} ${y} L${x + 8} ${y} L${x + 7} ${y + 10} Q${x} ${y + 16} ${x - 7} ${y + 10} Z`} fill="#fbf7e6" stroke={INK} strokeWidth={3.2} strokeLinejoin="round" />;
   };
 
   const tube = (d: string, k: string) => (
@@ -197,16 +197,8 @@ export const GremlinBean: React.FC<{
     const r = Math.PI / 180, m = right ? 1 : -1;
     const ex = sx0 + m * Math.sin(a1 * r) * 72, ey = sy0 + Math.cos(a1 * r) * 72;
     const hx = ex + m * Math.sin((a1 + a2) * r) * 62, hy = ey + Math.cos((a1 + a2) * r) * 62;
-    const fist = a2 > 30 || a1 > 120;
-    return (
-      <g key={k}>
-        {tube(`M${sx0} ${sy0} Q${(sx0 + ex) / 2 + m * 4} ${(sy0 + ey) / 2} ${ex} ${ey} L${hx} ${hy}`, k + "t")}
-        <circle cx={hx} cy={hy} r={17} fill={BODY} stroke={INK} strokeWidth={5.5} />
-        {fist
-          ? <path d={`M${hx - 8} ${hy - 6} Q${hx} ${hy - 10} ${hx + 8} ${hy - 6} M${hx - 9} ${hy + 2} Q${hx} ${hy - 2} ${hx + 9} ${hy + 2}`} fill="none" stroke={INK} strokeWidth={3} strokeLinecap="round" />
-          : <path d={`M${hx + m * 6} ${hy - 12} L${hx + m * 18} ${hy - 20} M${hx + m * 12} ${hy - 3} L${hx + m * 26} ${hy - 4} M${hx + m * 8} ${hy + 8} L${hx + m * 20} ${hy + 14}`} stroke={INK} strokeWidth={5} strokeLinecap="round" />}
-      </g>
-    );
+    // Plain rounded tube ends — no hands or fingers
+    return tube(`M${sx0} ${sy0} Q${(sx0 + ex) / 2 + m * 4} ${(sy0 + ey) / 2} ${ex} ${ey} L${hx} ${hy}`, k);
   };
   // Arms move with the body: talk gestures, laugh bobs, angry shakes
   const wig = talk * 14 * Math.sin(t * 7) + p.bounce * 8 * Math.sin(frame * 0.55) + p.tremble * 4 * Math.sin(frame * 3.3);
