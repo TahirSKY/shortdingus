@@ -29,7 +29,18 @@ Clips tagged `reference` (e.g. Ryth videos) have a **gemini-edit-style** report:
 - SFX on every beat that matters (pop-in whoosh, vine boom on the stare, record scratch on freeze) — use the hub/shared sound library with their peak times.
 - Captions for the key source quote and for his punchline. Keep text in the phone-safe area.
 
+## Be a creative editor, not a template
+Every video should feel directed. Don't repeat one move (corner pop-in, line, leave) for the whole video — vary how the character and the source share the screen, and pick each move because it makes *that* moment funnier. Do this on your own; the user should never have to remind you. Ideas to mix, invent beyond them:
+- **Observer:** he sits at the side or bottom edge, cropped by the frame, watching the clip play and commenting or silently reacting.
+- **Pause and take over:** freeze the source, he slides in full size (or fills the screen) to roast it, then the video resumes.
+- **Loop the crime:** replay the last clip on a loop, black-and-white (grayscale + contrast, maybe grain or vignette), with him in full colour on top judging it.
+- **Eye close-up:** punch the camera into his eyes; `eyeShake` for trembling eyeballs, `pupilScale` small for unhinged, big for fake-innocent. Pair with a heartbeat, vine boom or bass drop.
+- **Camera work:** treat both the source and the character like they're filmed — full-screen takeovers, slow push-ins, snap zooms to a face on the key word, quick zoom out for the reveal, whip pans between source and character, shake on impacts, split screen, picture-in-picture.
+- **Colour and texture:** red flash on anger, B&W for deadpan, freeze-frame + record scratch, TV colour bars, impact frames, meme overlays, captions that pop on the exact word.
+- Let quiet moments breathe so the big hits land. Escalate across the video.
+Before building, briefly tell the user which moves you plan for which moments.
+
 ## The character
-**Gremlin Bean** — a smug lime-green bean with crossed arms, one curl of hair, mismatched eyes and two buck teeth. Its full code is in the library (role `character`, shown under CHARACTERS). Copy the `GremlinBean` component into the video unchanged and drive it with props: `poses` (smug, sideEye, stare, judging, laugh, angry, shocked, talk — switch at the beat, they blend), `words` (voice word timings, seconds local to its Sequence → mouth flaps), `enterAt`/`exitAt` (springy pop-in/out), `look`, `flip`, `size`. Give each instance a unique `id`. Pop him in from a corner or bottom edge, often cropped by the frame. Silent reactions = pose + no words.
+**Gremlin Bean** — a menacing lime-green bean with heavy V brows, one curl of hair, mismatched eyes, sharp buck teeth and expressive arms. Its full code is in the library (role `character`, shown under CHARACTERS). Copy the `GremlinBean` component into the video unchanged and drive it with props: `poses` (smug, menace, sideEye, stare, judging, point, laugh, angry, shocked, talk — switch at the beat, they blend; each pose brings its own arms: hands on hips, at the sides, on the belly while laughing, on the chest scheming, pointing, fists up, thrown up), `words` (voice word timings, seconds local to its Sequence → mouth flaps), `enterAt`/`exitAt` (springy pop-in/out), `look`, `flip`, `size`, `eyeShake`, `pupilScale`. Give each instance a unique `id`. Silent reactions = pose + no words. Wrap him in your own transforms for camera moves (scale/translate the container to zoom into his eyes, etc.).
 
 Useful other skills: suggest-sfx, retention-structure (hook ideas), final-check.
