@@ -73,7 +73,7 @@ async function makeSheets(file: File, duration: number, group: AssetGroup, id: s
     }
     const blob: Blob = await new Promise((r) => c.toBlob((b) => r(b!), "image/jpeg", 0.72));
     const path = `groups/${group.slug}/frames/${id}/sheet-${String(sheets.length).padStart(3, "0")}.jpg`;
-    const up = await supabase.storage.from("hub-media").upload(path, blob, { contentType: "image/jpeg", upsert: true });
+    const up = await supabase.storage.from("hub-media").upload(path, blob, { contentType: "image/jpeg", upsert: false });
     if (up.error) throw up.error;
     sheets.push({ path, times: chunk, cols: COLS });
   }
