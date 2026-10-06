@@ -76,8 +76,11 @@ Rules: times are numeric seconds; cover the full timeline with non-overlapping b
 
 export async function expireStale(db: any) {
   const cutoff = new Date(Date.now() - 10 * 60_000).toISOString();
+  // Long AssemblyAI jobs (with a saved transcript_id) get 3 hours; they are finished by resumeAssembly.
   await db.from("asset_analyses").update({ status: "error", error_message: "Analysis timed out. Run it again." })
-    .in("status", ["running", "pending"]).lt("created_at", cutoff);
+    .in("status", ["running", "pending"]).lt("created_at", cutoff).is("report->>transcript_id", null);
+  await db.from("asset_analyses").update({ status: "error", error_message: "Transcription timed out. Run it again." })
+    .in("status", ["running", "pending"]).lt("created_at", new Date(Date.now() - 3 * 3600_000).toISOString());
 }
 
 export async function runImage(analysisId: string, asset: any) {
@@ -177,12 +180,34 @@ function wordExtras(words: { w: string; start: number; end: number }[]) {
 }
 
 /** AssemblyAI word-level transcript (times in seconds). */
+async function finishAssembly(db: any, analysisId: string, t: any) {
+  const words = (t.words || []).map((x: any) => ({ w: String(x.text), start: x.start / 1000, end: x.end / 1000, ...(x.speaker ? { speaker: x.speaker } : {}) }));
+  const utterances = (t.utterances || []).map((u: any) => ({ speaker: u.speaker, text: u.text, start: u.start / 1000, end: u.end / 1000 }));
+  const extras = wordExtras(words);
+  const summary = words.length ? `${words.length} words, ${extras.cuts.length} suggested cuts.` : "No speech found.";
+  await db.from("asset_analyses").update({ status: "complete", summary, report: { text: t.text || "", words, utterances, ...extras, provider: "assemblyai", transcript_id: t.id }, error_message: null }).eq("id", analysisId);
+}
+
+/** Check a long-running AssemblyAI job once (used for long source videos that outlive the first background run). */
+export async function resumeAssembly(analysisId: string) {
+  const db = admin();
+  const { data: row } = await db.from("asset_analyses").select("id, status, report").eq("id", analysisId).maybeSingle();
+  const tid = row?.report?.transcript_id;
+  if (!row || row.status !== "running" || !tid) return row?.status || "missing";
+  const key = Deno.env.get("ASSEMBLYAI_API_KEY");
+  const r = await fetch(`https://api.assemblyai.com/v2/transcript/${tid}`, { headers: { authorization: key || "" } });
+  const t = await r.json().catch(() => ({}));
+  if (t.status === "completed") { await finishAssembly(db, analysisId, t); return "complete"; }
+  if (t.status === "error") { await db.from("asset_analyses").update({ status: "error", error_message: `AssemblyAI: ${String(t.error).slice(0, 200)}` }).eq("id", analysisId); return "error"; }
+  return "running";
+}
+
 export async function runAssembly(analysisId: string, asset: any) {
   const db = admin();
   try {
     const key = Deno.env.get("ASSEMBLYAI_API_KEY");
     if (!key) throw new Error("AssemblyAI is not configured.");
-    const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 3600);
+    const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 6 * 3600);
     if (error || !signed) throw new Error("Could not open the file.");
     const start = await fetch("https://api.assemblyai.com/v2/transcript", {
       method: "POST", headers: { authorization: key, "content-type": "application/json" },
@@ -190,23 +215,63 @@ export async function runAssembly(analysisId: string, asset: any) {
     });
     const job = await start.json().catch(() => ({}));
     if (!start.ok || !job.id) throw new Error(`AssemblyAI refused the file (${start.status}): ${String(job.error || "").slice(0, 200)}`);
+    // Save the job id so long videos can be finished later by resumeAssembly.
+    await db.from("asset_analyses").update({ report: { transcript_id: job.id, provider: "assemblyai" } }).eq("id", analysisId);
     let t: any = job;
-    const deadline = Date.now() + 9 * 60_000;
+    const deadline = Date.now() + 5 * 60_000;
     while (t.status !== "completed" && t.status !== "error") {
-      if (Date.now() > deadline) throw new Error("Transcription took too long. Run it again.");
-      await new Promise((r) => setTimeout(r, 3000));
+      if (Date.now() > deadline) return; // still running; resumeAssembly finishes it
+      await new Promise((r) => setTimeout(r, 4000));
       const r = await fetch(`https://api.assemblyai.com/v2/transcript/${job.id}`, { headers: { authorization: key } });
       t = await r.json();
     }
     if (t.status === "error") throw new Error(`AssemblyAI: ${String(t.error).slice(0, 200)}`);
-    const words = (t.words || []).map((x: any) => ({ w: String(x.text), start: x.start / 1000, end: x.end / 1000, ...(x.speaker ? { speaker: x.speaker } : {}) }));
-    const utterances = (t.utterances || []).map((u: any) => ({ speaker: u.speaker, text: u.text, start: u.start / 1000, end: u.end / 1000 }));
-    const extras = wordExtras(words);
-    const summary = words.length ? `${words.length} words, ${extras.cuts.length} suggested cuts.` : "No speech found.";
-    await db.from("asset_analyses").update({ status: "complete", summary, report: { text: t.text || "", words, utterances, ...extras, provider: "assemblyai", transcript_id: t.id }, error_message: null }).eq("id", analysisId);
+    await finishAssembly(db, analysisId, t);
   } catch (e) {
     console.error("[analyze-asset:assembly]", e);
     await db.from("asset_analyses").update({ status: "error", error_message: (e as Error).message?.slice(0, 300) || "Transcription failed." }).eq("id", analysisId);
+  }
+}
+
+/** Faces + layout from browser-made contact sheets (meta.frames.sheets), so long sources never go through the 20 MB video path. */
+export async function runFrames(analysisId: string, asset: any) {
+  const db = admin();
+  try {
+    const sheets: { path: string; times: number[]; cols: number }[] = asset.meta?.frames?.sheets || [];
+    if (!sheets.length) throw new Error("No snapshots yet. Re-open the source page to make them.");
+    const BATCH = 4;
+    const batches: typeof sheets[] = [];
+    for (let i = 0; i < sheets.length; i += BATCH) batches.push(sheets.slice(i, i + BATCH));
+    const frames: any[] = [], notes: string[] = [];
+    const runBatch = async (b: typeof sheets) => {
+      const urls: string[] = [];
+      for (const s of b) { const { data } = await db.storage.from("hub-media").createSignedUrl(s.path, 1800); if (data) urls.push(data.signedUrl); }
+      const order = b.map((s, i) => `Image ${i + 1}: grid of ${s.cols} columns, read left-to-right then top-to-bottom; cell times (seconds) = ${JSON.stringify(s.times)}`).join("\n");
+      const prompt = `These are snapshot grids from a long video (podcast/talk/stream) for a vertical-shorts editor who must crop it to 9:16.
+${order}
+For EVERY cell return one entry. Return ONLY JSON: {"frames":[{"t":number,"layout":"single"|"two_shot"|"wide_group"|"screen"|"broll"|"other","people":[{"id":string,"x":number,"y":number,"w":number,"h":number}],"note":string}],"summary":string}
+x,y,w,h = face box as fractions 0-1 of THAT cell (x,y = top-left). Keep the same "id" (e.g. "left_man_glasses") for the same person across cells. "note" = anything visually notable (gesture, laugh, prop, on-screen text), else "". Valid JSON only.`;
+      const key = Deno.env.get("LOVABLE_API_KEY");
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST", headers: { "Content-Type": "application/json", "Lovable-API-Key": key || "", "X-Lovable-AIG-SDK": "fetch" },
+        body: JSON.stringify({ model: "google/gemini-3.8-flash", stream: true, response_format: { type: "json_object" },
+          messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...urls.map((url) => ({ type: "image_url", image_url: { url } }))] }] }),
+      });
+      if (res.status === 402) throw new Error("AI credits are used up. Add credits and try again.");
+      if (!res.ok) throw new Error(`AI request failed (${res.status}).`);
+      const d = parseJsonObject(await readSseText(res));
+      for (const f of d.frames || []) frames.push({ t: Number(f.t) || 0, layout: String(f.layout || "other"), people: (f.people || []).slice(0, 6).map((p: any) => ({ id: String(p.id || "?"), x: +Number(p.x).toFixed(3), y: +Number(p.y).toFixed(3), w: +Number(p.w).toFixed(3), h: +Number(p.h).toFixed(3) })), ...(f.note ? { note: String(f.note).slice(0, 200) } : {}) });
+      if (d.summary) notes.push(String(d.summary).slice(0, 400));
+    };
+    for (let i = 0; i < batches.length; i += 4) await Promise.all(batches.slice(i, i + 4).map(runBatch));
+    frames.sort((a, b) => a.t - b.t);
+    const layouts: Record<string, number> = {};
+    for (const f of frames) layouts[f.layout] = (layouts[f.layout] || 0) + 1;
+    const summary = `${frames.length} snapshots read. Layouts: ${Object.entries(layouts).map(([k, v]) => `${k} ${v}`).join(", ")}. ${notes.slice(0, 3).join(" ")}`.slice(0, 2000);
+    await db.from("asset_analyses").update({ status: "complete", summary, report: { summary, frames, shots: asset.meta?.frames?.shots || [], interval: asset.meta?.frames?.interval } , error_message: null }).eq("id", analysisId);
+  } catch (e) {
+    console.error("[analyze-asset:frames]", e);
+    await db.from("asset_analyses").update({ status: "error", error_message: (e as Error).message?.slice(0, 300) || "Snapshot analysis failed." }).eq("id", analysisId);
   }
 }
 
