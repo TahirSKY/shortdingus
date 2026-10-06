@@ -77,6 +77,31 @@ export function latestCode(files: any[]) {
 
 export const projectFiles = (ctx: EditorContext) => ctx.files.filter((a: any) => a.kind !== "code").map((a: any) => describe(a, ctx.analyses, true)).join("\n") || "(none)";
 
+/** For clip projects: the source video, its segments, and the words + face track inside those segments only. */
+export function clipSection(ctx: EditorContext) {
+  const c = ctx.project.plan?.clip;
+  if (!c?.source_asset_id || !Array.isArray(c.segments)) return "";
+  const src = ctx.library.find((a: any) => a.id === c.source_asset_id);
+  const an = ctx.analyses.filter((x: any) => x.asset_id === c.source_asset_id);
+  const words = an.find((x: any) => x.tool === "assembly-transcript")?.report?.words || [];
+  const frames = an.find((x: any) => x.tool === "gemini-frames")?.report?.frames || [];
+  let offset = 0;
+  const parts = c.segments.map((s: any, i: number) => {
+    const w = words.filter((x: any) => x.end > s.in && x.start < s.out).map((x: any) => [x.w, +x.start.toFixed(2), +x.end.toFixed(2), x.speaker || ""]);
+    const f = frames.filter((x: any) => x.t >= s.in - 2 && x.t <= s.out + 2).map((x: any) => ({ t: x.t, layout: x.layout, people: x.people }));
+    const head = `SEGMENT ${i + 1} (${s.purpose || ""}): source ${s.in}s-${s.out}s, plays at clip time ${offset.toFixed(2)}s`;
+    offset += s.out - s.in;
+    return `${head}\n  words [w, source_start, source_end, speaker]: ${JSON.stringify(w)}\n  face track (fractions of the source frame): ${JSON.stringify(f)}`;
+  });
+  return `
+CLIP FROM A LONG SOURCE (follow the clip-editing skill)
+Source: ${src?.name || c.source_asset_id} | id ${c.source_asset_id} | url ${assetUrl(c.source_asset_id)} | ${src?.meta?.width || "?"}x${src?.meta?.height || "?"}
+Hook: ${c.hook_text || ""} | Why: ${c.why || ""} | Framing hint: ${c.layout_hint || ""}
+Total clip length: ${offset.toFixed(2)}s. Play each segment with <OffthreadVideo startFrom/endAt> from the source URL (keep its audio).
+${parts.join("\n")}
+`;
+}
+
 /** Everything the agent and the builder need to know about the hub and project. */
 export function knowledge(ctx: EditorContext) {
   const { project, hub, skills, library } = ctx;
@@ -98,8 +123,8 @@ OTHER SKILLS: ${skills.filter((s: any) => s !== chosen).map((s: any) => `${s.slu
 
 PROJECT NOTES
 ${clip(project.notes || "(none)", 2000)}
-PLAN: ${clip(project.plan || {}, 2000)}
-
+PLAN: ${clip({ ...(project.plan || {}), clip: undefined }, 2000)}
+${clipSection(ctx)}
 PROJECT FILES
 ${projectFiles(ctx)}
 

@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.editor-agent]
 verify_jwt = false
+
+[functions.find-clips]
+verify_jwt = false
