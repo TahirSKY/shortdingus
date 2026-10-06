@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import HubHeader from "@/components/HubHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import AssetPanel from "@/features/hub/AssetPanel";
+import ClipSources from "@/features/clipping/ClipSources";
 import { CopyRow, EditableText, copy } from "@/features/hub/shared";
 import {
   type AssetGroup, type Skill, createProject, deleteGroup, deleteSkill, getGroup, ingestUrl, listProjects, listSkills,
@@ -139,8 +140,9 @@ export default function GroupDetail() {
         </div>
         <EditableText multiline value={group.notes || ""} onSave={(notes) => save({ notes })} placeholder="What is this niche about? Notes for you or the agent…" className="mt-3" />
 
-        <Tabs defaultValue="projects" className="mt-8">
-          <TabsList><TabsTrigger value="projects">Projects</TabsTrigger><TabsTrigger value="skills">Skills</TabsTrigger><TabsTrigger value="library">Library</TabsTrigger><TabsTrigger value="style">Style</TabsTrigger><TabsTrigger value="agent">Agent</TabsTrigger></TabsList>
+        <Tabs defaultValue={(group as any).analysis_mode === "clipping" ? "sources" : "projects"} className="mt-8">
+          <TabsList>{(group as any).analysis_mode === "clipping" && <TabsTrigger value="sources">Sources</TabsTrigger>}<TabsTrigger value="projects">Projects</TabsTrigger><TabsTrigger value="skills">Skills</TabsTrigger><TabsTrigger value="library">Library</TabsTrigger><TabsTrigger value="style">Style</TabsTrigger><TabsTrigger value="agent">Agent</TabsTrigger></TabsList>
+          <TabsContent value="sources" className="mt-6"><ClipSources group={group} /></TabsContent>
           <TabsContent value="projects" className="mt-6"><ProjectsTab group={group} /></TabsContent>
           <TabsContent value="skills" className="mt-6"><SkillsTab group={group} /></TabsContent>
           <TabsContent value="library" className="mt-6">
