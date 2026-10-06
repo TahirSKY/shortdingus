@@ -1,0 +1,6 @@
+ALTER TABLE public.asset_analyses DROP CONSTRAINT IF EXISTS asset_analyses_tool_check;
+ALTER TABLE public.asset_analyses ADD CONSTRAINT asset_analyses_tool_check CHECK (tool IN ('gemini-video','gemini-image','gemini-words','gemini-reaction','gemini-edit-style','gemini-frames','clip-finder','assembly-transcript','manual'));
+INSERT INTO public.asset_groups (slug, title, notes, style_guide, auto_cutout, analysis_mode)
+VALUES ('clipping', 'Clipping', 'Drop long raw footage (podcasts, streams, talks). It gets transcribed in full, the AI finds the clip-worthy moments across the whole video, and each clip you keep becomes its own project that edits the original at full quality.',
+'Vertical 9:16. Speaker always framed (face-follow crop). Split screen when two people trade lines. Word-by-word captions in the safe zone. Hook in the first second. Punch-ins on emphasis words. Sound effects sparingly, on exact words. No dead air.', false, 'clipping')
+ON CONFLICT (slug) DO UPDATE SET analysis_mode = 'clipping';
