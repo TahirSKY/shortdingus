@@ -358,7 +358,7 @@ export async function startAnalysis(asset: any): Promise<Promise<void> | null> {
   const db = admin();
   await expireStale(db);
   const jobs: Promise<void>[] = [];
-  if (["image", "video"].includes(asset.kind)) {
+  if (["image", "video"].includes(asset.kind) && asset.role !== "source") {
     const tool = asset.kind === "image" ? "gemini-image" : await videoTool(db, asset);
     const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
     if (error || !row) console.error("[auto-analysis] insert failed", error);
