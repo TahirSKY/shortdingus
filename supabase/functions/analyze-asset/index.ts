@@ -1,5 +1,5 @@
 import { admin, cors, isUuid, json } from "../_shared/hub.ts";
-import { expireStale, runAssembly, runGemini, runImage, runReaction, runWords, videoTool } from "../_shared/analysis.ts";
+import { expireStale, resumeAssembly, runAssembly, runFrames, runGemini, runImage, runReaction, runWords, videoTool } from "../_shared/analysis.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
@@ -8,6 +8,10 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "Body must be JSON." }, 400); }
+  if (body?.resume) {
+    if (!isUuid(String(body.resume))) return json({ error: "Invalid resume id." }, 400);
+    return json({ status: await resumeAssembly(String(body.resume)) });
+  }
   const assetId = String(body?.assetId || "");
   const tool = String(body?.tool || "gemini-video");
   if (!isUuid(assetId)) return json({ error: "Missing or invalid assetId." }, 400);
@@ -16,6 +20,14 @@ Deno.serve(async (req) => {
   if (!asset) return json({ error: "Asset not found." }, 404);
 
   await expireStale(db);
+  if (tool === "gemini-frames") {
+    if (!asset.meta?.frames?.sheets?.length) return json({ error: "This video has no snapshots yet." }, 400);
+    const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
+    if (error || !row) return json({ error: "Could not start analysis." }, 500);
+    EdgeRuntime.waitUntil(runFrames(row.id, asset));
+    return json({ analysis: row }, 202);
+  }
+  if (asset.role === "source" && tool === "gemini-video") return json({ error: "Long source videos are read from the transcript and snapshots, not watched whole." }, 400);
   if (tool === "assembly-transcript") {
     if (!["audio", "video"].includes(asset.kind) || !asset.storage_path) return json({ error: "Transcripts work on uploaded audio or video." }, 400);
     const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
