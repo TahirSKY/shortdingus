@@ -256,6 +256,12 @@ export default function Editor() {
           <Button size="sm" variant={tab === "chat" ? "secondary" : "ghost"} onClick={() => setTab("chat")}>Chat</Button>
           <Button size="sm" variant={tab === "preview" ? "secondary" : "ghost"} onClick={() => setTab("preview")}>Preview</Button>
         </div>
+        {(project.plan as any)?.clip?.source_asset_id && <Button size="sm" variant="ghost" disabled={!!tracking} onClick={async () => {
+          setTracking("0%");
+          try { const cam = await trackProject(project as any, (x) => setTracking(`${Math.round(x * 100)}%`)); toast.success(`Faces tracked: ${cam.keys.length} camera moves. Ask the editor to rebuild the framing.`); qc.invalidateQueries({ queryKey: ["project"] }); }
+          catch (e) { toast.error(`Face tracking failed: ${(e as Error).message}`); }
+          setTracking(null);
+        }}><ScanFace className="mr-1 h-3.5 w-3.5" />{tracking ? `Tracking ${tracking}` : (project.plan as any)?.clip?.camera ? "Re-track faces" : "Track faces"}</Button>}
         <Button size="sm" variant="ghost" disabled={codes.length < 2 || latest?.meta?.source !== "editor"} onClick={undo}><Undo2 className="mr-1 h-3.5 w-3.5" />Undo</Button>
         <Button size="sm" disabled={!code} onClick={render}><Clapperboard className="mr-1 h-3.5 w-3.5" />Render</Button>
       </header>

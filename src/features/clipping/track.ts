@@ -135,3 +135,21 @@ export async function trackClip(sourceId: string, segments: ClipSeg[], words: an
   }
   return { keys, speakers, faces_seen: samples.filter((s) => s.faces.length).length, samples: samples.length };
 }
+
+/** Track faces for a clip project and save the camera into project.plan.clip.camera. */
+export async function trackProject(project: { id: string; plan: any }, onProgress: (p: number) => void) {
+  const { supabase } = await import("@/integrations/supabase/client");
+  const db = supabase as any;
+  const c = project.plan?.clip;
+  if (!c?.source_asset_id) throw new Error("This project isn't a clip.");
+  const [{ data: src }, { data: an }] = await Promise.all([
+    db.from("assets").select("meta").eq("id", c.source_asset_id).maybeSingle(),
+    db.from("asset_analyses").select("report").eq("asset_id", c.source_asset_id).eq("tool", "assembly-transcript").eq("status", "complete").order("created_at", { ascending: false }).limit(1),
+  ]);
+  const words = an?.[0]?.report?.words || [];
+  const camera = await trackClip(c.source_asset_id, c.segments, words, src?.meta?.width || 1920, src?.meta?.height || 1080, onProgress);
+  const plan = { ...project.plan, clip: { ...c, camera } };
+  const { error } = await db.from("projects").update({ plan }).eq("id", project.id);
+  if (error) throw error;
+  return camera;
+}

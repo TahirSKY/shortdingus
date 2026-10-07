@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { type AssetGroup, assetUrl, createProject, fmtTime, listSkills, updateProject } from "@/features/hub/api";
 import { type Clip, type Stage, findClips, listSources, resumeTranscript, uploadSource } from "./api";
+import { trackProject } from "./track";
 
 const MODELS = [
   ["openai/gpt-6-astra", "GPT-6 Astra (best)"], ["openai/gpt-6-sol", "GPT-6 Sol"], ["openai/gpt-6-luna", "GPT-6 Luna (cheap)"],
@@ -58,6 +59,13 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
       notes: `Hook: ${c.hook_text}\nWhy it works: ${c.why}\nFraming: ${c.layout_hint}`,
       plan: { title: c.title, duration_s: +c.segments.reduce((t, s) => t + s.out - s.in, 0).toFixed(1), clip: { source_asset_id: src.id, segments: c.segments, hook_text: c.hook_text, why: c.why, layout_hint: c.layout_hint } } as any,
     });
+    setBusy("Tracking faces 0%");
+    try {
+      const plan = { title: c.title, clip: { source_asset_id: src.id, segments: c.segments, hook_text: c.hook_text, why: c.why, layout_hint: c.layout_hint } };
+      const cam = await trackProject({ id: p.id, plan }, (x) => setBusy(`Tracking faces ${Math.round(x * 100)}%`));
+      toast.success(`Faces tracked: ${Object.keys(cam.speakers).length} speakers matched, ${cam.keys.length} camera moves.`);
+    } catch (e) { toast.error(`Face tracking failed: ${(e as Error).message}. You can retry from the editor.`); }
+    setBusy(null);
     qc.invalidateQueries({ queryKey: ["projects", group.id] });
     if (go) navigate(`/groups/${group.slug}/p/${p.slug}/editor`);
   };
