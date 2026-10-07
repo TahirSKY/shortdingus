@@ -14,10 +14,11 @@ let landmarker: Promise<FaceLandmarker> | null = null;
 function getLandmarker() {
   landmarker ??= (async () => {
     const fs = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
-    return FaceLandmarker.createFromOptions(fs, {
-      baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate: "GPU" },
+    const make = (delegate: "GPU" | "CPU") => FaceLandmarker.createFromOptions(fs, {
+      baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", delegate },
       runningMode: "IMAGE", numFaces: 4, outputFaceBlendshapes: true, minFaceDetectionConfidence: 0.4,
     });
+    return make("GPU").catch(() => make("CPU"));
   })();
   return landmarker;
 }
