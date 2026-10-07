@@ -106,7 +106,7 @@ export async function trackClip(sourceId: string, segments: ClipSeg[], words: an
     return [r3(clamp(f.cx - w / 2, 0, 1 - w)), r3(clamp(f.cy - h * 0.42, 0, 1 - h)), r3(w), r3(h)];
   };
   const keys: CamKey[] = [];
-  let last: CamKey | null = null, lastChange = -99, lastTarget: string | null = null;
+  let last: CamKey | null = null, lastChange = -99, lastTarget: string | null = null, lastFaceT = -99, shotStart = 0;
   const talkRecent: Record<string, number> = {};
   for (let i = 0; i < samples.length; i++) {
     const s = samples[i];
@@ -120,6 +120,10 @@ export async function trackClip(sourceId: string, segments: ClipSeg[], words: an
     let target: Face | undefined = spk && speakers[spk] ? visible.find((f) => f.id === speakers[spk]) : undefined;
     target ??= [...visible].sort((a, b) => (talkRecent[b.id] || 0) - (talkRecent[a.id] || 0) || b.w - a.w)[0];
     const others = visible.filter((f) => f.id !== target?.id);
+    if (target) lastFaceT = s.local;
+    // a face dropping out for a moment inside the same shot is a detector miss, not a reason to go wide
+    if (s.cut) shotStart = s.local;
+    if (!target && last && last.m !== "w" && lastFaceT >= shotStart && s.local - lastFaceT < 1.5) continue;
     let key: CamKey;
     if (!target) key = { t: r3(s.local), m: "w" };
     else if (near.size >= 2 && others.length && visible.length <= 3) {
