@@ -85,20 +85,32 @@ export function clipSection(ctx: EditorContext) {
   const an = ctx.analyses.filter((x: any) => x.asset_id === c.source_asset_id);
   const words = an.find((x: any) => x.tool === "assembly-transcript")?.report?.words || [];
   const frames = an.find((x: any) => x.tool === "gemini-frames")?.report?.frames || [];
+  const cam = c.camera?.keys?.length ? c.camera : null;
   let offset = 0;
   const parts = c.segments.map((s: any, i: number) => {
     const w = words.filter((x: any) => x.end > s.in && x.start < s.out).map((x: any) => [x.w, +x.start.toFixed(2), +x.end.toFixed(2), x.speaker || ""]);
-    const f = frames.filter((x: any) => x.t >= s.in - 2 && x.t <= s.out + 2).map((x: any) => ({ t: x.t, layout: x.layout, people: x.people }));
     const head = `SEGMENT ${i + 1} (${s.purpose || ""}): source ${s.in}s-${s.out}s, plays at clip time ${offset.toFixed(2)}s`;
     offset += s.out - s.in;
-    return `${head}\n  words [w, source_start, source_end, speaker]: ${JSON.stringify(w)}\n  face track (fractions of the source frame): ${JSON.stringify(f)}`;
+    if (cam) return `${head}\n  words [w, source_start, source_end, speaker]: ${JSON.stringify(w)}`;
+    const f = frames.filter((x: any) => x.t >= s.in - 2 && x.t <= s.out + 2).map((x: any) => ({ t: x.t, layout: x.layout, people: x.people }));
+    return `${head}\n  words [w, source_start, source_end, speaker]: ${JSON.stringify(w)}\n  rough snapshot layout (approximate, do not crop from it): ${JSON.stringify(f)}`;
   });
+  const aspect = (Number(src?.meta?.width) || 16) / (Number(src?.meta?.height) || 9);
+  const framing = cam
+    ? `CAMERA FRAMING (from real face tracking — mandatory):
+Paste this helper verbatim and render the footage ONLY through it: <ClipCamera src={SOURCE} segments={SEGMENTS} camera={CAMERA} srcAspect={${aspect.toFixed(4)}} zoom={punch} />. Never write your own crop/transform maths for the source video. For punch-ins pass zoom (1 to 1.25) driven by interpolate/spring. Put captions, hook, overlays and SFX on top of it.
+Speakers → tracked faces: ${JSON.stringify(cam.speakers || {})}. Modes: s=follow one speaker, p=split screen (two people trading lines), w=wide (no reliable face).
+const SEGMENTS = ${JSON.stringify(c.segments.map((s: any) => ({ in: s.in, out: s.out })))};
+const CAMERA = ${JSON.stringify(cam.keys)};
+${CLIP_CAMERA_CODE}`
+    : `No face tracking for this clip yet: tell the user to press "Track faces" on the project page. Until then frame it wide (whole source frame letterboxed in 9:16); never guess crops.`;
   return `
 CLIP FROM A LONG SOURCE (follow the clip-editing skill)
 Source: ${src?.name || c.source_asset_id} | id ${c.source_asset_id} | url ${assetUrl(c.source_asset_id)} | ${src?.meta?.width || "?"}x${src?.meta?.height || "?"}
 Hook: ${c.hook_text || ""} | Why: ${c.why || ""} | Framing hint: ${c.layout_hint || ""}
-Total clip length: ${offset.toFixed(2)}s. Play each segment with <OffthreadVideo startFrom/endAt> from the source URL (keep its audio).
+Total clip length: ${offset.toFixed(2)}s. Keep the source audio.
 ${parts.join("\n")}
+${framing}
 `;
 }
 

@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowLeft, Bookmark, Clapperboard, FileText, Paperclip, Undo2, Scissors } from "lucide-react";
+import { ArrowLeft, Bookmark, Clapperboard, FileText, Paperclip, Undo2, Scissors, ScanFace } from "lucide-react";
+import { trackProject } from "@/features/clipping/track";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -221,6 +222,7 @@ export default function Editor() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"chat" | "preview">("chat");
+  const [tracking, setTracking] = useState<string | null>(null);
   const { data: group } = useQuery({ queryKey: ["group", slug], queryFn: () => getGroup(slug) });
   const { data: project } = useQuery({ queryKey: ["project", group?.id, pslug], enabled: !!group, queryFn: () => getProject(group!.id, pslug) });
   const { data: initial, error: loadError } = useQuery({ queryKey: ["editor-messages", project?.id], enabled: !!project, queryFn: () => loadMessages(project!.id), staleTime: Infinity, refetchOnWindowFocus: false });
@@ -256,6 +258,12 @@ export default function Editor() {
           <Button size="sm" variant={tab === "chat" ? "secondary" : "ghost"} onClick={() => setTab("chat")}>Chat</Button>
           <Button size="sm" variant={tab === "preview" ? "secondary" : "ghost"} onClick={() => setTab("preview")}>Preview</Button>
         </div>
+        {(project.plan as any)?.clip?.source_asset_id && <Button size="sm" variant="ghost" disabled={!!tracking} onClick={async () => {
+          setTracking("0%");
+          try { const cam = await trackProject(project as any, (x) => setTracking(`${Math.round(x * 100)}%`)); toast.success(`Faces tracked: ${cam.keys.length} camera moves. Ask the editor to rebuild the framing.`); qc.invalidateQueries({ queryKey: ["project"] }); }
+          catch (e) { toast.error(`Face tracking failed: ${(e as Error).message}`); }
+          setTracking(null);
+        }}><ScanFace className="mr-1 h-3.5 w-3.5" />{tracking ? `Tracking ${tracking}` : (project.plan as any)?.clip?.camera ? "Re-track faces" : "Track faces"}</Button>}
         <Button size="sm" variant="ghost" disabled={codes.length < 2 || latest?.meta?.source !== "editor"} onClick={undo}><Undo2 className="mr-1 h-3.5 w-3.5" />Undo</Button>
         <Button size="sm" disabled={!code} onClick={render}><Clapperboard className="mr-1 h-3.5 w-3.5" />Render</Button>
       </header>
