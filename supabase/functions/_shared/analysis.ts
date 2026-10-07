@@ -260,7 +260,9 @@ x,y,w,h = face box as fractions 0-1 of THAT cell (x,y = top-left). Keep the same
       if (res.status === 402) throw new Error("AI credits are used up. Add credits and try again.");
       if (!res.ok) throw new Error(`AI request failed (${res.status}).`);
       const d = parseJsonObject(await readSseText(res));
-      for (const f of d.frames || []) frames.push({ t: Number(f.t) || 0, layout: String(f.layout || "other"), people: (f.people || []).slice(0, 6).map((p: any) => ({ id: String(p.id || "?"), x: +Number(p.x).toFixed(3), y: +Number(p.y).toFixed(3), w: +Number(p.w).toFixed(3), h: +Number(p.h).toFixed(3) })), ...(f.note ? { note: String(f.note).slice(0, 200) } : {}) });
+      // Drop impossible boxes (grid-relative or out of range); these are rough layout hints, real framing comes from face tracking.
+      const okBox = (p: any) => [p.x, p.y, p.w, p.h].every((v) => Number.isFinite(+v) && +v >= 0 && +v <= 1) && +p.x + +p.w <= 1.02 && +p.y + +p.h <= 1.02 && +p.w > 0.01;
+      for (const f of d.frames || []) frames.push({ t: Number(f.t) || 0, layout: String(f.layout || "other"), people: (f.people || []).filter(okBox).slice(0, 6).map((p: any) => ({ id: String(p.id || "?"), x: +Number(p.x).toFixed(3), y: +Number(p.y).toFixed(3), w: +Number(p.w).toFixed(3), h: +Number(p.h).toFixed(3) })), ...(f.note ? { note: String(f.note).slice(0, 200) } : {}) });
       if (d.summary) notes.push(String(d.summary).slice(0, 400));
     };
     for (let i = 0; i < batches.length; i += 4) await Promise.all(batches.slice(i, i + 4).map(runBatch));
