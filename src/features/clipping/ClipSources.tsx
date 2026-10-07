@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Play, Upload, Sparkles, FolderPlus, Loader2 } from "lucide-react";
+import { Play, Upload, Sparkles, FolderPlus, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { type AssetGroup, assetUrl, createProject, fmtTime, listSkills, updateProject } from "@/features/hub/api";
+import { type AssetGroup, assetUrl, createProject, fmtTime, listProjects, listSkills, updateProject } from "@/features/hub/api";
 import { type Clip, type Stage, findClips, listSources, resumeTranscript, uploadSource } from "./api";
 import { trackProject } from "./track";
 
@@ -30,6 +30,9 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
   const [instructions, setInstructions] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const { data: skills = [] } = useQuery({ queryKey: ["skills", group.id], queryFn: () => listSkills(group.id) });
+  const { data: projects = [] } = useQuery({ queryKey: ["projects", group.id], queryFn: () => listProjects(group.id) });
+  // Projects already made from a clip (same source + same first segment), newest first.
+  const existing = (c: Clip) => projects.filter((p: any) => p.plan?.clip?.source_asset_id === src.id && p.plan.clip.segments?.[0]?.in === c.segments[0]?.in);
   const mine = analyses.filter((a) => a.asset_id === src.id);
   const tr = mine.find((a) => a.tool === "assembly-transcript");
   const fr = mine.find((a) => a.tool === "gemini-frames");
@@ -127,7 +130,8 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
                     </div>
                     <div className="mt-2 flex gap-2">
                       <Button size="sm" variant="ghost" onClick={() => play(c)}><Play className="mr-1 h-3.5 w-3.5" />Play</Button>
-                      <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => make(c, true).catch((e) => toast.error(e.message))}><FolderPlus className="mr-1 h-3.5 w-3.5" />Make project</Button>
+                      {existing(c)[0] && <Button size="sm" onClick={() => navigate(`/groups/${group.slug}/p/${existing(c)[0].slug}/editor`)}><Pencil className="mr-1 h-3.5 w-3.5" />Open editor</Button>}
+                      <Button size="sm" variant={existing(c)[0] ? "ghost" : "secondary"} disabled={!!busy} onClick={() => { if (existing(c)[0] && !confirm("This clip already has a project. Start a new one from scratch?")) return; make(c, true).catch((e) => toast.error(e.message)); }}><FolderPlus className="mr-1 h-3.5 w-3.5" />{existing(c)[0] ? "New project" : "Make project"}</Button>
                     </div>
                   </div>
                 );
