@@ -124,6 +124,7 @@ export async function trackClip(sourceId: string, segments: ClipSeg[], words: an
     // a face dropping out for a moment inside the same shot is a detector miss, not a reason to go wide
     if (s.cut) shotStart = s.local;
     if (!target && last && last.m !== "w" && lastFaceT >= shotStart && s.local - lastFaceT < 1.5) continue;
+    if (!target && last?.m === "w") continue;
     let key: CamKey;
     if (!target) key = { t: r3(s.local), m: "w" };
     else if (near.size >= 2 && others.length && visible.length <= 3) {
