@@ -76,6 +76,7 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
         <div>
           <video ref={video} src={assetUrl(src.id)} controls preload="metadata" onTimeUpdate={onTime} className="w-full rounded bg-muted" />
           <p className="mt-2 truncate text-sm font-medium">{src.name}</p>
+          {busy?.startsWith("Tracking") && <p className="mt-1 text-xs text-primary">{busy} — keep this tab open</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span>{fmtTime(Number(src.duration_seconds) || 0)}</span>
             <span>· Transcript</span>{status(tr)}<span>· Faces & layout</span>{status(fr)}<span>· Clips</span>{status(cf)}

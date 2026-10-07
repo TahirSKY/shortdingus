@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowLeft, Bookmark, Clapperboard, FileText, Paperclip, Undo2, Scissors } from "lucide-react";
+import { ArrowLeft, Bookmark, Clapperboard, FileText, Paperclip, Undo2, Scissors, ScanFace } from "lucide-react";
+import { trackProject } from "@/features/clipping/track";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation";
@@ -221,6 +222,7 @@ export default function Editor() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"chat" | "preview">("chat");
+  const [tracking, setTracking] = useState<string | null>(null);
   const { data: group } = useQuery({ queryKey: ["group", slug], queryFn: () => getGroup(slug) });
   const { data: project } = useQuery({ queryKey: ["project", group?.id, pslug], enabled: !!group, queryFn: () => getProject(group!.id, pslug) });
   const { data: initial, error: loadError } = useQuery({ queryKey: ["editor-messages", project?.id], enabled: !!project, queryFn: () => loadMessages(project!.id), staleTime: Infinity, refetchOnWindowFocus: false });
