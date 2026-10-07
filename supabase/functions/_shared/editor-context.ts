@@ -2,6 +2,7 @@
 import { createOpenAI } from "npm:@ai-sdk/openai@4.0.83";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@3.0.62";
 import { assetUrl } from "./hub.ts";
+import { CLIP_CAMERA_CODE } from "./clip-camera.ts";
 
 export const MODEL = "openai/gpt-6-astra";
 export const GATEWAY = "https://ai.gateway.lovable.dev/v1";
