@@ -1,4 +1,5 @@
 import { admin, assetUrl, cors, json } from "../_shared/hub.ts";
+import { clipSection } from "../_shared/editor-context.ts";
 
 const SHARED_HUB = "shared-library";
 const BASE = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
@@ -45,11 +46,14 @@ Deno.serve(async (req) => {
       "`style_guide` (hub, then shared) describes the look and voice the user likes.",
       "`library` holds reusable sounds, music, clips and images (search by role/tags/analyses).",
       "Voiceover files (role=voice) carry an `assembly-transcript` analysis: words [{w,start,end}] in seconds, caption_lines and suggested cuts.",
+      "Clip projects (project.plan.clip): read `clip_brief` — source URL, segments, the words inside them with timings/speakers, the face-tracking CAMERA and the ClipCamera helper to paste. Framing is the base layer; the creative edit on top is your job (see the clip-editing skill).",
+      "Long code: if you can't write files back, give the user the full single-file composition in chat to paste into the app's Playground (see AGENT_ACCESS.md → Render rules).",
       "Save files for this video into the project (`project=<project slug>`, plus a `role`). `project.plan` is free-form notes — use any shape.",
     ],
     hub: { slug: hub.slug, title: hub.title, notes: hub.notes, style_guide: hub.style_guide },
     shared_style_guide: shared && shared.id !== hub.id ? shared.style_guide : undefined,
     project: project ? { slug: project.slug, name: project.name, stage: project.stage, notes: project.notes, plan: project.plan, skill: chosen?.slug || null } : null,
+    clip_brief: project?.plan?.clip ? clipSection({ project, library: library || [], analyses: an } as any) : undefined,
     projects: projects || [],
     skills: (skills || []).map((s: any) => ({ slug: s.slug, name: s.name, scope: s.group_id ? "hub" : "shared", description: s.description, body: s.body })),
     library: (library || []).map((a: any) => fileOut(a, an)),

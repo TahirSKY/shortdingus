@@ -152,3 +152,22 @@ Hubs with `auto_cutout: true` (shown in the manifest's hub object; VOX is on) au
 - `GET /functions/v1/meme-search?token=…&q=mind+blown` → GIPHY results with `mp4_url`.
 - Save a pick: `agent-create?token=…&slug=<hub>&project=<p>&kind=video&role=stock|meme&sourceUrl=<url>`. It is auto-described.
 - Mascot clips: library assets with `role=mascot`, tagged `vertical`/`horizontal`; listed under `mascot_clips` in the project manifest. Play muted over the voiceover.
+
+## Reactions hub
+- Character: library `code` asset with `role=character` (Gremlin Bean). Copy its full code into your composition; don't redraw it. Its props cover poses, expressions, mouth timing and eye shake.
+- Source videos carry `gemini-reaction` analyses (timeline + reaction_moments); `reference` clips carry `gemini-edit-style` (edit events, pop-ins, style notes). Read them in the manifest.
+- Follow the `reaction-menace` skill: observer shots, pausing the source, full-screen takeovers, B&W replays with the character in colour, eye close-ups — creatively, not as a fixed recipe.
+
+## Clipping hub
+- Long sources are library `video` assets with `role=source` (full quality, never cut). A clip project stores `plan.clip`: `source_asset_id`, `segments` [{in,out}] in source seconds (play order; the hook can come from later in the source) and `camera` (face tracking).
+- The manifest's `clip_brief` has everything ready: source URL, each segment's words with timings/speakers, `SEGMENTS`, `CAMERA` and the `ClipCamera` helper. Paste the helper as-is and render the source through it; drive `zoom` for punch-ins. No CAMERA → frame wide and ask the user to press "Track faces".
+- Framing is only the base. The edit is yours: cutaways, B-roll, memes, kinetic numbers, freeze frames, replays, captions, SFX (see `clip-editing`, `motion-craft`).
+
+## Render rules (code the Playground accepts)
+- One self-contained file. Import only from `remotion` (and libraries the Playground already has); no local imports.
+- Start with a settings comment: `/* REMOTION_CONFIG = { fps: 30, durationInFrames: 1800, width: 1080, height: 1920 } */` — plain numbers are safest.
+- `export default` your component; don't name it `MyVideo`.
+- Use asset URLs exactly as the manifest lists them (copy ids exactly). No Unsplash.
+- No `backdrop-filter` / frosted-glass blur (the renderer has no GPU; it is stripped and slows renders).
+- Deterministic animation only (`useCurrentFrame`, `interpolate`, `spring`); no `Math.random()` without a seed, no timers, no DOM/CSS manipulation.
+- Delivering long code: if writing back through `agent-create` (`kind=code role=code`) fails or the code is too long to send, give the user the complete file in your chat reply in one code block. They paste it into the app's Playground (or the project editor) to preview and render.
