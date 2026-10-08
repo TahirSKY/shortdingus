@@ -17,7 +17,7 @@ const CropView = ({ src, rect, startFrom, endAt, muted, style, zoom = 1 }) => {
   const zx = Math.max(0, Math.min(1 - zw, cx - zw / 2)), zy = Math.max(0, Math.min(1 - zh, cy - zh / 2));
   return (
     <div style={{ position: 'absolute', overflow: 'hidden', ...style }}>
-      <OffthreadVideo src={src} startFrom={startFrom} endAt={endAt} muted={muted}
+      <Video src={src} startFrom={startFrom} endAt={endAt} muted={muted}
         style={{ position: 'absolute', width: (100 / zw) + '%', height: (100 / zh) + '%', left: (-zx / zw * 100) + '%', top: (-zy / zh * 100) + '%', objectFit: 'fill', maxWidth: 'none' }} />
     </div>
   );
