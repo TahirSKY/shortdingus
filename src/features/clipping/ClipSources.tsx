@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { type AssetGroup, assetUrl, createProject, fmtTime, listProjects, listSkills, updateProject } from "@/features/hub/api";
-import { type Clip, type Stage, findClips, listSources, resumeTranscript, uploadSource } from "./api";
+import { type Clip, type Stage, findClips, listSources, prepareAudio, resumeTranscript, uploadSource } from "./api";
 import { trackProject } from "./track";
 
 const MODELS = [
