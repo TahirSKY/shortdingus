@@ -29,6 +29,15 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
   const [model, setModel] = useState(() => localStorage.getItem("clip-model") || MODELS[0][0]);
   const [instructions, setInstructions] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const audioRef = useRef<HTMLInputElement>(null);
+  const runAudio = async (f: File | null) => {
+    setBusy("Audio 0%");
+    try {
+      await prepareAudio(src.id, group.slug, f, (p) => setBusy(`Audio ${Math.round(p * 100)}%`));
+      toast.success("Sound copy saved. Clips from this video can render now.");
+      qc.invalidateQueries({ queryKey: ["sources", group.id] });
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
+  };
   const { data: skills = [] } = useQuery({ queryKey: ["skills", group.id], queryFn: () => listSkills(group.id) });
   const { data: projects = [] } = useQuery({ queryKey: ["projects", group.id], queryFn: () => listProjects(group.id) });
   // Projects already made from a clip (same source + same first segment), newest first.
