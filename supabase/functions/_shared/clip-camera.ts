@@ -1,6 +1,7 @@
 // Tested framing helper the editor pastes into clip videos. CAMERA comes from browser face tracking (src/features/clipping/track.ts).
 export const CLIP_CAMERA_CODE = `
 // ---- ClipCamera (paste as-is; do not rewrite the maths) ----
+// Picture streams muted from the original; sound plays from the source's small audio copy (&part=audio).
 // CAMERA keys: { t: clip seconds, m: "s" single | "p" split | "w" wide, a/b: [x,y,w,h] source fractions, cut?: 1 }
 const lerpRect = (p, q, k) => p.map((v, i) => v + (q[i] - v) * k);
 const camAt = (keys, t) => {
@@ -17,7 +18,7 @@ const CropView = ({ src, rect, startFrom, endAt, muted, style, zoom = 1 }) => {
   const zx = Math.max(0, Math.min(1 - zw, cx - zw / 2)), zy = Math.max(0, Math.min(1 - zh, cy - zh / 2));
   return (
     <div style={{ position: 'absolute', overflow: 'hidden', ...style }}>
-      <Video src={src} startFrom={startFrom} endAt={endAt} muted={muted}
+      <Video src={src} startFrom={startFrom} endAt={endAt} muted
         style={{ position: 'absolute', width: (100 / zw) + '%', height: (100 / zh) + '%', left: (-zx / zw * 100) + '%', top: (-zy / zh * 100) + '%', objectFit: 'fill', maxWidth: 'none' }} />
     </div>
   );
@@ -38,6 +39,7 @@ const ClipCamera = ({ src, segments, camera, srcAspect = 16 / 9, zoom = 1 }) => 
         const local = { startFrom: sf + (frame - from), endAt: ea };
         return (
           <Sequence key={i} from={from} durationInFrames={len}>
+            <Audio src={src + '&part=audio'} startFrom={sf} endAt={ea} />
             {k.m === 's' && <CropView src={src} rect={k.a} startFrom={sf} endAt={ea} zoom={zoom} style={{ inset: 0 }} />}
             {k.m === 'p' && <>
               <CropView src={src} rect={k.a} startFrom={sf} endAt={ea} zoom={zoom} style={{ left: 0, top: 0, width: '100%', height: '50%' }} />
