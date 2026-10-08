@@ -20,6 +20,8 @@
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { renderMediaOnLambda } from "npm:@remotion/lambda-client@4.0.438";
+import { CLIP_CAMERA_CODE } from "../_shared/clip-camera.ts";
+import { admin } from "../_shared/hub.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -190,16 +192,24 @@ function stripSlowCss(code: string): string {
  * WHOLE source file before the first frame (multi-GB clipping sources never finish
  * and don't fit the Lambda disk); <Video> streams just the needed seconds via range requests.
  */
-function streamVideos(code: string): string {
-  if (!/<OffthreadVideo\b/.test(code)) return code;
-  let out = code.replace(/<OffthreadVideo\b/g, "<Video").replace(/<\/OffthreadVideo>/g, "</Video>");
-  const hasVideo = /import\s*\{[^}]*\bVideo\b[^}]*\}\s*from\s*["']remotion["']/.test(out) || /\bconst\s*\{[^}]*\bVideo\b/.test(out);
-  if (!hasVideo) {
-    const m = out.match(/import\s*\{([^}]*)\}\s*from\s*["']remotion["']/);
-    out = m
-      ? out.replace(m[0], `import {${m[1].trim().replace(/,$/, "")}, Video } from "remotion"`)
-      : `import { Video } from "remotion";\n` + out;
+function ensureImport(code: string, name: string): string {
+  if (new RegExp(`import\\s*\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*["']remotion["']`).test(code) || new RegExp(`\\bconst\\s*\\{[^}]*\\b${name}\\b`).test(code)) return code;
+  const m = code.match(/import\s*\{([^}]*)\}\s*from\s*["']remotion["']/);
+  return m ? code.replace(m[0], `import {${m[1].trim().replace(/,$/, "")}, ${name} } from "remotion"`) : `import { ${name} } from "remotion";\n` + code;
+}
+
+function streamVideos(code: string, sourceIds: string[]): string {
+  let out = code;
+  // Older clip projects pasted an earlier ClipCamera; swap in the current one (muted picture + audio copy).
+  const a = out.indexOf("// ---- ClipCamera"), b = out.indexOf("// ---- end ClipCamera ----");
+  if (a >= 0 && b > a) out = out.slice(0, a) + CLIP_CAMERA_CODE.trim() + out.slice(b + "// ---- end ClipCamera ----".length);
+  out = out.replace(/<OffthreadVideo\b/g, "<Video").replace(/<\/OffthreadVideo>/g, "</Video>");
+  // Any <Video> playing a big source must be muted, or Lambda downloads the whole file for its sound.
+  if (sourceIds.length) {
+    out = out.replace(/<Video\b(?![^<]{0,400}?\bmuted\b)(?=[^<]{0,400}?(?:SOURCE|src=\{src\}|${sourceIds.join("|")}))/g, "<Video muted");
   }
+  if (/<Video\b/.test(out)) out = ensureImport(out, "Video");
+  if (/<Audio\b/.test(out)) out = ensureImport(out, "Audio");
   return out;
 }
 
@@ -250,8 +260,19 @@ Deno.serve(async (req) => {
 
     // Prepare code for Lambda's pickEntryFile contract (strip Root.tsx, ensure export default),
     // then pin the length/size the bundle will read (see pinBundleConfig).
+    // Big clip sources: picture streams, sound must come from the small audio copy.
+    const ids = [...new Set([...rawCode.matchAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi)].map((m) => m[0].toLowerCase()))];
+    let sourceIds: string[] = [];
+    if (ids.length) {
+      const { data: srcs } = await admin().from("assets").select("id, name, meta").eq("role", "source").in("id", ids);
+      const missing = (srcs ?? []).filter((x: any) => !x.meta?.audio_path);
+      if (missing.length) {
+        return json({ error: `"${missing[0].name}" needs a sound copy first: open the clipping hub and press "Prepare audio" on that video, then render again.` }, 400);
+      }
+      sourceIds = (srcs ?? []).map((x: any) => x.id);
+    }
     const code = pinBundleConfig(
-      streamVideos(stripSlowCss(prepareCodeForLambda(rawCode))),
+      streamVideos(stripSlowCss(prepareCodeForLambda(rawCode)), sourceIds),
       { durationInFrames, fps, width: dims.width, height: dims.height },
     );
 

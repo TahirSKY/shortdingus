@@ -61,6 +61,8 @@
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
     "motion": "^13.4.6",
+    "mp4-muxer": "5",
+    "mp4box": "0.5.2",
     "nanoid": "^6.0.1",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",

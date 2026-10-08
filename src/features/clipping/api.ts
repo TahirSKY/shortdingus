@@ -106,7 +106,20 @@ export async function uploadSource(group: AssetGroup, file: File, onStage: (s: S
     await db.from("assets").update({ meta: { width: meta.width, height: meta.height, frames } }).eq("id", id);
     await supabase.functions.invoke("analyze-asset", { body: { assetId: id, tool: "gemini-frames" } });
   }
+  onStage({ label: "Copying the sound track…", p: 0.97 });
+  try { await prepareAudio(id, group.slug, file, () => {}); } catch (e) { console.warn("audio copy failed", e); }
   return id;
+}
+
+/** Saves a small sound-only copy of a source (no re-encode); renders take audio from it. */
+export async function prepareAudio(assetId: string, groupSlug: string, source: File | null, onProgress: (p: number) => void) {
+  const { extractAudio } = await import("./extract-audio");
+  const blob = await extractAudio(source ?? `${URL_}/functions/v1/asset-url?id=${assetId}`, onProgress);
+  const path = `groups/${groupSlug}/${assetId}-audio.m4a`;
+  await tusUpload(path, new File([blob], "audio.m4a", { type: "audio/mp4" }), () => {});
+  const { data } = await db.from("assets").select("meta").eq("id", assetId).single();
+  const { error } = await db.from("assets").update({ meta: { ...((data?.meta as any) || {}), audio_path: path } }).eq("id", assetId);
+  if (error) throw error;
 }
 
 export async function resumeTranscript(analysisId: string) {
