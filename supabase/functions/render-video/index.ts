@@ -186,6 +186,24 @@ function stripSlowCss(code: string): string {
 }
 
 /**
+ * Swap <OffthreadVideo> for <Video>. OffthreadVideo makes every Lambda download the
+ * WHOLE source file before the first frame (multi-GB clipping sources never finish
+ * and don't fit the Lambda disk); <Video> streams just the needed seconds via range requests.
+ */
+function streamVideos(code: string): string {
+  if (!/<OffthreadVideo\b/.test(code)) return code;
+  let out = code.replace(/<OffthreadVideo\b/g, "<Video").replace(/<\/OffthreadVideo>/g, "</Video>");
+  const hasVideo = /import\s*\{[^}]*\bVideo\b[^}]*\}\s*from\s*["']remotion["']/.test(out) || /\bconst\s*\{[^}]*\bVideo\b/.test(out);
+  if (!hasVideo) {
+    const m = out.match(/import\s*\{([^}]*)\}\s*from\s*["']remotion["']/);
+    out = m
+      ? out.replace(m[0], `import {${m[1].trim().replace(/,$/, "")}, Video } from "remotion"`)
+      : `import { Video } from "remotion";\n` + out;
+  }
+  return out;
+}
+
+/**
  * Ensure Babel uses classic JSX runtime (React.createElement) not automatic (jsx-runtime).
  * The Lambda bundle's manual require() doesn't map react/jsx-runtime, so automatic fails.
  * Also ensure `import React` is present since classic runtime needs it in scope.
@@ -233,7 +251,7 @@ Deno.serve(async (req) => {
     // Prepare code for Lambda's pickEntryFile contract (strip Root.tsx, ensure export default),
     // then pin the length/size the bundle will read (see pinBundleConfig).
     const code = pinBundleConfig(
-      stripSlowCss(prepareCodeForLambda(rawCode)),
+      streamVideos(stripSlowCss(prepareCodeForLambda(rawCode))),
       { durationInFrames, fps, width: dims.width, height: dims.height },
     );
 
@@ -280,6 +298,8 @@ Deno.serve(async (req) => {
       inputProps,
       concurrency,
       logLevel,
+      // Seeking deep into long remote sources can take longer than the 30s default.
+      timeoutInMilliseconds: 120000,
     };
 
     // dumpBrowserLogs captures Chrome console output for debugging evaluateCode issues
