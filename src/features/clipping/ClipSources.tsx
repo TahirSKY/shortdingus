@@ -85,6 +85,14 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
             <span>· Transcript</span>{status(tr)}<span>· Faces & layout</span>{status(fr)}<span>· Clips</span>{status(cf)}
           </div>
           {[tr, fr, cf].filter((a) => a?.status === "error").map((a) => <p key={a.id} className="mt-1 text-xs text-destructive">{a.error_message}</p>)}
+          {!(src.meta as any)?.audio_path && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border p-2 text-xs">
+              <span className="flex-1 text-muted-foreground">{busy?.startsWith("Audio") ? `${busy} — keep this tab open` : "Needs a sound copy before clips can render."}</span>
+              <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => audioRef.current?.click()}>Prepare audio (pick original file)</Button>
+              <Button size="sm" variant="ghost" disabled={!!busy} onClick={() => runAudio(null)}>From cloud (slower)</Button>
+              <input ref={audioRef} type="file" hidden accept="video/*" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) runAudio(f); }} />
+            </div>
+          )}
           <div className="mt-3 space-y-2">
             <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={2} placeholder="Optional: what to look for, e.g. only money advice, funny moments with Sam, max 45s…" className="text-xs" />
             <div className="flex gap-2">
