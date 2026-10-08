@@ -63,7 +63,7 @@ export async function extractAudio(source: File | string, onProgress: (p: number
     const buf: any = await reader.read(offset, end);
     buf.fileStart = offset;
     const next = mp4.appendBuffer(buf);
-    offset = typeof next === "number" && next > offset ? next : end;
+    offset = typeof next === "number" && next !== offset ? next : end;
     onProgress(Math.min(0.99, offset / reader.size));
   }
   mp4.flush();
