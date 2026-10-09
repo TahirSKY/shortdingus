@@ -214,6 +214,31 @@ function streamVideos(code: string, sourceIds: string[]): string {
 }
 
 /**
+ * Clip projects with a pre-cut file: every <Video>/<Audio> of the big source is redirected to the
+ * small lossless cut, with source-frame trims mapped into the cut's timeline via `ranges`.
+ */
+function useCuts(code: string, cuts: { src: string; cut: string; ranges: unknown }[]): string {
+  if (!cuts.length) return code;
+  const out = code.replace(/<Video\b/g, "<CutVideo").replace(/<\/Video>/g, "</CutVideo>").replace(/<Audio\b/g, "<CutAudio").replace(/<\/Audio>/g, "</CutAudio>");
+  const defs = `
+// ---- clip cut mapping (added at render) ----
+const __CUTS = ${JSON.stringify(cuts)};
+const __cutFor = (src) => __CUTS.find((c) => String(src || '').includes(c.src));
+const __mapT = (r, t) => { let best = r[0], d = Infinity; for (const x of r) { if (t >= x.a && t <= x.b) return x.f + t - x.a; const dd = Math.min(Math.abs(t - x.a), Math.abs(t - x.b)); if (dd < d) { d = dd; best = x; } } return best.f + Math.max(best.a, Math.min(best.b, t)) - best.a; };
+const __cutProps = (props, fps) => {
+  const c = __cutFor(props.src); if (!c) return props;
+  const m = (fr) => fr == null ? fr : Math.max(0, Math.round(__mapT(c.ranges, fr / fps) * fps));
+  const p = { ...props, src: String(props.src).replace(c.src, c.cut).replace('&part=audio', '') };
+  for (const k of ['startFrom', 'endAt', 'trimBefore', 'trimAfter']) if (props[k] != null) p[k] = m(props[k]);
+  return p;
+};
+const CutVideo = (props) => { const { fps } = useVideoConfig(); return <Video {...__cutProps(props, fps)} />; };
+const CutAudio = (props) => { const { fps } = useVideoConfig(); return <Audio {...__cutProps(props, fps)} />; };
+`;
+  return ensureImport(ensureImport(ensureImport(out, "Video"), "Audio"), "useVideoConfig") + defs;
+}
+
+/**
  * Ensure Babel uses classic JSX runtime (React.createElement) not automatic (jsx-runtime).
  * The Lambda bundle's manual require() doesn't map react/jsx-runtime, so automatic fails.
  * Also ensure `import React` is present since classic runtime needs it in scope.
@@ -263,16 +288,29 @@ Deno.serve(async (req) => {
     // Big clip sources: picture streams, sound must come from the small audio copy.
     const ids = [...new Set([...rawCode.matchAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi)].map((m) => m[0].toLowerCase()))];
     let sourceIds: string[] = [];
+    const cuts: { src: string; cut: string; ranges: unknown }[] = [];
     if (ids.length) {
       const { data: srcs } = await admin().from("assets").select("id, name, meta").eq("role", "source").in("id", ids);
-      const missing = (srcs ?? []).filter((x: any) => !x.meta?.audio_path);
+      const { data: cutRows } = await admin().from("assets").select("id, meta, created_at").eq("role", "clip-cut").in("meta->>source_asset_id", ids).order("created_at", { ascending: false });
+      // Pick the cut covering the code's SEGMENTS best (newest wins ties).
+      const segs = [...rawCode.matchAll(/["']?in["']?\s*:\s*([\d.]+)\s*,\s*["']?out["']?\s*:\s*([\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+      for (const sid of ids) {
+        let best: any = null, bestScore = -1;
+        for (const r of (cutRows ?? []).filter((x: any) => x.meta?.source_asset_id === sid)) {
+          const rs = r.meta.ranges || [];
+          const score = segs.filter(([a, b]) => rs.some((x: any) => a >= x.a - 0.05 && b <= x.b + 0.05)).length;
+          if (score > bestScore) { best = r; bestScore = score; }
+        }
+        if (best && (bestScore > 0 || !segs.length)) cuts.push({ src: sid, cut: best.id, ranges: best.meta.ranges });
+      }
+      const missing = (srcs ?? []).filter((x: any) => !x.meta?.audio_path && !cuts.some((c) => c.src === x.id));
       if (missing.length) {
-        return json({ error: `"${missing[0].name}" needs a sound copy first: open the clipping hub and press "Prepare audio" on that video, then render again.` }, 400);
+        return json({ error: `"${missing[0].name}" needs preparing first: open the clipping hub and press "Prepare clip" on this clip, then render again.` }, 400);
       }
       sourceIds = (srcs ?? []).map((x: any) => x.id);
     }
     const code = pinBundleConfig(
-      streamVideos(stripSlowCss(prepareCodeForLambda(rawCode)), sourceIds),
+      useCuts(streamVideos(stripSlowCss(prepareCodeForLambda(rawCode)), sourceIds), cuts),
       { durationInFrames, fps, width: dims.width, height: dims.height },
     );
 
