@@ -8,7 +8,9 @@ export interface CutRange { a: number; b: number; f: number } // source seconds 
 
 async function openUrl(url: string) {
   const head = await fetch(url, { headers: { Range: "bytes=0-0" } });
-  const size = Number(head.headers.get("content-range")?.split("/")[1] || 0);
+  let size = Number(head.headers.get("content-range")?.split("/")[1] || 0);
+  // Content-Range is often hidden cross-origin; Content-Length on a HEAD always is visible.
+  if (!size) size = Number((await fetch(head.url || url, { method: "HEAD" })).headers.get("content-length") || 0);
   if (!size) throw new Error("Couldn't read the original video from storage.");
   const real = head.url || url;
   const read = async (s: number, e: number) => {
