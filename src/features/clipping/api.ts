@@ -140,3 +140,22 @@ export async function listSources(groupId: string) {
   if (b.error) throw b.error;
   return { sources: a.data as any[], analyses: b.data as any[] };
 }
+
+/** Losslessly cuts a project's clip ranges out of the big original so renders only touch a small file. */
+export async function prepareClip(group: AssetGroup, project: any, onProgress: (p: number) => void) {
+  const c = project.plan?.clip;
+  if (!c?.source_asset_id || !c.segments?.length) throw new Error("This project has no clip ranges.");
+  const { cutClip } = await import("./cut-clip");
+  const out = await cutClip(`${URL_}/functions/v1/asset-url?id=${c.source_asset_id}`, c.segments, (p) => onProgress(p * 0.85));
+  const id = crypto.randomUUID();
+  const path = `groups/${group.slug}/${id}-clip-${safe(project.slug || "clip")}.mp4`;
+  await tusUpload(path, new File([out.blob], "clip.mp4", { type: "video/mp4" }), (p) => onProgress(0.85 + p * 0.15));
+  const { error } = await db.from("assets").insert({
+    id, group_id: group.id, project_id: project.id, kind: "video", role: "clip-cut", name: `Cut: ${project.name || project.slug}`, storage_path: path,
+    mime_type: "video/mp4", size_bytes: out.blob.size, duration_seconds: out.duration, tags: ["clip-cut"],
+    meta: { source_asset_id: c.source_asset_id, ranges: out.ranges, width: out.width, height: out.height, skip_analysis: true },
+  });
+  if (error) throw error;
+  await db.from("projects").update({ plan: { ...project.plan, clip: { ...c, cut_asset_id: id } } }).eq("id", project.id);
+  return id;
+}

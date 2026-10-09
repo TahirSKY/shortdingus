@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { type AssetGroup, assetUrl, createProject, fmtTime, listProjects, listSkills, updateProject } from "@/features/hub/api";
-import { type Clip, type Stage, findClips, listSources, prepareAudio, resumeTranscript, uploadSource } from "./api";
+import { type Clip, type Stage, findClips, listSources, prepareAudio, prepareClip, resumeTranscript, uploadSource } from "./api";
 import { trackProject } from "./track";
 
 const MODELS = [
@@ -36,6 +36,14 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
       await prepareAudio(src.id, group.slug, f, (p) => setBusy(`Audio ${Math.round(p * 100)}%`));
       toast.success("Sound copy saved. Clips from this video can render now.");
       qc.invalidateQueries({ queryKey: ["sources", group.id] });
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
+  };
+  const runCut = async (proj: any) => {
+    setBusy("Cutting 0%");
+    try {
+      await prepareClip(group, proj, (p) => setBusy(`Cutting ${Math.round(p * 100)}%`));
+      toast.success("Clip cut at full quality. Renders now use the small clip file.");
+      qc.invalidateQueries({ queryKey: ["projects", group.id] });
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(null); }
   };
   const { data: skills = [] } = useQuery({ queryKey: ["skills", group.id], queryFn: () => listSkills(group.id) });
@@ -148,6 +156,7 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
                     <div className="mt-2 flex gap-2">
                       <Button size="sm" variant="ghost" onClick={() => play(c)}><Play className="mr-1 h-3.5 w-3.5" />Play</Button>
                       {existing(c)[0] && <Button size="sm" onClick={() => navigate(`/groups/${group.slug}/p/${existing(c)[0].slug}/editor`)}><Pencil className="mr-1 h-3.5 w-3.5" />Open editor</Button>}
+                      {existing(c)[0] && <Button size="sm" variant="secondary" disabled={!!busy} title="Cuts this clip's moments out of the original at full quality so it renders fast" onClick={() => runCut(existing(c)[0])}>{existing(c)[0].plan?.clip?.cut_asset_id ? "Re-cut clip" : "Prepare clip"}</Button>}
                       <Button size="sm" variant={existing(c)[0] ? "ghost" : "secondary"} disabled={!!busy} onClick={() => { if (existing(c)[0] && !confirm("This clip already has a project. Start a new one from scratch?")) return; make(c, true).catch((e) => toast.error(e.message)); }}><FolderPlus className="mr-1 h-3.5 w-3.5" />{existing(c)[0] ? "New project" : "Make project"}</Button>
                     </div>
                   </div>

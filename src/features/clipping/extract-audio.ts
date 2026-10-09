@@ -13,12 +13,14 @@ function fileReader(file: File): Reader {
 
 async function urlReader(url: string): Promise<Reader> {
   const head = await fetch(url, { headers: { Range: "bytes=0-0" } });
-  const size = Number(head.headers.get("content-range")?.split("/")[1] || 0);
+  let size = Number(head.headers.get("content-range")?.split("/")[1] || 0);
+  // Content-Range is often hidden cross-origin; Content-Length on a HEAD always is visible.
+  if (!size) size = Number((await fetch(head.url || url, { method: "HEAD" })).headers.get("content-length") || 0);
   if (!size) throw new Error("Couldn't read the original video from storage.");
   return {
     size,
     read: async (s, e) => {
-      const r = await fetch(url, { headers: { Range: `bytes=${s}-${e - 1}` } });
+      const r = await fetch(head.url || url, { headers: { Range: `bytes=${s}-${e - 1}` } });
       if (!r.ok) throw new Error(`Download failed (${r.status}).`);
       return r.arrayBuffer();
     },
