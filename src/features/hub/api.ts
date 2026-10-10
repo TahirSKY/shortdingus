@@ -75,6 +75,17 @@ export function kindFromFile(file: File): AssetKind {
   return "text";
 }
 
+/** Reads a Lottie JSON's size, timing and named moves (markers) so the editor can direct it. */
+async function lottieInfo(file: File) {
+  try {
+    const j = JSON.parse(await file.text());
+    if (!j || typeof j.fr !== "number" || !Array.isArray(j.layers)) return null;
+    const fps = j.fr, frames = Math.max(0, (j.op ?? 0) - (j.ip ?? 0));
+    const moves = (j.markers || []).map((m: any) => ({ name: String(m.cm ?? "").trim(), start: m.tm, frames: m.dr }));
+    return { duration: frames / fps, meta: { lottie: { fps, frames, width: j.w, height: j.h, moves, layers: j.layers.length } } };
+  } catch { return null; }
+}
+
 function mediaDuration(file: File, kind: AssetKind) {
   if (kind !== "video" && kind !== "audio") return Promise.resolve({ duration: null as number | null, w: 0, h: 0 });
   return new Promise<{ duration: number | null; w: number; h: number }>((resolve) => {
@@ -94,11 +105,13 @@ export async function uploadFile(group: AssetGroup, file: File, projectId: strin
   const duration = dims.duration;
   const tags = dims.w && dims.h ? [dims.h > dims.w ? "vertical" : dims.w > dims.h ? "horizontal" : "square"] : [];
   if (!role && kind === "video" && /mascot/i.test(file.name)) role = "mascot";
+  const lottie = /\.(json|lottie)$/i.test(file.name) ? await lottieInfo(file) : null;
+  if (lottie) { role = "lottie"; tags.push("lottie"); }
   const path = `groups/${group.slug}/${id}-${safeFile(file.name)}`;
   const mime = file.type || (file.name.endsWith(".json") ? "application/json" : "text/plain");
   const up = await supabase.storage.from("hub-media").upload(path, file, { contentType: mime, upsert: false });
   if (up.error) throw up.error;
-  const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: duration, project_id: projectId, role, tags });
+  const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: lottie ? lottie.duration : duration, project_id: projectId, role, tags, meta: lottie ? lottie.meta : {} });
   if (error) { await supabase.storage.from("hub-media").remove([path]); throw error; }
   await touch(group.id);
   if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));

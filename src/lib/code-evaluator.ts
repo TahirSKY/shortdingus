@@ -20,6 +20,9 @@ async function ensureModules() {
     remotionModule = await import("remotion");
   }
   AVAILABLE_MODULES["remotion"] = remotionModule;
+  if (!AVAILABLE_MODULES["@remotion/lottie"]) {
+    AVAILABLE_MODULES["@remotion/lottie"] = await import("@remotion/lottie");
+  }
 }
 
 /**
