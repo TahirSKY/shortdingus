@@ -161,8 +161,24 @@ ${library.filter((a: any) => a.role === "style-reference").map((a: any) => `- ${
 CHARACTERS (reusable code — copy the component into the video as-is and drive it with props; never redraw it)
 ${library.filter((a: any) => a.role === "character" && a.inline_content).map((a: any) => `--- ${a.name} | id ${a.id}\n${a.inline_content}`).join("\n") || "(none)"}
 
+${lottieSection([...library, ...ctx.files])}
+
 HUB + SHARED LIBRARY
-${library.filter((a: any) => a.role !== "style-reference" && a.role !== "character").map((a: any) => describe(a, ctx.analyses, false)).join("\n") || "(none)"}`;
+${library.filter((a: any) => a.role !== "style-reference" && a.role !== "character" && a.role !== "lottie").map((a: any) => describe(a, ctx.analyses, false)).join("\n") || "(none)"}`;
+}
+
+/** Lottie animations (designer-made moves) and how to play them. */
+export function lottieSection(assets: any[]) {
+  const list = assets.filter((a: any) => a.role === "lottie");
+  if (!list.length) return "LOTTIE ANIMATIONS: (none)";
+  return `LOTTIE ANIMATIONS (fixed designer-made moves; you choose which, when, where, how big, how fast, flipped or looped — you cannot invent new motion inside them)
+How to play one:
+import { Lottie } from "@remotion/lottie";
+const [data, setData] = useState(null); const [handle] = useState(() => delayRender("lottie"));
+useEffect(() => { fetch(URL).then((r) => r.json()).then((j) => { setData(j); continueRender(handle); }).catch(() => cancelRender(new Error("Lottie failed"))); }, []);
+{data && <Lottie animationData={data} playbackRate={1} loop={false} style={{ width: 600 }} />}
+Play one named move by wrapping in <Sequence from={START} durationInFrames={MOVE_FRAMES * 30 / LOTTIE_FPS}> and skipping into it with a negative-from inner Sequence of the move's start (converted to video fps), or keep separate files per move. Fetch each file once at the top level.
+${list.map((a: any) => { const l = a.meta?.lottie || {}; return `- ${a.name} | id ${a.id} | url ${assetUrl(a.id)} | ${l.width}x${l.height} ${l.fps}fps ${l.frames} frames${l.moves?.length ? ` | moves: ${l.moves.map((m: any) => `${m.name} @${m.start}+${m.frames}`).join(", ")}` : ""}`; }).join("\n")}`;
 }
 
 /** Save code as a new project code version after checking every referenced file id exists. */
