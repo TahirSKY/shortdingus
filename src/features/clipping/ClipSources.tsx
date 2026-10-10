@@ -11,10 +11,7 @@ import { type AssetGroup, assetUrl, createProject, fmtTime, listProjects, listSk
 import { type Clip, type Stage, findClips, listSources, prepareAudio, prepareClip, resumeTranscript, uploadSource } from "./api";
 import { trackProject } from "./track";
 
-const MODELS = [
-  ["openai/gpt-6-astra", "GPT-6 Astra (best)"], ["openai/gpt-6-sol", "GPT-6 Sol"], ["openai/gpt-6-luna", "GPT-6 Luna (cheap)"],
-  ["google/gemini-3.1-pro-preview", "Gemini 3.1 Pro"], ["google/gemini-3.8-flash", "Gemini 3.8 Flash (cheap)"],
-];
+import { MODELS } from "@/lib/models";
 
 const status = (a: any) => !a ? <Badge variant="outline">not started</Badge>
   : a.status === "complete" ? <Badge variant="secondary">done</Badge>

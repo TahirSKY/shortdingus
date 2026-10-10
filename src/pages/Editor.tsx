@@ -21,15 +21,7 @@ import { type AssetGroup, type Project, deleteAsset, getGroup, getProject, listA
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/editor-agent`;
 const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const MODELS = [
-  ["openai/gpt-6-astra", "GPT-6 Astra (best)"],
-  ["openai/gpt-6-sol", "GPT-6 Sol"],
-  ["openai/gpt-6-luna", "GPT-6 Luna (cheap)"],
-  ["openai/gpt-5.6-terra", "GPT-5.6 Terra"],
-  ["openai/gpt-5.6-luna", "GPT-5.6 Luna (cheap)"],
-  ["google/gemini-3.1-pro-preview", "Gemini 3.1 Pro"],
-  ["google/gemini-3.8-flash", "Gemini 3.8 Flash (cheap)"],
-];
+import { MODELS } from "@/lib/models";
 
 export async function loadMessages(projectId: string): Promise<UIMessage[]> {
   const { data, error } = await supabase.from("editor_messages" as any).select("ui_message").eq("project_id", projectId).order("created_at");

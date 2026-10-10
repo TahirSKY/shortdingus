@@ -7,15 +7,29 @@ import { CLIP_CAMERA_CODE } from "./clip-camera.ts";
 export const MODEL = "openai/gpt-6-astra";
 export const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 // Models the user may pick in the editor. OpenAI ones run on Responses, Google ones on chat completions.
+export const OPENROUTER = "https://openrouter.ai/api/v1";
+// "openrouter/<vendor/model>" ids run on the user's own OpenRouter key.
+export const OPENROUTER_MODELS = [
+  "openrouter/anthropic/claude-opus-5.5", "openrouter/anthropic/claude-fable-5.1",
+  "openrouter/moonshotai/kimi-k3", "openrouter/z-ai/glm-5.3", "openrouter/deepseek/deepseek-v4-pro-0813",
+  "openrouter/qwen/qwen3.8-max-0902", "openrouter/minimax/minimax-m3",
+];
 export const EDITOR_MODELS = [
   "openai/gpt-6-astra", "openai/gpt-6-sol", "openai/gpt-6-luna",
   "openai/gpt-5.6-terra", "openai/gpt-5.6-luna",
   "google/gemini-3.1-pro-preview", "google/gemini-3.8-flash",
+  ...OPENROUTER_MODELS,
 ];
 export const pickModel = (m: unknown) => (typeof m === "string" && EDITOR_MODELS.includes(m) ? m : MODEL);
 
 // Returns the model plus its provider options. cacheKey keeps repeat requests on the same prompt cache.
 export function editorModel(id: string, key: string, cacheKey: string, fetchFn?: typeof fetch) {
+  if (id.startsWith("openrouter/")) {
+    const orKey = Deno.env.get("OPENROUTER_API_KEY");
+    if (!orKey) throw new Error("OpenRouter key is missing.");
+    const provider = createOpenAICompatible({ name: "openrouter", baseURL: OPENROUTER, apiKey: orKey, headers: { "X-Title": "ShortDingus" } });
+    return { model: provider.chatModel(id.slice("openrouter/".length)), providerOptions: { openrouter: { reasoning: { effort: "medium" } } } as any };
+  }
   const headers = { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" };
   if (id.startsWith("openai/")) {
     const provider = createOpenAI({ baseURL: GATEWAY, apiKey: key, headers, fetch: fetchFn });
