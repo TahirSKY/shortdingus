@@ -61,16 +61,21 @@ function snap(words: any[], t: number, edge: "in" | "out") {
 }
 
 async function callModel(model: string, system: string, user: string) {
-  const key = Deno.env.get("LOVABLE_API_KEY") || "";
-  const headers = { "Content-Type": "application/json", "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" };
+  const or = model.startsWith("openrouter/");
+  const key = Deno.env.get(or ? "OPENROUTER_API_KEY" : "LOVABLE_API_KEY") || "";
+  const headers: Record<string, string> = or
+    ? { "Content-Type": "application/json", Authorization: `Bearer ${key}`, "X-Title": "ShortDingus" }
+    : { "Content-Type": "application/json", "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" };
   const openai = model.startsWith("openai/");
-  const res = await fetch(`${GATEWAY}/${openai ? "responses" : "chat/completions"}`, {
+  const res = await fetch(or ? "https://openrouter.ai/api/v1/chat/completions" : `${GATEWAY}/${openai ? "responses" : "chat/completions"}`, {
     method: "POST", headers,
     body: JSON.stringify(openai
       ? { model, stream: true, store: false, reasoning: { effort: "low" }, input: [{ role: "system", content: system }, { role: "user", content: user }], text: { format: { type: "json_schema", name: "clips", strict: true, schema: SCHEMA } } }
-      : { model, stream: true, response_format: { type: "json_object" }, messages: [{ role: "system", content: system }, { role: "user", content: `${user}\n\nReturn ONLY JSON matching: ${JSON.stringify(SCHEMA)}` }] }),
+      : or
+        ? { model: model.slice("openrouter/".length), stream: true, reasoning: { effort: "low" }, response_format: { type: "json_schema", json_schema: { name: "clips", strict: true, schema: SCHEMA } }, messages: [{ role: "system", content: system }, { role: "user", content: `${user}\n\nReturn ONLY JSON matching: ${JSON.stringify(SCHEMA)}` }] }
+        : { model, stream: true, response_format: { type: "json_object" }, messages: [{ role: "system", content: system }, { role: "user", content: `${user}\n\nReturn ONLY JSON matching: ${JSON.stringify(SCHEMA)}` }] }),
   });
-  if (res.status === 402) throw new Error("AI credits are used up. Add credits and try again.");
+  if (res.status === 402) throw new Error(or ? "Your OpenRouter balance is empty. Top it up and try again." : "AI credits are used up. Add credits and try again.");
   if (res.status === 429) throw new Error("AI is busy right now. Try again in a minute.");
   if (!res.ok) throw new Error(`AI request failed on ${model} (${res.status}): ${(await res.text()).slice(0, 200)}`);
   const reader = res.body!.getReader(); const dec = new TextDecoder();
