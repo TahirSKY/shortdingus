@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { CopyRow } from "@/features/hub/shared";
-import { createGroup, listGroups, listSkills, manifestUrl, type AssetGroup } from "@/features/hub/api";
+import { createGroup, listGroups, listSkills, projectManifestUrl, type AssetGroup } from "@/features/hub/api";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Json } from "@/integrations/supabase/types";
 import {
@@ -359,7 +359,7 @@ export default function SkillPackImport() {
                   <p className="mt-1 text-xs text-muted-foreground">{result.skills} readable skills/rules · {result.assets} library references. {result.primarySkillName ? `Primary file: ${fileBaseName(result.primarySkillName)}.` : "No SKILL.md was found; the source files are still available as skills."}</p>
                 </div>
               </div>
-              <CopyRow label="Agent manifest — paste this link into the chat so the pack can be read" value={manifestUrl(result.group.slug)} />
+              <CopyRow label="Full agent manifest — includes imported skills and hub rules" value={projectManifestUrl(result.group.slug)} />
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" asChild><Link to={`/groups/${result.group.slug}`}>Open hub <ChevronRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
                 <Button size="sm" variant="outline" onClick={() => { setResult(null); setParsed(null); }}>Import another pack</Button>
