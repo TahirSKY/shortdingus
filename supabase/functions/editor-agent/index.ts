@@ -191,6 +191,66 @@ Deno.serve(async (req) => {
         return error ? { error: error.message } : { saved: true, id: data.id, version: v };
       },
     }),
+    search_source: tool({
+      description: "Clip projects only: search the WHOLE long source video (not just this clip) for a stronger hook, a payoff, missing context or a callback. Give a phrase/keywords to find where things are said, and/or a time window (seconds) to read the transcript there. Also returns the other clip ideas found in this source.",
+      inputSchema: z.object({ query: z.string().nullable(), from: z.number().nullable(), to: z.number().nullable() }),
+      execute: async ({ query, from, to }) => {
+        const c = project.plan?.clip;
+        if (!c?.source_asset_id) return { error: "This project is not a clip from a long source." };
+        const { data: an } = await db.from("asset_analyses").select("tool, report").eq("asset_id", c.source_asset_id).eq("status", "complete").in("tool", ["assembly-transcript", "clip-finder"]).order("created_at", { ascending: false });
+        const words: any[] = (an || []).find((a: any) => a.tool === "assembly-transcript")?.report?.words || [];
+        if (!words.length) return { error: "The source has no transcript yet." };
+        const lineOf = (i0: number, i1: number) => `[${words[i0].start.toFixed(1)}-${words[i1].end.toFixed(1)} ${words[i0].speaker || ""}] ${words.slice(i0, i1 + 1).map((w) => w.w).join(" ")}`;
+        const out: Record<string, unknown> = {};
+        if (query?.trim()) {
+          const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
+          const hits: { i: number; n: number }[] = [];
+          for (let i = 0; i < words.length; i += 10) {
+            const win = words.slice(i, i + 30).map((w) => w.w.toLowerCase()).join(" ");
+            const n = terms.filter((t) => win.includes(t)).length;
+            if (n) hits.push({ i, n });
+          }
+          hits.sort((a, b) => b.n - a.n);
+          const picked: number[] = [];
+          for (const h of hits) { if (picked.every((p) => Math.abs(p - h.i) > 40)) picked.push(h.i); if (picked.length >= 12) break; }
+          out.matches = picked.sort((a, b) => a - b).map((i) => lineOf(Math.max(0, i - 15), Math.min(words.length - 1, i + 45)));
+        }
+        if (from != null || to != null) {
+          const a = Math.max(0, from ?? (to! - 120)), b = Math.min(a + 600, to ?? a + 120);
+          const w = words.map((x, i) => ({ x, i })).filter(({ x }) => x.end > a && x.start < b);
+          const lines: string[] = [];
+          for (let k = 0; k < w.length; k += 40) lines.push(lineOf(w[k].i, w[Math.min(w.length - 1, k + 39)].i));
+          out.window = lines;
+        }
+        const ideas = (an || []).find((a: any) => a.tool === "clip-finder")?.report?.clips || [];
+        out.other_clip_ideas = ideas.slice(0, 25).map((x: any) => ({ title: x.title, score: x.score, hook: x.hook_text, segments: x.segments }));
+        out.source_length = words[words.length - 1].end;
+        return out;
+      },
+    }),
+    set_clip_segments: tool({
+      description: "Clip projects only: replace the clip's source ranges (absolute seconds in the original, in play order). Use to add a hook from elsewhere in the source, add context, trim boring parts or extend to the payoff. Ask the user first. Afterwards the user must press Track faces and Prepare/Re-cut clip again before rendering.",
+      inputSchema: z.object({ segments: z.array(z.object({ in: z.number(), out: z.number(), purpose: z.string() })).min(1).max(20), reason: z.string() }),
+      execute: async ({ segments, reason }) => {
+        const c = project.plan?.clip;
+        if (!c?.source_asset_id) return { error: "This project is not a clip from a long source." };
+        const { data: tr } = await db.from("asset_analyses").select("report").eq("asset_id", c.source_asset_id).eq("tool", "assembly-transcript").eq("status", "complete").order("created_at", { ascending: false }).limit(1).maybeSingle();
+        const words: any[] = tr?.report?.words || [];
+        const snap = (t: number, edge: "in" | "out") => {
+          let best: any = null, d = Infinity;
+          for (const w of words) { const v = edge === "in" ? w.start : w.end; const dd = Math.abs(v - t); if (dd < d) { d = dd; best = w; } }
+          return best && d < 2 ? (edge === "in" ? Math.max(0, best.start - 0.08) : best.end + 0.12) : t;
+        };
+        const segs = segments.map((s) => ({ purpose: s.purpose, in: +snap(Math.max(0, s.in), "in").toFixed(2), out: +snap(s.out, "out").toFixed(2) })).filter((s) => s.out - s.in > 0.4);
+        if (!segs.length) return { error: "No valid ranges." };
+        const { cut_asset_id: _cut, camera: _cam, ...rest } = c;
+        const plan = { ...project.plan, clip: { ...rest, segments: segs, previous_segments: c.segments, change_reason: reason } };
+        const { error } = await db.from("projects").update({ plan, updated_at: new Date().toISOString() }).eq("id", project.id);
+        if (error) return { error: error.message };
+        project.plan = plan;
+        return { ok: true, segments: segs, total_seconds: +segs.reduce((n, s) => n + s.out - s.in, 0).toFixed(2), next: "Tell the user to press Track faces, then Re-cut clip, on the project page before you build/render. Until tracked, frame wide." };
+      },
+    }),
     update_project: tool({
       description: "Update the project's stage and/or notes (e.g. save the approved proposal).",
       inputSchema: z.object({ stage: z.enum(["idea", "script", "assets", "voice", "edit", "check", "render", "done"]).nullable(), notes: z.string().nullable() }),

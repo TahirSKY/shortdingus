@@ -124,6 +124,7 @@ CLIP FROM A LONG SOURCE (follow the clip-editing skill: framing is the base, the
 Source: ${src?.name || c.source_asset_id} | id ${c.source_asset_id} | url ${assetUrl(c.source_asset_id)} | ${src?.meta?.width || "?"}x${src?.meta?.height || "?"}
 Hook: ${c.hook_text || ""} | Why: ${c.why || ""} | Framing hint: ${c.layout_hint || ""}
 Total clip length: ${offset.toFixed(2)}s. Keep the source audio.
+THE CLIP IS NOT FIXED. The goal is a short that goes viral, not a faithful crop of these ranges. If the opening is weak, the middle drags, context is missing or the payoff is elsewhere, use search_source to look through the WHOLE source (a sharper hook line, the setup, the callback, a reaction) and propose new ranges to the user; once agreed, save them with set_clip_segments. Also bring in B-roll, stock, memes, generated images or on-screen context whenever the footage alone is thin.
 ${parts.join("\n")}
 ${framing}
 `;

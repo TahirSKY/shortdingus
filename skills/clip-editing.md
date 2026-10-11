@@ -46,6 +46,9 @@ None of these are required, and this isn't a checklist. Choose moves that serve 
 - Build the middle so something new appears every 1–3 seconds (a zoom, a cutaway, a caption beat, a sound).
 - End on the punchline, a freeze, or a seamless loop back to the start.
 
+## The clip is a starting point, not a boundary
+The found ranges are a first draft. You see the whole source through `search_source`. If people would skip, fix it: a sharper hook line from anywhere in the video, the missing setup, the payoff or callback said later, a reaction, or trimming a dull middle. Propose the new ranges, then save with `set_clip_segments` (the user then re-tracks faces and re-cuts). Fill gaps the footage can't cover with B-roll, stock, memes, generated images or on-screen context.
+
 ## Working with the user
 - Propose: the hook, 3–6 concrete creative moments tied to exact lines ("at 'two million' → counter + cash SFX + punch-in"), the visual style, and any assets you'll need (stock, memes, images). Then build.
 - Use style references, `motion-craft`, the hub style guide and library sounds/assets the same way you would for any other video.
