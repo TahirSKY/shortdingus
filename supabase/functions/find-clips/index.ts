@@ -113,7 +113,7 @@ ${transcriptText(tr.report)}
 VISUAL LAYOUT OVER TIME (from snapshots: layout|people ids):
 ${fr ? layoutText(fr.report?.frames || []) : "(not available)"}
 
-Return 8-25 clips, best first. Each clip: segments in PLAY ORDER with absolute seconds in the source (one segment for a straight clip; add a separate hook segment from anywhere in the video when it makes a stronger opening). Typical total 20-75s unless the moment needs otherwise. score 0-100 = honest viral potential. category e.g. hot-take, story, advice, funny, clash, reveal. layout_hint = how to frame it (e.g. "follow speaker B", "split screen A/B", "wide then punch in"). hook_text = the on-screen hook line.`;
+Return every moment you genuinely believe could perform (usually somewhere around 8-25), best first. Quality over count; don't pad. Each clip: segments in PLAY ORDER with absolute seconds in the source. Build each clip as strongly as the whole video allows: pull a hook, setup or payoff from anywhere, cut dead middles, combine related moments. Length is whatever the moment needs. score 0-100 = honest viral potential. category: your own short label. layout_hint = how to frame it. hook_text = the on-screen hook line. In "why", also note what the edit would need to land (e.g. B-roll of X, a stat on screen, missing context).`;
     const out = await callModel(model, system, user);
     const words = tr.report.words;
     const clips = (out.clips || []).map((c: any) => ({
