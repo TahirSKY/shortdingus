@@ -46,7 +46,9 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
   const { data: skills = [] } = useQuery({ queryKey: ["skills", group.id], queryFn: () => listSkills(group.id) });
   const { data: projects = [] } = useQuery({ queryKey: ["projects", group.id], queryFn: () => listProjects(group.id) });
   // Projects already made from a clip (same source + same first segment), newest first.
-  const existing = (c: Clip) => projects.filter((p: any) => p.plan?.clip?.source_asset_id === src.id && p.plan.clip.segments?.[0]?.in === c.segments[0]?.in);
+  const existing = (c: Clip) => projects.filter((p: any) => p.plan?.clip?.source_asset_id === src.id && (
+    // origin_in survives later range edits by the editor agent; older projects fall back to segment/name matching.
+    p.plan.clip.origin_in === c.segments[0]?.in || p.plan.clip.segments?.some((s: any) => s.in === c.segments[0]?.in) || p.name === c.title));
   const mine = analyses.filter((a) => a.asset_id === src.id);
   const tr = mine.find((a) => a.tool === "assembly-transcript");
   const fr = mine.find((a) => a.tool === "gemini-frames");
@@ -74,7 +76,7 @@ function SourceCard({ group, src, analyses }: { group: AssetGroup; src: any; ana
     const p = await createProject(group.id, c.title, skill?.id || null);
     await updateProject(p.id, {
       notes: `Hook: ${c.hook_text}\nWhy it works: ${c.why}\nFraming: ${c.layout_hint}`,
-      plan: { title: c.title, duration_s: +c.segments.reduce((t, s) => t + s.out - s.in, 0).toFixed(1), clip: { source_asset_id: src.id, segments: c.segments, hook_text: c.hook_text, why: c.why, layout_hint: c.layout_hint } } as any,
+      plan: { title: c.title, duration_s: +c.segments.reduce((t, s) => t + s.out - s.in, 0).toFixed(1), clip: { source_asset_id: src.id, origin_in: c.segments[0]?.in, segments: c.segments, hook_text: c.hook_text, why: c.why, layout_hint: c.layout_hint } } as any,
     });
     setBusy("Tracking faces 0%");
     try {
