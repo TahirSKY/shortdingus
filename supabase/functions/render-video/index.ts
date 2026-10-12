@@ -307,7 +307,8 @@ Deno.serve(async (req) => {
       if (missing.length) {
         return json({ error: `"${missing[0].name}" needs preparing first: open the clipping hub and press "Prepare clip" on this clip, then render again.` }, 400);
       }
-      sourceIds = (srcs ?? []).map((x: any) => x.id);
+      // Only sources WITHOUT a small pre-cut file need muting; a cut plays its own sound.
+      sourceIds = (srcs ?? []).map((x: any) => x.id).filter((id: string) => !cuts.some((c) => c.src === id));
     }
     const code = pinBundleConfig(
       useCuts(streamVideos(stripSlowCss(prepareCodeForLambda(rawCode)), sourceIds), cuts),
