@@ -167,7 +167,7 @@ Hubs with `auto_cutout: true` (shown in the manifest's hub object; VOX is on) au
 - One self-contained file. Import only from `remotion` (and libraries the Playground already has); no local imports.
 - Start with a settings comment: `/* REMOTION_CONFIG = { fps: 30, durationInFrames: 1800, width: 1080, height: 1920 } */` — plain numbers are safest.
 - `export default` your component; don't name it `MyVideo`.
-- Use asset URLs exactly as the manifest lists them (copy ids exactly). No Unsplash.
+- Use asset URLs exactly as the manifest lists them (copy ids exactly). The source video must be a hub asset; other media may be any public URL that serves HTTP range requests (nothing blocks external URLs — `render-video` has no allowlist), but hub copies don't rot and are reusable, so save stock/meme picks with `role=stock` or `role=meme`, never `role=source`.
 - No `backdrop-filter` / frosted-glass blur (the renderer has no GPU; it is stripped and slows renders).
 - Deterministic animation only (`useCurrentFrame`, `interpolate`, `spring`); no `Math.random()` without a seed, no timers, no DOM/CSS manipulation.
 - Delivering long code: if writing back through `agent-create` (`kind=code role=code`) fails or the code is too long to send, give the user the complete file in your chat reply in one code block. They paste it into the app's Playground (or the project editor) to preview and render.

@@ -1,0 +1,15 @@
+
+// ─────────────────────────────────────────────────────────────
+// 25. AUDIO — music bed (ducked, incl. the record stop) + SFX hits
+// ─────────────────────────────────────────────────────────────
+
+const AudioLayer = () => (
+  <>
+    <Audio src={ASSETS.music} volume={(f) => musicVolumeAt(f)} />
+    {SFX.map((fx, i) => (
+      <Sequence key={`sfx-${i}`} from={sec(fx.at)} durationInFrames={Math.max(1, Math.min(sec(3), DURATION - sec(fx.at)))} layout="none">
+        <Audio src={fx.src} volume={fx.vol} />
+      </Sequence>
+    ))}
+  </>
+);

@@ -1,0 +1,101 @@
+
+// ─────────────────────────────────────────────────────────────
+// 11. CAPTIONS — speaker chip + word-by-word pages + the strike-through
+// ─────────────────────────────────────────────────────────────
+
+const SpeakerChip = ({ speaker }) => {
+  const tag = speakerTag(speaker);
+  const dot = tag === "JUDGE" ? COLORS.yellow : COLORS.green;
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "6px 20px",
+        borderRadius: 999,
+        background: "rgba(15,20,28,0.92)",
+        border: `2px solid ${COLORS.panelBorder}`,
+        fontFamily: FONT,
+        fontWeight: 900,
+        fontSize: 26,
+        letterSpacing: 4,
+        color: COLORS.white,
+        boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
+      }}
+    >
+      <div style={{ width: 14, height: 14, borderRadius: 7, background: dot, boxShadow: `0 0 12px ${dot}` }} />
+      {tag}
+    </div>
+  );
+};
+
+const CaptionWord = ({ word, active, spoken, frame }) => {
+  const key = keyColorFor(word.text);
+  const pop = active ? springAt(frame, word.start, SPRING_SNAP) : 0;
+  const scale = active ? interpolate(pop, [0, 1], [1, 1.12]) : 1;
+  const color = key ?? (active ? COLORS.yellow : COLORS.white);
+  return (
+    <span style={{ display: "inline-block", margin: "0 11px", transform: `scale(${scale}) translateY(${active ? -4 * pop : 0}px)`, color, opacity: spoken || active ? 1 : 0.88, ...strokeText(10) }}>
+      {word.text.toUpperCase()}
+    </span>
+  );
+};
+
+const CaptionsLayer = () => {
+  const frame = useCurrentFrame();
+  const t = frame / FPS;
+  if (isFreeze(t)) return null;
+  const page = CAPTION_PAGES.find((p) => t >= p.start && t < p.end);
+  if (!page) return null;
+
+  const enter = springAt(frame, page.start, SPRING_SNAP);
+  const pageScale = interpolate(enter, [0, 1], [0.88, 1]);
+  const pageY = interpolate(enter, [0, 1], [22, 0]);
+  const strikeP = t >= CAPTION_STRIKE.start && t < CAPTION_STRIKE.end ? clamp01((t - CAPTION_STRIKE.start) / 0.18) : 0;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 40,
+        right: 40,
+        top: LAYOUT.captionTop,
+        height: LAYOUT.captionBottom - LAYOUT.captionTop,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 16,
+        opacity: clamp01(enter * 1.6),
+        transform: `translateY(${pageY}px) scale(${pageScale})`,
+      }}
+    >
+      <SpeakerChip speaker={page.speaker} />
+      <div style={{ position: "relative" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", maxWidth: 980, fontFamily: FONT, fontWeight: 900, fontSize: 76, lineHeight: 1.12, textAlign: "center" }}>
+          {page.words.map((w, i) => {
+            const active = t >= w.start && t < Math.max(w.end, w.start + 0.12);
+            const spoken = t >= w.end;
+            return <CaptionWord key={`${page.start}-${i}`} word={w} active={active} spoken={spoken} frame={frame} />;
+          })}
+        </div>
+        {strikeP > 0 ? (
+          <div
+            style={{
+              position: "absolute",
+              left: "-2%",
+              top: "50%",
+              height: 14,
+              marginTop: -7,
+              width: `${strikeP * 104}%`,
+              background: COLORS.red,
+              borderRadius: 7,
+              transform: "rotate(-2deg)",
+              boxShadow: "0 0 18px rgba(255,59,59,0.7)",
+            }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+};

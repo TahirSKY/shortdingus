@@ -1,0 +1,25 @@
+const repairWords = (list) => {
+  const out = list.map(([text, s, e, speaker]) => ({ text, s, e, orig: s, speaker }));
+  const solid = (w) => w.e - w.s >= 0.05;
+  let i = 0;
+  while (i < out.length) {
+    if (!solid(out[i])) {
+      let j = i;
+      while (j + 1 < out.length && !solid(out[j + 1])) j++;
+      const runStart = out[i].s;
+      const next = out[j + 1];
+      const runEnd = Math.max(out[j].e + 0.06, next ? next.s : out[j].e + 0.24);
+      const step = (runEnd - runStart) / (j - i + 1);
+      for (let k = i; k <= j; k++) {
+        out[k].s = runStart + (k - i) * step;
+        out[k].e = runStart + (k - i + 1) * step;
+      }
+      i = j + 1;
+    } else i++;
+  }
+  for (let k = 0; k < out.length; k++) {
+    if (k > 0 && out[k].s < out[k - 1].e) out[k].s = Math.min(out[k - 1].e, out[k].orig + 0.4);
+    out[k].e = Math.max(out[k].e, out[k].s + 0.08);
+  }
+  return out;
+};

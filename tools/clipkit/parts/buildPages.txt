@@ -1,0 +1,22 @@
+const buildPages = (words) => {
+  const pages = [];
+  let current = [];
+  words.forEach((word, i) => {
+    const prev = words[i - 1];
+    const breakHere =
+      current.length > 0 &&
+      (current.length >= MAX_WORDS_PER_PAGE || prev.speaker !== word.speaker || word.start - prev.end > PAGE_GAP_BREAK || /[.?!]$/.test(prev.text) || (current.length >= 3 && /[,—]$/.test(prev.text)));
+    if (breakHere) {
+      pages.push(current);
+      current = [];
+    }
+    current.push(word);
+  });
+  if (current.length) pages.push(current);
+  return pages.map((ws, i) => {
+    const next = pages[i + 1];
+    const last = ws[ws.length - 1];
+    const holdEnd = next ? Math.min(next[0].start, last.end + 0.5) : last.end + 0.5;
+    return { words: ws, start: ws[0].start, end: holdEnd, speaker: ws[0].speaker };
+  });
+};

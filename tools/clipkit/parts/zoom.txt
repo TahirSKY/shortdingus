@@ -1,0 +1,25 @@
+const EASES = {
+  snap: Easing.out(Easing.back(2.2)),
+  smooth: Easing.inOut(Easing.cubic),
+  linear: Easing.inOut(Easing.sin),
+};
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+
+const zoomAt = (frame) => {
+  const t = frame / FPS;
+  if (t <= ZOOM_KEYS[0].t) return ZOOM_KEYS[0].z;
+  let startVal = ZOOM_KEYS[0].z;
+  for (let i = 0; i < ZOOM_KEYS.length; i++) {
+    const key = ZOOM_KEYS[i];
+    const next = ZOOM_KEYS[i + 1];
+    const valueAt = (tau) => {
+      const p = key.dur <= 0 ? 1 : clamp01((tau - key.t) / key.dur);
+      return lerp(startVal, key.z, EASES[key.ease](p));
+    };
+    if (!next || t < next.t) return valueAt(t);
+    startVal = valueAt(next.t);
+  }
+  return startVal;
+};

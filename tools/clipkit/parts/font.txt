@@ -1,0 +1,47 @@
+
+// ─────────────────────────────────────────────────────────────
+// 1. FONT — Montserrat, loaded through the FontFace API and gated with delayRender.
+//    A bare CSS @import can paint frames before the font arrives on Lambda and silently
+//    fall back to Impact, so the render waits for the real woff2 (6s safety net).
+// ─────────────────────────────────────────────────────────────
+
+const FONT_CSS_URL = "https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=block";
+const FONT_CSS = `@import url('${FONT_CSS_URL}');`;
+const FONT = "'Montserrat', Impact, sans-serif";
+const MONO_FONT = '"Courier New", Courier, monospace';
+
+const useMontserrat = () => {
+  const [handle] = useState(() => delayRender("Loading Montserrat"));
+  useEffect(() => {
+    let settled = false;
+    const done = () => {
+      if (!settled) {
+        settled = true;
+        continueRender(handle);
+      }
+    };
+    const safety = setTimeout(done, 6000);
+    (async () => {
+      const css = await fetch(FONT_CSS_URL).then((r) => r.text());
+      const jobs = [];
+      (css.match(/@font-face\s*{[^}]*}/g) || []).forEach((block) => {
+        if (/unicode-range/.test(block) && !/U\+0000-00FF/.test(block)) return; // latin subset only
+        const weight = /font-weight:\s*(\d+)/.exec(block);
+        const url = /url\((https:\/\/[^)]+\.woff2)\)/.exec(block);
+        if (!weight || !url) return;
+        const face = new FontFace("Montserrat", `url(${url[1]})`, {
+          weight: weight[1],
+          style: "normal",
+        });
+        document.fonts.add(face);
+        jobs.push(face.load());
+      });
+      await Promise.all(jobs);
+      done();
+    })().catch(done);
+    return () => {
+      clearTimeout(safety);
+      done();
+    };
+  }, [handle]);
+};

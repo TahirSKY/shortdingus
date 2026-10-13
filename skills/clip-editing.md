@@ -53,3 +53,21 @@ The found ranges are a first draft. You see the whole source through `search_sou
 - Propose: the hook, 3–6 concrete creative moments tied to exact lines ("at 'two million' → counter + cash SFX + punch-in"), the visual style, and any assets you'll need (stock, memes, images). Then build.
 - Use style references, `motion-craft`, the hub style guide and library sounds/assets the same way you would for any other video.
 - Before render: captions don't cover faces, text stays in the safe zone, cutaways don't hide the important reaction, audio is clean.
+
+## Standing defaults (decided once — do not re-ask per clip)
+- **Structure**: cold open on the punchline or the biggest claim (0–2.4s, full-bleed or wide with a headline that is already legible at frame 0), white flash + a "N SECONDS EARLIER" flag, then play the segment, then the payoff, then a freeze/verdict outro with the comment bait. Stitch the cold open out of a range the prepared cut already covers so no re-cut is needed.
+- **Profanity**: caption it as transcribed. Do not soften it, do not bleep it, unless the user says otherwise for that clip.
+- **Diarization**: fix obvious speaker mislabels and 0–20ms ASR word slots in the CAPTIONS only — never move audio. Spread a compressed run evenly to the next solid word, then clamp monotonically (min 0.08s per word, push capped at 0.4s). Drop words that start before their segment's in-point or get cut off by its out-point.
+- **Colour language**: green = money in / performance / technical, red = money out / danger / the roast, yellow = the active word and hook type. Keep the normalizer from stripping the "." inside numbers (`1.5k`, `30R`).
+- **Density**: a new beat every 1–3s, ~1 SFX cue per second, layered (2–3) only on the 2–3 hero beats. Card lane should end up 85–95% busy; a genuine silence in the source is itself a beat — hold it on screen instead of filling it.
+- **Emoji**: decorative only. Anything load-bearing (arrows, checks, buzzers, flames, clocks) is drawn as SVG/CSS so it cannot become a missing-glyph box on Lambda.
+- **Brand**: if the project has a brand stamp/logo image, it is on screen from frame 0 to the last frame, top-right, outside the shake wrapper so it stays steady like a broadcast bug, and never inside the bottom 340px or the right 160px UI zones.
+- **Framing**: use the tracked CAMERA keys as given, shifted by the cold-open offset. Only invent a rect when the tracker has none for that moment, and then prefer wide over guessing a face.
+
+## Verify before handing it over
+Run `node tools/clipcheck/check.mjs clips/<slug>.tsx` and `verify.mjs` (details and the
+`CLIP_AUDIT` contract in `tools/clipcheck/README.md`). Build the clip from `tools/clipkit` parts
+rather than retyping the machinery, and declare every beat window in `BLOCKS` so the lane audit
+can prove two cards never share pixels. Then hand over the file (it is too big to paste in chat —
+push it and give the raw URL), the frame numbers to scrub for QA, and the dials that are one-line
+changes.

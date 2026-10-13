@@ -1,0 +1,80 @@
+
+// ─────────────────────────────────────────────────────────────
+// 9. TERMINAL BACKGROUND — grid, scrolling candle silhouettes, vignette
+// ─────────────────────────────────────────────────────────────
+
+const seeded = (i) => {
+  const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+const CANDLE_COUNT = 40;
+const CANDLE_SPACING = 36;
+const CANDLE_STRIP_WIDTH = CANDLE_COUNT * CANDLE_SPACING;
+
+const CANDLES = (() => {
+  let mid = 0;
+  return Array.from({ length: CANDLE_COUNT }, (_, i) => {
+    const up = seeded(i * 3.1) > 0.45;
+    const body = 24 + seeded(i * 7.7) * 110;
+    const wick = body + 20 + seeded(i * 5.3) * 60;
+    mid += (up ? -1 : 1) * body * 0.35;
+    mid = Math.max(-70, Math.min(70, mid));
+    return { up, body, wick, mid };
+  });
+})();
+
+const CandleStrip = ({ y, speed, opacity, flip = false }) => {
+  const frame = useCurrentFrame();
+  const offset = -((frame * speed) % CANDLE_STRIP_WIDTH);
+  const renderStrip = (key, dx) => (
+    <div key={key} style={{ position: "absolute", left: dx, top: 0, width: CANDLE_STRIP_WIDTH, height: 300 }}>
+      {CANDLES.map((c, i) => {
+        const color = c.up ? COLORS.green : COLORS.red;
+        const cx = i * CANDLE_SPACING + CANDLE_SPACING / 2;
+        const cy = 150 + c.mid;
+        return (
+          <React.Fragment key={i}>
+            <div style={{ position: "absolute", left: cx - 1.5, top: cy - c.wick / 2, width: 3, height: c.wick, background: color }} />
+            <div style={{ position: "absolute", left: cx - 11, top: cy - c.body / 2, width: 22, height: c.body, background: color, borderRadius: 3 }} />
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+  return (
+    <div style={{ position: "absolute", left: 0, top: y, width: WIDTH, height: 300, overflow: "hidden", opacity, transform: flip ? "scaleY(-1)" : undefined }}>
+      {renderStrip("a", offset)}
+      {renderStrip("b", offset + CANDLE_STRIP_WIDTH)}
+    </div>
+  );
+};
+
+const TerminalBackground = () => {
+  const frame = useCurrentFrame();
+  const gridShift = (frame * 0.4) % 60;
+  return (
+    <AbsoluteFill style={{ background: COLORS.bg, overflow: "hidden" }}>
+      <AbsoluteFill
+        style={{
+          backgroundImage: `linear-gradient(${COLORS.gridLine} 2px, transparent 2px), linear-gradient(90deg, ${COLORS.gridLine} 2px, transparent 2px)`,
+          backgroundSize: "60px 60px",
+          backgroundPosition: `${-gridShift}px 0px`,
+        }}
+      />
+      <CandleStrip y={1560} speed={0.9} opacity={0.09} />
+      <CandleStrip y={-40} speed={0.6} opacity={0.05} flip />
+      <div
+        style={{
+          position: "absolute",
+          left: -100,
+          right: -100,
+          top: LAYOUT.videoTop - 120,
+          height: LAYOUT.videoHeight + 240,
+          background: "radial-gradient(ellipse at center, rgba(0,230,118,0.07) 0%, rgba(0,0,0,0) 65%)",
+        }}
+      />
+      <AbsoluteFill style={{ background: "radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.75) 100%)" }} />
+    </AbsoluteFill>
+  );
+};

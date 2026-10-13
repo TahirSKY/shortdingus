@@ -14,6 +14,7 @@ Render a few key frames with `render-still` (start, a few middle moments, the en
 - [ ] **Readability**: captions large and high contrast.
 - [ ] **Opening frame** isn't accidentally black or blank (unless intended).
 - [ ] **Audio**: music under the voice; no clipping; no unintended silent gaps.
-- [ ] **Assets**: every URL is a hub `asset-url` link (no Unsplash — blocked on the renderer).
+- [ ] **Assets**: the SOURCE is a hub `asset-url?id=` link (the cut/`meta.ranges`/`&part=audio` machinery keys off hub ids, and a `role=source` asset with no `meta.audio_path` is refused at render). B-roll/memes/SFX may be any public URL that serves range requests — nothing blocks it — but hub copies don't rot and are reusable, so save picks with `role=stock`/`role=meme` (never `role=source`).
+- [ ] **Gate**: `node tools/clipcheck/check.mjs <clip.tsx>` and `verify.mjs` both pass (see `tools/clipcheck/README.md`).
 
 Optionally save the result as `check.md` in the project (`role=plan`).

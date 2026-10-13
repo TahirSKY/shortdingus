@@ -739,34 +739,20 @@ const CrossGlyph = ({ size = 34, color = COLORS.red }) => (
 const lerpRect = (p, q, k) => p.map((v, i) => v + (q[i] - v) * k);
 const camAt = (keys, t) => {
   let i = 0;
-  for (let j = 0; j < keys.length; j++) {
-    if (keys[j].t <= t) i = j;
-    else break;
-  }
-  const k = keys[i],
-    prev = keys[i - 1];
-  if (!prev || k.cut || prev.m !== k.m || k.m === "w") return k;
-  const p = Math.min(1, (t - k.t) / 0.45),
-    e = 1 - Math.pow(1 - p, 3);
+  for (let j = 0; j < keys.length; j++) { if (keys[j].t <= t) i = j; else break; }
+  const k = keys[i], prev = keys[i - 1];
+  if (!prev || k.cut || prev.m !== k.m || k.m === 'w') return k;
+  const p = Math.min(1, (t - k.t) / 0.45), e = 1 - Math.pow(1 - p, 3);
   return { ...k, a: lerpRect(prev.a, k.a, e), b: k.b && prev.b ? lerpRect(prev.b, k.b, e) : k.b };
 };
 const CropView = ({ src, rect, startFrom, endAt, muted, style, zoom = 1 }) => {
   const [x, y, w, h] = rect;
-  const cx = x + w / 2,
-    cy = y + h / 2,
-    zw = w / zoom,
-    zh = h / zoom;
-  const zx = Math.max(0, Math.min(1 - zw, cx - zw / 2)),
-    zy = Math.max(0, Math.min(1 - zh, cy - zh / 2));
+  const cx = x + w / 2, cy = y + h / 2, zw = w / zoom, zh = h / zoom;
+  const zx = Math.max(0, Math.min(1 - zw, cx - zw / 2)), zy = Math.max(0, Math.min(1 - zh, cy - zh / 2));
   return (
-    <div style={{ position: "absolute", overflow: "hidden", ...style }}>
-      <Video
-        src={src}
-        startFrom={startFrom}
-        endAt={endAt}
-        muted
-        style={{ position: "absolute", width: 100 / zw + "%", height: 100 / zh + "%", left: (-zx / zw) * 100 + "%", top: (-zy / zh) * 100 + "%", objectFit: "fill", maxWidth: "none" }}
-      />
+    <div style={{ position: 'absolute', overflow: 'hidden', ...style }}>
+      <Video src={src} startFrom={startFrom} endAt={endAt} muted
+        style={{ position: 'absolute', width: (100 / zw) + '%', height: (100 / zh) + '%', left: (-zx / zw * 100) + '%', top: (-zy / zh * 100) + '%', objectFit: 'fill', maxWidth: 'none' }} />
     </div>
   );
 };
@@ -776,29 +762,24 @@ const ClipCamera = ({ src, segments, camera, srcAspect = 16 / 9, zoom = 1 }) => 
   const { fps, width, height } = useVideoConfig();
   let off = 0;
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0b0b0f" }}>
+    <AbsoluteFill style={{ backgroundColor: '#0b0b0f' }}>
       {segments.map((s, i) => {
-        const from = Math.round(off * fps),
-          len = Math.round((s.out - s.in) * fps);
+        const from = Math.round(off * fps), len = Math.round((s.out - s.in) * fps);
         off += s.out - s.in;
         if (frame < from || frame >= from + len) return null;
-        const t = frame / fps,
-          k = camAt(camera, t);
-        const sf = Math.round(s.in * fps),
-          ea = Math.round(s.out * fps);
+        const t = frame / fps, k = camAt(camera, t);
+        const sf = Math.round(s.in * fps), ea = Math.round(s.out * fps);
         const local = { startFrom: sf + (frame - from), endAt: ea };
         return (
           <Sequence key={i} from={from} durationInFrames={len}>
-            <Audio src={src + "&part=audio"} startFrom={sf} endAt={ea} />
-            {k.m === "s" && <CropView src={src} rect={k.a} startFrom={sf} endAt={ea} zoom={zoom} style={{ inset: 0 }} />}
-            {k.m === "p" && (
-              <>
-                <CropView src={src} rect={k.a} startFrom={sf} endAt={ea} zoom={zoom} style={{ left: 0, top: 0, width: "100%", height: "50%" }} />
-                <CropView src={src} rect={k.b} startFrom={sf} endAt={ea} zoom={zoom} style={{ left: 0, top: "50%", width: "100%", height: "50%" }} muted />
-                <div style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 6, marginTop: -3, background: "#0b0b0f" }} />
-              </>
-            )}
-            {k.m === "w" && <CropView src={src} rect={[0, 0, 1, 1]} startFrom={sf} endAt={ea} style={{ left: 0, width: "100%", top: (height - width / srcAspect) * 0.4, height: width / srcAspect }} />}
+            <Audio src={src + '&part=audio'} startFrom={sf} endAt={ea} />
+            {k.m === 's' && <CropView src={src} rect={k.a} startFrom={sf} endAt={ea} zoom={zoom} style={{ inset: 0 }} />}
+            {k.m === 'p' && <>
+              <CropView src={src} rect={k.a} startFrom={sf} endAt={ea} zoom={zoom} style={{ left: 0, top: 0, width: '100%', height: '50%' }} />
+              <CropView src={src} rect={k.b} startFrom={sf} endAt={ea} zoom={zoom} muted style={{ left: 0, top: '50%', width: '100%', height: '50%' }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 6, marginTop: -3, background: '#0b0b0f' }} />
+            </>}
+            {k.m === 'w' && <CropView src={src} rect={[0, 0, 1, 1]} startFrom={sf} endAt={ea} style={{ left: 0, width: '100%', top: (height - width / srcAspect) * 0.4, height: width / srcAspect }} />}
           </Sequence>
         );
       })}
@@ -2495,6 +2476,50 @@ const FirstPayoutWeekendClip = () => {
       <AudioLayer />
     </AbsoluteFill>
   );
+};
+
+// Self-audit contract for tools/clipcheck/verify.mjs. Declaring the beat windows is what lets the
+// checker PROVE two cards never occupy the same pixels, and that every beat lands on a real word.
+// lane = which vertical slot the beat owns, so deliberate stacks (a corner flag above a panel)
+// are not reported as collisions.
+const BLOCKS = [
+  ["hook headline", 0, COLD.cut, "card"],
+  ["50k flag", NUMBERS.account, NUMBERS.accountOut, "flag"],
+  ["payout gauge", NUMBERS.payoutIn, NUMBERS.out, "card"],
+  ["accounts", ACCOUNTS.in, ACCOUNTS.out, "card"],
+  ["question", SPEND.q, SPEND.out, "card"],
+  ["lit type", LIT.type, LIT.typeOut, "card"],
+  ["confession", VERDICT.confess, VERDICT.confessOut, "card"],
+  ["verdict", VERDICT.stamp, VERDICT.out, "card"],
+  ["compare lanes", COMPARE.in, COMPARE.out, "card"],
+  ["thesis", THESIS.start, THESIS.end, "card"],
+  ["explain", THESIS.demand, THESIS.demandOut, "card"],
+  ["weekend ledger", WEEKEND.in, WEEKEND.out, "card"],
+  ["receipt", RECEIPT.in, RECEIPT.out, "card"],
+  ["reinvest choice", CHOICE.in, CHOICE.out, "card"],
+  ["savings vault", ENDING.vault, ENDING.vaultOut, "card"],
+  ["hes fine", ENDING.fine, DURATION / FPS, "card"],
+];
+
+export const CLIP_AUDIT = {
+  fps: FPS,
+  duration: DURATION,
+  layout: LAYOUT,
+  srcAspect: SOURCE_ASPECT,
+  segments: SEGMENTS,
+  offsetFrames: SEGMENT_OFFSETS.map((t) => Math.round(t * FPS)),
+  camera: CAMERA,
+  words: WORDS,
+  pages: CAPTION_PAGES,
+  zoomAt,
+  musicVolumeAt,
+  sfx: SFX,
+  blocks: BLOCKS,
+  hide: CAPTION_HIDE_RANGES,
+  silences: [
+    [2.0, 2.22],
+    [32.69, 34.71],
+  ],
 };
 
 export default FirstPayoutWeekendClip;
