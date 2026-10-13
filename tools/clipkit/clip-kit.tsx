@@ -2,10 +2,11 @@
  * CLIP KIT — the reusable half of a house-style clipping composition.
  *
  * Every block here is byte-identical to code that has already rendered on Lambda
- * (extracted from clips/first-payout-spent-it-in-a-weekend.tsx). Copy the blocks you need
- * VERBATIM into a new single-file composition; only the DATA and the creative sections change.
- * That is what keeps clips consistent AND fast: ~30 KB of this machinery is identical every time,
- * so a new clip is ~30 KB of real decisions instead of ~100 KB of retyping.
+ * (extracted from clips/first-payout-spent-it-in-a-weekend.tsx and
+ * clips/high-schooler-claims-150r-trades.tsx). Copy the blocks you need VERBATIM into a new
+ * single-file composition; only the DATA and the creative sections change. That is what keeps
+ * clips consistent AND fast: ~33 KB of this machinery is identical every time, so a new clip is
+ * ~40 KB of real decisions instead of ~100 KB of retyping.
  *
  * Order in the assembled file (the kit depends on this):
  *   1 font gate        — Montserrat via FontFace + delayRender (no @remotion/google-fonts in package.json)
@@ -17,16 +18,25 @@
  *   7 helpers          — springs, springAt, exitAt, isBetween, shakeAt, panelStyle, strokeText, SVG glyphs
  *   8 camera           — ClipCamera, MUST stay between its markers: render-video replaces that block
  *   9 background       — terminal grid + scrolling candle silhouettes + vignette
- *  10 captions         — SpeakerChip, CaptionWord, CaptionsLayer
- *  11 creative sections (per clip) — build these on small primitives: Panel / Stamp / Tag / Lane / Counter
- *  12 audio            — AudioLayer
- *  13 main + CLIP_AUDIT export (tools/clipcheck/verify.mjs reads it)
+ *  10 primitives       — Kicker / Big / Panel / Flag / Lane / WhiteFlash: every beat is one of these
+ *  11 captions         — SpeakerChip, CaptionWord, CaptionsLayer (incl. the strike-through)
+ *  12 audio            — AudioLayer (each SFX cue is capped at 3s)
+ *  13 creative sections (per clip)
+ *  14 main + CLIP_AUDIT export (tools/clipcheck/verify.mjs reads it)
  *
  * LAYOUT is a contract, not a suggestion — the zones must not overlap:
- *   chipTop..+92  a single persistent object (the clip's protagonist: a balance, a counter)
- *   cardTop..cardBottom  one beat card at a time; declare every window in CLIP_AUDIT.blocks
+ *   chipTop..+chipHeight  a single persistent object (the clip's protagonist: a balance, a counter,
+ *                         a status readout). Keep it LEFT if a brand bug owns the top-right.
+ *   cardTop..cardBottom   one beat card at a time; declare every window in CLIP_AUDIT.blocks
  *   videoTop..+videoHeight  ClipCamera's wide box exactly: (1920 - 1080/srcAspect) * 0.4 = 525
  *   captionTop..captionBottom  captions; captionBottom <= 1580 (phone UI)
+ *
+ * Two traps this kit cannot save you from:
+ *   · ClipCamera paints its own OPAQUE background, so anything drawn BEFORE it (the terminal
+ *     background, say) never shows. Draw ambience after it, clipped to the zones the letterboxed
+ *     band does not occupy, and hide it in "s"/"p" modes where the picture is full-bleed.
+ *   · ClipCamera's zoom prop is ignored in "w" mode. A clip that is mostly wide needs its own push
+ *     on a wrapper OUTSIDE the marker block (see clips/judge-reads-body-language… pushAt).
  */
 
 // ==== KIT: font (verbatim) ====
@@ -76,6 +86,91 @@ const useMontserrat = () => {
       done();
     };
   }, [handle]);
+};
+
+// ==== KIT: repairWords (verbatim) ====
+const repairWords = (list) => {
+  const out = list.map(([text, s, e, speaker]) => ({ text, s, e, orig: s, speaker }));
+  const solid = (w) => w.e - w.s >= 0.05;
+  let i = 0;
+  while (i < out.length) {
+    if (!solid(out[i])) {
+      let j = i;
+      while (j + 1 < out.length && !solid(out[j + 1])) j++;
+      const runStart = out[i].s;
+      const next = out[j + 1];
+      const runEnd = Math.max(out[j].e + 0.06, next ? next.s : out[j].e + 0.24);
+      const step = (runEnd - runStart) / (j - i + 1);
+      for (let k = i; k <= j; k++) {
+        out[k].s = runStart + (k - i) * step;
+        out[k].e = runStart + (k - i + 1) * step;
+      }
+      i = j + 1;
+    } else i++;
+  }
+  for (let k = 0; k < out.length; k++) {
+    if (k > 0 && out[k].s < out[k - 1].e) out[k].s = Math.min(out[k - 1].e, out[k].orig + 0.4);
+    out[k].e = Math.max(out[k].e, out[k].s + 0.08);
+  }
+  return out;
+};
+
+// ==== KIT: normalizeWord (verbatim) ====
+const normalizeWord = (w) =>
+  w
+    .toLowerCase()
+    .replace(/[^a-z0-9$%.]/g, "")
+    .replace(/^\.+|\.+$/g, "");
+
+// ==== KIT: buildPages (verbatim) ====
+const buildPages = (words) => {
+  const pages = [];
+  let current = [];
+  words.forEach((word, i) => {
+    const prev = words[i - 1];
+    const breakHere =
+      current.length > 0 &&
+      (current.length >= MAX_WORDS_PER_PAGE || prev.speaker !== word.speaker || word.start - prev.end > PAGE_GAP_BREAK || /[.?!]$/.test(prev.text) || (current.length >= 3 && /[,—]$/.test(prev.text)));
+    if (breakHere) {
+      pages.push(current);
+      current = [];
+    }
+    current.push(word);
+  });
+  if (current.length) pages.push(current);
+  return pages.map((ws, i) => {
+    const next = pages[i + 1];
+    const last = ws[ws.length - 1];
+    const holdEnd = next ? Math.min(next[0].start, last.end + 0.5) : last.end + 0.5;
+    return { words: ws, start: ws[0].start, end: holdEnd, speaker: ws[0].speaker };
+  });
+};
+
+// ==== KIT: zoom (verbatim) ====
+const EASES = {
+  snap: Easing.out(Easing.back(2.2)),
+  smooth: Easing.inOut(Easing.cubic),
+  linear: Easing.inOut(Easing.sin),
+};
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+
+const zoomAt = (frame) => {
+  const t = frame / FPS;
+  if (t <= ZOOM_KEYS[0].t) return ZOOM_KEYS[0].z;
+  let startVal = ZOOM_KEYS[0].z;
+  for (let i = 0; i < ZOOM_KEYS.length; i++) {
+    const key = ZOOM_KEYS[i];
+    const next = ZOOM_KEYS[i + 1];
+    const valueAt = (tau) => {
+      const p = key.dur <= 0 ? 1 : clamp01((tau - key.t) / key.dur);
+      return lerp(startVal, key.z, EASES[key.ease](p));
+    };
+    if (!next || t < next.t) return valueAt(t);
+    startVal = valueAt(next.t);
+  }
+  return startVal;
 };
 
 // ==== KIT: helpers (verbatim) ====
@@ -290,6 +385,57 @@ const TerminalBackground = () => {
   );
 };
 
+// ==== KIT: primitives (verbatim) ====
+
+// ── PRIMITIVES ────────────────────────────────────────────────
+// Every beat in a clip is one of these six. That is what keeps the file small and the spacing
+// consistent: a Panel always owns the card lane, a Flag always owns a corner of the picture.
+const Kicker = ({ children, color = "rgba(255,255,255,0.6)", size = 28, align = "left" }) => (
+  <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: size, letterSpacing: 5, color, textAlign: align }}>{children}</div>
+);
+
+const Big = ({ children, color = COLORS.white, size = 82, stroke = 9, align = "left" }) => (
+  <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: size, lineHeight: 1.03, color, textAlign: align, ...strokeText(stroke) }}>{children}</div>
+);
+
+const Panel = ({ at, out, top = LAYOUT.cardTop, left = 50, right = 50, border = COLORS.panelBorder, rotate = 0, cfg = SPRING_IN, from = 1.4, amp = 0, children }) => {
+  const frame = useCurrentFrame();
+  if (!isBetween(frame, at, out)) return null;
+  const enter = springAt(frame, at, cfg);
+  const shake = amp ? shakeAt(frame, at, 5, amp) : { x: 0, y: 0 };
+  return (
+    <div style={{ position: "absolute", left, right, top, opacity: exitAt(frame, out, 6) * clamp01(enter * 3), transform: `translate(${shake.x}px, ${shake.y}px) scale(${interpolate(enter, [0, 1], [from, 1])}) rotate(${rotate}deg)`, ...panelStyle, border: `3px solid ${border}`, padding: "20px 28px 24px" }}>
+      {children}
+    </div>
+  );
+};
+
+const Flag = ({ at, out, top, left, right, color = COLORS.white, size = 30, from = -70, bg = "rgba(0,0,0,0.8)", children }) => {
+  const frame = useCurrentFrame();
+  if (!isBetween(frame, at, out)) return null;
+  const enter = springAt(frame, at, SPRING_SNAP);
+  return (
+    <div style={{ position: "absolute", top, left, right, display: "flex", alignItems: "center", gap: 14, padding: "10px 22px", background: bg, borderRadius: 12, border: `2px solid ${color}`, fontFamily: MONO_FONT, fontWeight: 700, fontSize: size, letterSpacing: 2, color, opacity: exitAt(frame, out, 6) * clamp01(enter * 2), transform: `translateX(${interpolate(enter, [0, 1], [from, 0])}px)`, whiteSpace: "nowrap" }}>
+      {children}
+    </div>
+  );
+};
+
+const Lane = ({ label, value, mark, color = COLORS.white, p, active = true }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 22px", borderRadius: 18, background: active ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)", border: `3px solid ${active ? color : "rgba(255,255,255,0.12)"}`, opacity: clamp01(p * 2), transform: `translateX(${interpolate(p, [0, 1], [active ? 240 : -240, 0])}px)` }}>
+    <Kicker size={24} color="rgba(255,255,255,0.55)">{label}</Kicker>
+    <div style={{ flex: 1, fontFamily: FONT, fontWeight: 900, fontSize: 42, color: active ? color : "rgba(255,255,255,0.7)" }}>{value}</div>
+    {mark ? <div style={{ transform: `scale(${interpolate(p, [0, 1], [2, 1])})` }}>{mark}</div> : null}
+  </div>
+);
+
+const WhiteFlash = ({ at, frames = 4, peak = 0.95, color = COLORS.white }) => {
+  const frame = useCurrentFrame();
+  const local = frame - sec(at);
+  if (local < 0 || local >= frames) return null;
+  return <AbsoluteFill style={{ background: color, opacity: peak * (1 - local / frames), pointerEvents: "none" }} />;
+};
+
 // ==== KIT: captions (verbatim) ====
 
 // ─────────────────────────────────────────────────────────────
@@ -409,88 +555,3 @@ const AudioLayer = () => (
     ))}
   </>
 );
-
-// ==== KIT: repairWords (verbatim) ====
-const repairWords = (list) => {
-  const out = list.map(([text, s, e, speaker]) => ({ text, s, e, orig: s, speaker }));
-  const solid = (w) => w.e - w.s >= 0.05;
-  let i = 0;
-  while (i < out.length) {
-    if (!solid(out[i])) {
-      let j = i;
-      while (j + 1 < out.length && !solid(out[j + 1])) j++;
-      const runStart = out[i].s;
-      const next = out[j + 1];
-      const runEnd = Math.max(out[j].e + 0.06, next ? next.s : out[j].e + 0.24);
-      const step = (runEnd - runStart) / (j - i + 1);
-      for (let k = i; k <= j; k++) {
-        out[k].s = runStart + (k - i) * step;
-        out[k].e = runStart + (k - i + 1) * step;
-      }
-      i = j + 1;
-    } else i++;
-  }
-  for (let k = 0; k < out.length; k++) {
-    if (k > 0 && out[k].s < out[k - 1].e) out[k].s = Math.min(out[k - 1].e, out[k].orig + 0.4);
-    out[k].e = Math.max(out[k].e, out[k].s + 0.08);
-  }
-  return out;
-};
-
-// ==== KIT: buildPages (verbatim) ====
-const buildPages = (words) => {
-  const pages = [];
-  let current = [];
-  words.forEach((word, i) => {
-    const prev = words[i - 1];
-    const breakHere =
-      current.length > 0 &&
-      (current.length >= MAX_WORDS_PER_PAGE || prev.speaker !== word.speaker || word.start - prev.end > PAGE_GAP_BREAK || /[.?!]$/.test(prev.text) || (current.length >= 3 && /[,—]$/.test(prev.text)));
-    if (breakHere) {
-      pages.push(current);
-      current = [];
-    }
-    current.push(word);
-  });
-  if (current.length) pages.push(current);
-  return pages.map((ws, i) => {
-    const next = pages[i + 1];
-    const last = ws[ws.length - 1];
-    const holdEnd = next ? Math.min(next[0].start, last.end + 0.5) : last.end + 0.5;
-    return { words: ws, start: ws[0].start, end: holdEnd, speaker: ws[0].speaker };
-  });
-};
-
-// ==== KIT: normalizeWord (verbatim) ====
-const normalizeWord = (w) =>
-  w
-    .toLowerCase()
-    .replace(/[^a-z0-9$%.]/g, "")
-    .replace(/^\.+|\.+$/g, "");
-
-// ==== KIT: zoom (verbatim) ====
-const EASES = {
-  snap: Easing.out(Easing.back(2.2)),
-  smooth: Easing.inOut(Easing.cubic),
-  linear: Easing.inOut(Easing.sin),
-};
-
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const lerp = (a, b, p) => a + (b - a) * p;
-
-const zoomAt = (frame) => {
-  const t = frame / FPS;
-  if (t <= ZOOM_KEYS[0].t) return ZOOM_KEYS[0].z;
-  let startVal = ZOOM_KEYS[0].z;
-  for (let i = 0; i < ZOOM_KEYS.length; i++) {
-    const key = ZOOM_KEYS[i];
-    const next = ZOOM_KEYS[i + 1];
-    const valueAt = (tau) => {
-      const p = key.dur <= 0 ? 1 : clamp01((tau - key.t) / key.dur);
-      return lerp(startVal, key.z, EASES[key.ease](p));
-    };
-    if (!next || t < next.t) return valueAt(t);
-    startVal = valueAt(next.t);
-  }
-  return startVal;
-};

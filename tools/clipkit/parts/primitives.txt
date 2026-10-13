@@ -1,0 +1,49 @@
+
+// ── PRIMITIVES ────────────────────────────────────────────────
+// Every beat in a clip is one of these six. That is what keeps the file small and the spacing
+// consistent: a Panel always owns the card lane, a Flag always owns a corner of the picture.
+const Kicker = ({ children, color = "rgba(255,255,255,0.6)", size = 28, align = "left" }) => (
+  <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: size, letterSpacing: 5, color, textAlign: align }}>{children}</div>
+);
+
+const Big = ({ children, color = COLORS.white, size = 82, stroke = 9, align = "left" }) => (
+  <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: size, lineHeight: 1.03, color, textAlign: align, ...strokeText(stroke) }}>{children}</div>
+);
+
+const Panel = ({ at, out, top = LAYOUT.cardTop, left = 50, right = 50, border = COLORS.panelBorder, rotate = 0, cfg = SPRING_IN, from = 1.4, amp = 0, children }) => {
+  const frame = useCurrentFrame();
+  if (!isBetween(frame, at, out)) return null;
+  const enter = springAt(frame, at, cfg);
+  const shake = amp ? shakeAt(frame, at, 5, amp) : { x: 0, y: 0 };
+  return (
+    <div style={{ position: "absolute", left, right, top, opacity: exitAt(frame, out, 6) * clamp01(enter * 3), transform: `translate(${shake.x}px, ${shake.y}px) scale(${interpolate(enter, [0, 1], [from, 1])}) rotate(${rotate}deg)`, ...panelStyle, border: `3px solid ${border}`, padding: "20px 28px 24px" }}>
+      {children}
+    </div>
+  );
+};
+
+const Flag = ({ at, out, top, left, right, color = COLORS.white, size = 30, from = -70, bg = "rgba(0,0,0,0.8)", children }) => {
+  const frame = useCurrentFrame();
+  if (!isBetween(frame, at, out)) return null;
+  const enter = springAt(frame, at, SPRING_SNAP);
+  return (
+    <div style={{ position: "absolute", top, left, right, display: "flex", alignItems: "center", gap: 14, padding: "10px 22px", background: bg, borderRadius: 12, border: `2px solid ${color}`, fontFamily: MONO_FONT, fontWeight: 700, fontSize: size, letterSpacing: 2, color, opacity: exitAt(frame, out, 6) * clamp01(enter * 2), transform: `translateX(${interpolate(enter, [0, 1], [from, 0])}px)`, whiteSpace: "nowrap" }}>
+      {children}
+    </div>
+  );
+};
+
+const Lane = ({ label, value, mark, color = COLORS.white, p, active = true }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 22px", borderRadius: 18, background: active ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)", border: `3px solid ${active ? color : "rgba(255,255,255,0.12)"}`, opacity: clamp01(p * 2), transform: `translateX(${interpolate(p, [0, 1], [active ? 240 : -240, 0])}px)` }}>
+    <Kicker size={24} color="rgba(255,255,255,0.55)">{label}</Kicker>
+    <div style={{ flex: 1, fontFamily: FONT, fontWeight: 900, fontSize: 42, color: active ? color : "rgba(255,255,255,0.7)" }}>{value}</div>
+    {mark ? <div style={{ transform: `scale(${interpolate(p, [0, 1], [2, 1])})` }}>{mark}</div> : null}
+  </div>
+);
+
+const WhiteFlash = ({ at, frames = 4, peak = 0.95, color = COLORS.white }) => {
+  const frame = useCurrentFrame();
+  const local = frame - sec(at);
+  if (local < 0 || local >= frames) return null;
+  return <AbsoluteFill style={{ background: color, opacity: peak * (1 - local / frames), pointerEvents: "none" }} />;
+};

@@ -40,11 +40,13 @@ pure logic through the composition's own `CLIP_AUDIT` export:
 | audit | what it has caught |
 |---|---|
 | segment tiling vs `durationInFrames` | a 1-frame black tail (1377 vs 1376) |
+| segment picture frames vs sound frames | an out-point where `round(out*fps)-round(in*fps)` differs from `round((out-in)*fps)` — the segment's audio copy then stops a frame before the picture |
 | `offsetFrames` vs the caption clock | captions drifting from audio across a stitched hook |
 | word monotonicity / duration / bounds | ASR words with 0–20 ms slots, words outside the timeline |
 | caption pages | >4 words, overlaps, mixed speakers on one page, a page starting under a blackout |
 | camera rects | a placeholder rect, a rect escaping the frame, split mode missing its second face |
 | zoom curve | peaks past the 1.25 clamp, dips under 1.0 (crop widening outside the tracked face box) |
+| `pushAt` — the slow push-in | drift >1.05, and (with `shakePad`) the composed band top/bottom escaping the card and caption zones. Needed because the push and the shake wrapper scale about **different origins**, so the band moves more than either transform alone |
 | music silences | a "record stop" that was not actually silent on the frame it claimed |
 | layout zones | chip / card / band / caption zones intersecting; captions inside the bottom 340 px |
 | beat lanes | two cards double-booked on the same pixels (caught 4 in the first build) |

@@ -82,6 +82,11 @@ A.segments.forEach((s, i) => {
   const from = Math.round(off * A.fps), len = Math.round((s.out - s.in) * A.fps);
   chk(from === prevEnd, `segment ${i} starts at frame ${from} but the previous ended at ${prevEnd} (a gap = black frames)`);
   chk(len > 0, `segment ${i} has no frames`);
+  // ClipCamera plays the picture from round(s.in*fps) to round(s.out*fps) of the source and the
+  // sound from the same two marks. Those two ways of counting must agree, or the audio copy of a
+  // segment stops early / overruns the cut by a frame.
+  const audioLen = Math.round(s.out * A.fps) - Math.round(s.in * A.fps);
+  chk(audioLen === len, `segment ${i} (${s.in}–${s.out}) tiles ${len} video frames but its sound runs ${audioLen} — ${audioLen < len ? `the audio stops ${len - audioLen} frame(s) before the picture` : "the audio overruns the cut"}; nudge the out-point until round(out*fps)-round(in*fps) === round((out-in)*fps)`);
   prevEnd = from + len; covered += len; off += s.out - s.in;
 });
 chk(A.duration >= covered, `durationInFrames ${A.duration} < the ${covered} frames the segments tile`);
@@ -141,6 +146,27 @@ chk(zmax <= 1.26, `zoom peaks at ${f(zmax)} — past the 1.25 clamp the tracked 
 chk(zmin >= 0.94, `zoom dips to ${f(zmin)} — below 1.0 the crop widens past the tracked face box`);
 if (jump > 0.22) warns.push(`zoom jumps ${f(jump)} in one frame at frame ${jumpAt} (${f(jumpAt / A.fps)}s) — only acceptable on a hard beat`);
 console.log(`zoom             OK  ${f(zmin)}–${f(zmax)}, biggest 1-frame jump ${f(jump)} @${f(jumpAt / A.fps)}s`);
+
+// ---- 5b. the wide push (optional) ----
+// ClipCamera ignores its zoom prop in "w" mode, so a clip that is mostly wide moves the picture
+// with its own wrapper scale (pushAt). That scale is applied about the centre of the letterboxed
+// band and then again by the shake wrapper about the centre of the canvas, so prove the composed
+// transform cannot push the picture into the card lane or the captions.
+if (A.pushAt) {
+  const L0 = A.layout;
+  const ps = Array.from({ length: A.duration }, (_, i) => A.pushAt(i));
+  const pmin = Math.min(...ps), pmax = Math.max(...ps);
+  chk(pmin >= 0.999, `pushAt dips to ${f(pmin)} — under 1 the wide picture shrinks and shows the backdrop at its edges`);
+  chk(pmax <= 1.08, `pushAt peaks at ${f(pmax)} — past 1.08 the letterboxed picture invades the graphics zones`);
+  const pad = A.shakePad || 1;
+  const canvasMid = 1920 / 2, origin = L0.videoTop + L0.videoHeight / 2;
+  const mapY = (y) => canvasMid + (origin + (y - origin) * pmax - canvasMid) * pad;
+  const top = mapY(L0.videoTop), bottom = mapY(L0.videoTop + L0.videoHeight);
+  chk(top >= L0.cardBottom, `at max push the picture's top edge climbs to y${f(top)} — inside the card lane (cards end at y${L0.cardBottom})`);
+  chk(bottom <= L0.captionTop, `at max push the picture's bottom edge reaches y${f(bottom)} — inside the captions (y${L0.captionTop})`);
+  const still = ps.filter((p) => p === 1).length;
+  console.log(`push             OK  ${f(pmin)}–${f(pmax)}, picture spans y${f(top)}–y${f(bottom)} at max push (cards end y${L0.cardBottom}, captions start y${L0.captionTop}), 1.0 on ${still}/${A.duration} frames`);
+}
 
 // ---- 6. music ----
 (A.silences || []).forEach(([a, b], i) => {
