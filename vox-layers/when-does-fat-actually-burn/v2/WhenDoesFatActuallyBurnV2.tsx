@@ -10,9 +10,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
-import { evolvePath, getLength, getPointAtLength } from '@remotion/paths';
-import { loadFont as loadSerif } from '@remotion/google-fonts/SourceSerif4';
-import { loadFont as loadSans } from '@remotion/google-fonts/Inter';
+// NOTE: the hub preview only bundles react, remotion and @remotion/lottie.
+// @remotion/paths and @remotion/google-fonts are NOT available there, so the
+// path math is hand-rolled below and fonts use system stacks.
 
 // =============================================================================
 // WhenDoesFatActuallyBurnV2 — VOX collage rebuild on Hasan Aboul Hasan's collage kit
@@ -22,8 +22,8 @@ import { loadFont as loadSans } from '@remotion/google-fonts/Inter';
 // as Sequences inside the board. Voice untouched, no captions, loop ending.
 // =============================================================================
 
-const FONT_EDITORIAL = loadSerif('normal', { weights: ['700', '900'], subsets: ['latin'] }).fontFamily;
-const FONT_BODY = loadSans('normal', { weights: ['400', '600', '800'], subsets: ['latin'] }).fontFamily;
+const FONT_EDITORIAL = 'Georgia, "Times New Roman", Times, serif';
+const FONT_BODY = '"Helvetica Neue", Arial, "Segoe UI", Helvetica, sans-serif';
 
 // =============================================================================
 // ASSETS
@@ -264,28 +264,81 @@ const RubberStamp: React.FC<{
   );
 };
 
+// --- Path math (stand-in for @remotion/paths): samples M/C/L paths into a
+// polyline once, then answers length / point-at-length from the samples. ---
+type Pt = { x: number; y: number };
+const cubicAt = (p0: Pt, p1: Pt, p2: Pt, p3: Pt, t: number): Pt => {
+  const u = 1 - t;
+  const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, e = t * t * t;
+  return { x: a * p0.x + b * p1.x + c * p2.x + e * p3.x, y: a * p0.y + b * p1.y + c * p2.y + e * p3.y };
+};
+const pathCache = new Map<string, { pts: Pt[]; cum: number[]; len: number }>();
+const samplePath = (d: string) => {
+  const hit = pathCache.get(d);
+  if (hit) return hit;
+  const raw = (d.match(/[MLC]|-?\d*\.?\d+/gi) ?? []) as string[];
+  const pts: Pt[] = [];
+  let cur: Pt = { x: 0, y: 0 };
+  let cmd = '';
+  let i = 0;
+  const num = () => parseFloat(raw[i++]);
+  while (i < raw.length) {
+    if (/^[MLC]$/i.test(raw[i])) { cmd = raw[i].toUpperCase(); i++; continue; }
+    if (cmd === 'M') {
+      cur = { x: num(), y: num() };
+      pts.push({ ...cur });
+      cmd = 'L';
+    } else if (cmd === 'L') {
+      const to = { x: num(), y: num() };
+      for (let s = 1; s <= 16; s++) pts.push({ x: cur.x + ((to.x - cur.x) * s) / 16, y: cur.y + ((to.y - cur.y) * s) / 16 });
+      cur = to;
+    } else if (cmd === 'C') {
+      const p1 = { x: num(), y: num() }, p2 = { x: num(), y: num() }, p3 = { x: num(), y: num() };
+      for (let s = 1; s <= 60; s++) pts.push(cubicAt(cur, p1, p2, p3, s / 60));
+      cur = p3;
+    } else break;
+  }
+  const cum = [0];
+  for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y));
+  const out = { pts, cum, len: cum[cum.length - 1] ?? 0 };
+  pathCache.set(d, out);
+  return out;
+};
+const pathLength = (d: string) => samplePath(d).len;
+const pointAtLength = (d: string, s: number): Pt => {
+  const { pts, cum, len } = samplePath(d);
+  if (pts.length === 0) return { x: 0, y: 0 };
+  const target = Math.min(Math.max(s, 0), len);
+  let lo = 0, hi = cum.length - 1;
+  while (lo < hi) { const mid = Math.floor((lo + hi) / 2); if (cum[mid] < target) lo = mid + 1; else hi = mid; }
+  const k = Math.max(1, lo);
+  const span = cum[k] - cum[k - 1] || 1;
+  const t = (target - cum[k - 1]) / span;
+  return { x: pts[k - 1].x + (pts[k].x - pts[k - 1].x) * t, y: pts[k - 1].y + (pts[k].y - pts[k - 1].y) * t };
+};
+
 const SketchArrow: React.FC<{
   d: string; vb: { w: number; h: number }; at?: number; dur?: number; color?: string; width?: number; dashed?: boolean; head?: boolean; id: string; z?: number;
 }> = ({ d, vb, at = 0, dur = 20, color = VOX.red, width = 7, dashed = false, head = true, id, z }) => {
   const frame = useCurrentFrame();
   const prog = interpolate(frame, [at, at + dur], [0, 1], { easing: EASE_INOUT, ...clamp });
   if (frame < at || prog <= 0.001) return null;
-  const evolved = evolvePath(prog, d);
-  const len = getLength(d);
-  const tip = getPointAtLength(d, len * prog);
-  const back = getPointAtLength(d, Math.max(0, len * prog - 26));
+  const len = pathLength(d);
+  const dash = `${len * prog} ${len}`;
+  const tip = pointAtLength(d, len * prog);
+  const back = pointAtLength(d, Math.max(0, len * prog - 26));
   const ang = (Math.atan2(tip.y - back.y, tip.x - back.x) * 180) / Math.PI;
   return (
     <svg viewBox={`0 0 ${vb.w} ${vb.h}`} style={{ position: 'absolute', left: 0, top: 0, width: vb.w, height: vb.h, overflow: 'visible', zIndex: z }}>
       {dashed ? (
         <>
           <mask id={id}>
-            <path d={d} fill="none" stroke="#fff" strokeWidth={width * 3} strokeDasharray={evolved.strokeDasharray} strokeDashoffset={evolved.strokeDashoffset} />
+            <path d={d} fill="none" stroke="#fff" strokeWidth={width * 3} strokeDasharray={dash} strokeDashoffset={0} />
           </mask>
           <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeDasharray={`${width * 2.6} ${width * 2.2}`} mask={`url(#${id})`} />
         </>
       ) : (
-        <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeDasharray={evolved.strokeDasharray} strokeDashoffset={evolved.strokeDashoffset} />
+        <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeDasharray={dash} strokeDashoffset={0} />
       )}
       {head && prog > 0.06 ? (
         <g transform={`translate(${tip.x}, ${tip.y}) rotate(${ang})`}>
