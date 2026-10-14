@@ -41,21 +41,18 @@ const SFX = {
   impact: U('599a8103-6cc7-4b36-8b2c-159af900165a'),
   riser: U('377b15fe-2f65-42df-9c9a-0830ea894bf9'),
 };
-// v2 photographic / engraving layers. NOTE: hub ingest was unreachable, so the
-// images are GitHub-hosted local cutouts (same white-flood method the hub uses);
-// swap these for hub cutout asset-urls once the hub is back.
-const GH = (f: string) =>
-  `https://github.com/TahirSKY/shortdingus/raw/refs/heads/arena/e04fa780-shortdingus/vox-layers/when-does-fat-actually-burn/v2/${f}`;
+// v2 photographic / engraving layers (hub cutouts; sugar is the original,
+// used as a bordered photo print)
 const A = {
-  runner: GH('cutouts/runner-sprint-photo-cutout.png'),
-  endurance: GH('cutouts/runner-endurance-photo-cutout.png'),
-  stopwatch: GH('cutouts/stopwatch-photo-cutout.png'),
-  sugarPrint: GH('sugar-cubes-photo.png'), // original, used as a bordered photo print
-  blood: GH('cutouts/blood-cells-cutout.png'),
-  muscle: GH('cutouts/muscle-leg-engraving-cutout.png'),
-  torso: GH('cutouts/torso-fat-engraving-cutout.png'),
-  droplets: GH('cutouts/fat-droplets-photo-cutout.png'),
-  flame: GH('cutouts/flame-photo-cutout.png'),
+  runner: U('53b4c498-b50a-45d0-921c-cc8679642de3'),
+  endurance: U('9c8dad7d-2490-4208-848b-0c3d5a372a73'),
+  stopwatch: U('073f6af6-8fc8-4c57-bfa6-7a628b05faa9'),
+  sugarPrint: U('b5cd68da-32af-4de5-b309-063ce09dc193'),
+  blood: U('bbabe1b1-88c2-4885-b676-a2202e045f50'),
+  muscle: U('3b59b403-e46c-4e65-96f5-d45728459554'),
+  torso: U('b999a516-1be8-4498-b1cd-33d9e3d26c8f'),
+  droplets: U('08010474-99e0-4511-8b0f-4308f5b2f5ed'),
+  flame: U('2b2fdf85-f0dc-447a-904c-29dff09e8acc'),
   lever: U('4844dc3e-d31b-4a4c-9f57-26cf7ce4eb58'), // v1 lever cutout (hub), reused
 };
 
