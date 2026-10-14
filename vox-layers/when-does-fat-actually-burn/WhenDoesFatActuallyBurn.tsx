@@ -349,7 +349,7 @@ const WhenDoesFatActuallyBurn: React.FC = () => {
           <Layer src={IMG.torso} x={50} y={1220} w={400} at={596} rot={-1.5} />
           <Layer src={IMG.fat} x={600} y={1240} w={360} at={603} extraScale={fatShrink} />
           <Layer src={IMG.flame} x={680} y={1180} w={200} at={610} extraScale={flamePop} />
-          <Chip text="NOW BURNING FAT" x={270} y={1560} bg={C.yellow} color={C.ink} size={36} at={619} />
+          <Chip text="NOW BURNING FAT" x={270} y={1500} bg={C.yellow} color={C.ink} size={36} at={619} />
         </Scene>
 
         {/* ================= SCENE 5 · PAYOFF + LOOP 22.4–28.72s ================= */}
