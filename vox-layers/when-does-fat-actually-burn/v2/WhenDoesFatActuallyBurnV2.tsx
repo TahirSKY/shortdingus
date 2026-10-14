@@ -41,18 +41,22 @@ const SFX = {
   impact: U('599a8103-6cc7-4b36-8b2c-159af900165a'),
   riser: U('377b15fe-2f65-42df-9c9a-0830ea894bf9'),
 };
-// v2 photographic / engraving layers (cutouts unless noted)
+// v2 photographic / engraving layers. NOTE: hub ingest was unreachable, so the
+// images are GitHub-hosted local cutouts (same white-flood method the hub uses);
+// swap these for hub cutout asset-urls once the hub is back.
+const GH = (f: string) =>
+  `https://github.com/TahirSKY/shortdingus/raw/refs/heads/arena/e04fa780-shortdingus/vox-layers/when-does-fat-actually-burn/v2/${f}`;
 const A = {
-  runner: U('__RUNNER__'),
-  endurance: U('__ENDURANCE__'),
-  stopwatch: U('__STOPWATCH__'),
-  sugarPrint: U('__SUGAR_ORIG__'), // original, used as a bordered photo print
-  blood: U('__BLOOD__'),
-  muscle: U('__MUSCLE__'),
-  torso: U('__TORSO__'),
-  droplets: U('__DROPLETS__'),
-  flame: U('__FLAME__'),
-  lever: U('4844dc3e-d31b-4a4c-9f57-26cf7ce4eb58'), // v1 lever cutout, reused
+  runner: GH('cutouts/runner-sprint-photo-cutout.png'),
+  endurance: GH('cutouts/runner-endurance-photo-cutout.png'),
+  stopwatch: GH('cutouts/stopwatch-photo-cutout.png'),
+  sugarPrint: GH('sugar-cubes-photo.png'), // original, used as a bordered photo print
+  blood: GH('cutouts/blood-cells-cutout.png'),
+  muscle: GH('cutouts/muscle-leg-engraving-cutout.png'),
+  torso: GH('cutouts/torso-fat-engraving-cutout.png'),
+  droplets: GH('cutouts/fat-droplets-photo-cutout.png'),
+  flame: GH('cutouts/flame-photo-cutout.png'),
+  lever: U('4844dc3e-d31b-4a4c-9f57-26cf7ce4eb58'), // v1 lever cutout (hub), reused
 };
 
 // =============================================================================
