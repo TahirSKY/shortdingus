@@ -286,7 +286,7 @@ const WhenDoesFatActuallyBurn: React.FC = () => {
           <Layer src={IMG.runnerSprint} x={90} y={700} w={900} at={-20} />
           <Layer src={IMG.fat} x={610} y={1180} w={380} at={-20} rot={2} />
           <Layer src={IMG.flame} x={120} y={1210} w={210} at={-20} extraScale={flamePop} />
-          <Chip text="NOT WHEN YOU THINK" x={300} y={1560} bg={C.yellow} color={C.ink} size={34} rot={1} />
+          <Chip text="NOT WHEN YOU THINK" x={300} y={1490} bg={C.yellow} color={C.ink} size={34} rot={1} />
         </Scene>
 
         {/* ================= SCENE 2 · THE MYTH 3.72–9.33s ================= */}
