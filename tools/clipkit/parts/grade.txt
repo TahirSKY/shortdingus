@@ -1,0 +1,57 @@
+
+// ─────────────────────────────────────────────────────────────
+// 9b. COLOUR GRADE — the house look. FOOTAGE ONLY.
+// ─────────────────────────────────────────────────────────────
+// Why this exists: every other clipper on the same source ships the flat camera original, so a
+// graded picture is the cheapest way to make a clip unmistakably ours — and it is a real signal to
+// a platform deciding whether a video is transformed work or reuse.
+//
+// Wiring, in the main component (three lines, in this order):
+//   1. put `filter: GRADE.filter` on the wrapper that carries ClipCamera (the same wrapper that
+//      carries pushAt's scale — one element, both transforms, and it stays OUTSIDE the marker block
+//      so check.mjs's byte-for-byte ClipCamera diff is unaffected);
+//   2. draw <BackdropLayer /> after it (ambience for the letterbox zones);
+//   3. draw <GradeLayer /> after that and BEFORE the creative layer.
+// The blend layers therefore sit over the footage and under the graphics: cards, captions, meters and
+// the brand stamp stay pixel-clean instead of going muddy. The brand bug is outside the shake
+// wrapper already, so it is never graded either.
+//
+// Cost: flat CSS compositing only — no SVG filter, no blur-behind, nothing that re-rasterises per
+// pixel per frame. Five full-frame layers of solid colour / gradients, which Lambda composites on
+// the GPU-less path about as cheaply as the opaque background ClipCamera already paints.
+//
+// The freeze outro does not go through GradeLayer (it draws over everything), so merge the grade into
+// its own <Video> filter — see clips/lose-a-trade-ask-your-friend-to-buy-breakfast.tsx.
+//
+// To go back to the flat original for one clip: set GRADE.off = true and GRADE.filter = "none".
+// To tune the house look, change these numbers and nothing else:
+//   shadow  teal floor in the shadows (lighten, so it only lifts the darks)
+//   warm    amber into the midtones/highlights (overlay keeps the blacks black)
+//   vignette  edge falloff, multiply
+//   grain   three-phase jitter — (frame % 3) - 1 — so it MOVES but is deterministic and repeatable
+const GRADE = {
+  filter: "saturate(1.14) contrast(1.11) brightness(0.985)",
+  off: false,
+  shadow: { color: "#0b3550", blend: "lighten", opacity: 0.14 },
+  warm: { color: "#ff9a3c", blend: "overlay", opacity: 0.15 },
+  vignette: 0.44,
+  grain: 0.055,
+  topWash: "rgba(255,190,120,0.07)",
+  bottomWash: "rgba(20,60,90,0.1)",
+};
+
+const GradeLayer = () => {
+  const frame = useCurrentFrame();
+  if (GRADE.off) return null;
+  const g = (frame % 3) - 1;
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      <AbsoluteFill style={{ background: GRADE.shadow.color, mixBlendMode: GRADE.shadow.blend, opacity: GRADE.shadow.opacity }} />
+      <AbsoluteFill style={{ background: GRADE.warm.color, mixBlendMode: GRADE.warm.blend, opacity: GRADE.warm.opacity }} />
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,${GRADE.vignette}) 100%)`, mixBlendMode: "multiply" }} />
+      <AbsoluteFill style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.55) 1px, transparent 1px)", backgroundSize: "4px 4px", backgroundPosition: `${g * 1.5}px ${-g}px`, mixBlendMode: "overlay", opacity: GRADE.grain }} />
+      <AbsoluteFill style={{ background: `linear-gradient(180deg, ${GRADE.topWash} 0%, rgba(0,0,0,0) 24%, rgba(0,0,0,0) 76%, ${GRADE.bottomWash} 100%)`, mixBlendMode: "soft-light" }} />
+    </AbsoluteFill>
+  );
+};
+

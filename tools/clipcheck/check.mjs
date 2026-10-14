@@ -51,9 +51,19 @@ else {
 }
 
 // 3. render rules (AGENT_ACCESS.md → Render rules)
+// These three test what actually RENDERS, so prose is stripped first: a comment that mentions a
+// banned property is not a banned property (that false positive cost a build once). Full-line
+// comments go, then trailing ones — `://` is left alone so asset URLs survive the strip. Note the
+// camelCase half of the backdrop test stays strict on purpose: render-video only scrubs the
+// kebab-case CSS form, so `backdropFilter:` in a JSX style object would reach Lambda untouched.
+const codeOnly = code
+  .split("\n")
+  .map((l) => { const t = l.trim(); return t.startsWith("//") || t.startsWith("*") || t.startsWith("/*") ? "" : l.replace(/(?<!:)\/\/.*$/, ""); })
+  .join("\n");
+
 ok(/^export default\s+/m.test(code), "no default export");
-ok(!/\bMyVideo\b/.test(code), "component is named MyVideo (forbidden)");
-ok(!/backdrop-filter|backdropFilter/.test(code), "backdrop-filter is used (Lambda renders it in software → timeouts)");
+ok(!/\bMyVideo\b/.test(codeOnly), "component is named MyVideo (forbidden)");
+ok(!/backdrop-filter|backdropFilter/.test(codeOnly), "backdrop-filter is used (Lambda renders it in software → timeouts)");
 const imports = [...code.matchAll(/from\s+["']([^"']+)["']/g)].map((x) => x[1]);
 const badImports = [...new Set(imports)].filter((i) => !["react", "remotion", "@remotion/lottie"].includes(i));
 ok(badImports.length === 0, "imports outside the Playground allowlist: " + badImports.join(", "));
@@ -110,7 +120,7 @@ const census = { Video: (code.match(/<Video\b/g) || []).length, Offthread: (code
 console.log("media elements   OK ", JSON.stringify(census));
 
 // 8. safe areas + emoji QA hints
-const emoji = [...new Set((code.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) || []))];
+const emoji = [...new Set((codeOnly.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) || []))];
 if (emoji.length) warns.push(`emoji in use (${emoji.join(" ")}) — verify on a still frame; prefer SVG/CSS glyphs for anything load-bearing`);
 const bottomHits = [...code.matchAll(/top:\s*(1[5-9]\d\d|1[6-9]\d\d)\b/g)].map((m) => Number(m[1]));
 if (bottomHits.length) warns.push("elements positioned below y1500 — keep anything critical above y1580 (YouTube UI): " + [...new Set(bottomHits)].join(", "));

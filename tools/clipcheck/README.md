@@ -24,7 +24,10 @@ Both exit non-zero on failure. Warnings are judgement calls; failures are not sh
 - does not compile under the Playground's exact Babel config (`src/lib/code-evaluator.ts`)
 - `/* REMOTION_CONFIG { … } */` missing or unparseable by `src/lib/detect-config.ts`
 - imports outside the `react` / `remotion` / `@remotion/lottie` allowlist, no default export,
-  a component named `MyVideo`, any `backdrop-filter`
+  a component named `MyVideo`, any `backdrop-filter`. These three test what actually RENDERS, so
+  comments are stripped first — prose that *mentions* a banned property is not a banned property.
+  The camelCase half of that check stays strict on purpose: `render-video` only scrubs the
+  kebab-case CSS form, so `backdropFilter:` inside a JSX style object would reach Lambda untouched.
 - the `ClipCamera` marker block **diffed against `supabase/functions/_shared/clip-camera.ts`**.
   This matters more than it looks: the Playground preview runs *your* copy while Lambda swaps in
   the canonical one, so drift means preview and render disagree. Install it from
@@ -84,7 +87,7 @@ Lambda. Copy blocks verbatim, in this order:
 
 ```
 font gate → DATA (per clip) → repairWords/normalizeWord/buildPages/zoom maths → caption clock,
-ZOOM_KEYS, SFX, music (per clip) → helpers+glyphs → ClipCamera → background → captions → audio
+ZOOM_KEYS, SFX, music (per clip) → helpers+glyphs → ClipCamera → background → grade → captions → audio
 → creative sections (per clip) → main + CLIP_AUDIT
 ```
 
@@ -95,6 +98,26 @@ music levels/silences, `LAYOUT` (rarely), and the creative sections.
 `LAYOUT` is a contract: `videoTop`/`videoHeight` must equal ClipCamera's wide box
 (`(1920 - 1080/srcAspect) * 0.4` = 525 for 16:9), or graphics will sit on top of the picture.
 
+## Colour grade — the house look (`clipkit/parts/grade.txt`)
+
+Every clipper on the same source ships the flat camera original, so from
+`clips/lose-a-trade-ask-your-friend-to-buy-breakfast.tsx` onwards our picture is graded: teal in the
+shadows, amber in the highlights, crushed blacks, a vignette and a three-phase grain.
+
+Three wiring points, all outside the ClipCamera marker block:
+
+1. `filter: GRADE.filter` goes on the wrapper that already carries `pushAt`'s scale — the same
+   element, both transforms;
+2. `<BackdropLayer />` after it (letterbox ambience);
+3. `<GradeLayer />` after that, **before** the creative layer — so the blend layers sit over the
+   footage and under the graphics. Cards, captions, meters and the brand stamp stay pixel-clean, and
+   the stamp is outside the shake wrapper anyway so it never gets tinted.
+
+Flat CSS compositing only: no SVG filter, no `backdrop-filter`, no blur-behind, nothing that
+re-rasterises per pixel per frame. A freeze outro draws over everything, so it does not go through
+`GradeLayer` — merge the grade into its own `<Video>` filter instead. `GRADE.off = true` plus
+`GRADE.filter = "none"` turns the whole thing off without touching a section.
+
 ## Assembly
 
 Keep the per-clip parts in a scratch dir and concatenate — do not retype the kit:
@@ -104,7 +127,7 @@ python3 - <<'PY'
 kit = lambda n: open(f"tools/clipkit/parts/{n}.txt").read().rstrip() + "\n"
 parts = [data_a, kit("font"), kit("repairWords"), kit("normalizeWord"), kit("buildPages"),
          kit("zoom"), data_b, kit("helpers"), kit("camera"), kit("background"),
-         kit("captions"), kit("audio"), sections]
+         kit("grade"), kit("captions"), kit("audio"), sections]
 open("clips/<project-slug>.tsx", "w").write("\n".join(parts))
 PY
 ```

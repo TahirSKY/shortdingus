@@ -18,6 +18,9 @@
  *   7 helpers          — springs, springAt, exitAt, isBetween, shakeAt, panelStyle, strokeText, SVG glyphs
  *   8 camera           — ClipCamera, MUST stay between its markers: render-video replaces that block
  *   9 background       — terminal grid + scrolling candle silhouettes + vignette
+ *   9b grade           — the house colour grade: a filter on the FOOTAGE wrapper + blend layers over
+ *                        the picture and under every graphic (parts/grade.txt). Teal shadows, amber
+ *                        highlights, vignette, three-phase grain. Flat CSS, no SVG filters.
  *  10 primitives       — Kicker / Big / Panel / Flag / Lane / WhiteFlash: every beat is one of these
  *  11 captions         — SpeakerChip, CaptionWord, CaptionsLayer (incl. the strike-through)
  *  12 audio            — AudioLayer (each SFX cue is capped at 3s)
