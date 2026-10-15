@@ -42,9 +42,13 @@ const SFX = {
   impact: U('599a8103-6cc7-4b36-8b2c-159af900165a'),
   riser: U('377b15fe-2f65-42df-9c9a-0830ea894bf9'),
 };
+// the character: one overweight man, consistent across the journey (GitHub-hosted
+// cutouts; belly hero = hook/loop, starter = myth, payoff = same man running happy)
+const GH = 'https://github.com/TahirSKY/shortdingus/raw/refs/heads/arena/e04fa780-shortdingus/vox-layers/when-does-fat-actually-burn/v3/cutouts';
 const A = {
-  runner: U('53b4c498-b50a-45d0-921c-cc8679642de3'),
-  endurance: U('9c8dad7d-2490-4208-848b-0c3d5a372a73'),
+  runner: `${GH}/char-belly-hero-cutout.png`,
+  starter: `${GH}/char-starting-jog-cutout.png`,
+  endurance: `${GH}/char-payoff-run-cutout.png`,
   stopwatch: U('073f6af6-8fc8-4c57-bfa6-7a628b05faa9'),
   sugarPrint: U('b5cd68da-32af-4de5-b309-063ce09dc193'),
   blood: U('bbabe1b1-88c2-4885-b676-a2202e045f50'),
@@ -518,7 +522,7 @@ const WhenDoesFatActuallyBurnV3: React.FC = () => {
         <Island k={1}>
           <Dim from={188}>
             <SerifStatement x={540} y={330} w={960} at={118} size={72} words={[{ t: 'Most' }, { t: 'people' }, { t: 'think' }, { t: 'it' }, { t: 'starts' }, { t: 'instantly.', hl: true }]} />
-            <Cutout src={A.runner} x={320} y={1090} w={520} at={126} enter="slide-l" rotate={-1} shadow={3} />
+            <Cutout src={A.starter} x={320} y={1090} w={520} at={126} enter="slide-l" rotate={-1} shadow={3} />
             <Arrow p={[P(700, 452), P(735, 500), P(765, 548), P(778, 612)]} at={168} dur={16} />
           </Dim>
           <Cutout src={A.stopwatch} x={780} y={800} w={330} at={150} enter="slide-r" rotate={3} shadow={3} />
