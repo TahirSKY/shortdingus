@@ -44,7 +44,7 @@ const SFX = {
 };
 // the character: one overweight man, consistent across the journey (GitHub-hosted
 // cutouts; belly hero = hook/loop, starter = myth, payoff = same man running happy)
-const GH = 'https://github.com/TahirSKY/shortdingus/raw/refs/heads/arena/e04fa780-shortdingus/vox-layers/when-does-fat-actually-burn/v3/cutouts';
+const GH = 'https://raw.githubusercontent.com/TahirSKY/shortdingus/refs/heads/arena/e04fa780-shortdingus/vox-layers/when-does-fat-actually-burn/v3/cutouts';
 const A = {
   runner: `${GH}/char-belly-hero-cutout.png`,
   starter: `${GH}/char-starting-jog-cutout.png`,
