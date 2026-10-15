@@ -355,29 +355,32 @@ const SketchArrow: React.FC<{
 const W = 1080;
 const H = 1920;
 
-// Camera journey: push on the hook, dive to each fuel station, widen for the
-// verdict, settle on fat, then travel home to the page-1 framing (loop).
+// Camera journey (v3, Hasan-style choreography): few decisive moves, long
+// creep-holds between them. Pairs of near-identical keys = a slow push that
+// never fully stops, instead of ease-arrive-ease trolley legs. Scenes are
+// staged inside the window each stop actually sees.
 const CAM: CamKey[] = [
-  { f: 0, x: 540, y: 960, z: 1 },
-  { f: 110, x: 540, y: 920, z: 1.07 },
-  { f: 270, x: 500, y: 1000, z: 1.18 },
-  { f: 390, x: 380, y: 1120, z: 1.55 },
-  { f: 470, x: 580, y: 1180, z: 1.5 },
-  { f: 560, x: 700, y: 1080, z: 1.38 },
-  { f: 625, x: 800, y: 1120, z: 1.55 },
-  { f: 700, x: 540, y: 980, z: 1.1 },
-  { f: 820, x: 540, y: 960, z: 1.02 },
-  { f: 862, x: 540, y: 960, z: 1 },
+  { f: 0, x: 540, y: 940, z: 1 },
+  { f: 120, x: 540, y: 920, z: 1.07 },
+  { f: 270, x: 525, y: 950, z: 1.15 },
+  { f: 340, x: 545, y: 790, z: 1.29 },
+  { f: 500, x: 535, y: 1090, z: 1.37 },
+  { f: 570, x: 540, y: 1080, z: 1.42 },
+  { f: 660, x: 545, y: 1095, z: 1.47 },
+  { f: 730, x: 540, y: 970, z: 1.1 },
+  { f: 820, x: 540, y: 955, z: 1.03 },
+  { f: 862, x: 540, y: 940, z: 1 },
 ];
 
-// the route across the board (the "map" of this video) + its stations
-const ROUTE = 'M 150 1380 C 260 1230, 300 1210, 370 1195 C 460 1175, 520 1300, 610 1315 C 700 1330, 740 1190, 815 1175 C 880 1162, 910 1260, 955 1295';
+// the route across the board (the "map" of this video), kept in the central
+// band the camera actually visits (x 280-820) + its stations
+const ROUTE = 'M 280 1420 C 340 1330, 380 1305, 430 1300 C 490 1295, 520 1400, 570 1420 C 620 1440, 640 1330, 690 1310 C 740 1292, 780 1360, 820 1400';
 const STATIONS = [
-  { x: 150, y: 1380, at: 285 },
-  { x: 370, y: 1195, at: 386 },
-  { x: 610, y: 1315, at: 440 },
-  { x: 815, y: 1175, at: 505 },
-  { x: 955, y: 1295, at: 605 },
+  { x: 280, y: 1420, at: 285 },
+  { x: 430, y: 1300, at: 386 },
+  { x: 570, y: 1420, at: 440 },
+  { x: 690, y: 1310, at: 505 },
+  { x: 820, y: 1400, at: 605 },
 ];
 
 const SceneFade: React.FC<{ out: number; dur?: number; children: React.ReactNode }> = ({ out, dur = 14, children }) => {
@@ -447,30 +450,30 @@ const WhenDoesFatActuallyBurnV2: React.FC = () => {
         {/* FIRST FUELS 9.3-16.7s */}
         <Sequence from={280} durationInFrames={222} layout="none">
           <SceneFade out={219}>
-            <ArchivalPhoto src={A.sugarPrint} x={320} y={600} w={500} at={106} rotate={-2} depth={0.06} caption="First fuel - sugar in the blood" />
-            <Cutout src={A.blood} x={770} y={590} w={500} at={118} enter="slide-r" rotate={2} depth={0.08} shadow={2} />
-            <LabelChip x={400} y={920} at={112} text="Sugar in your blood" kicker="First" accent={VOX.red} size={28} rotate={-1.5} />
-            <Cutout src={A.muscle} x={320} y={1140} w={540} at={157} enter="slide-l" rotate={-1.5} depth={0.08} shadow={3} />
-            <Cutout src={A.torso} x={770} y={1130} w={450} at={172} enter="slide-r" rotate={1.5} depth={0.08} shadow={3} />
-            <LabelChip x={620} y={920} at={163} text="Glycogen in your muscles" kicker="Stored" accent={VOX.teal} size={28} rotate={1.2} />
-            <DrainBar x={300} y={1520} w={400} label="BLOOD SUGAR" a={120} b={185} color={VOX.yellow} />
-            <DrainBar x={760} y={1520} w={400} label="GLYCOGEN" a={170} b={215} color={VOX.red} />
+            <ArchivalPhoto src={A.sugarPrint} x={350} y={650} w={480} at={106} rotate={-2} depth={0.06} caption="First fuel - sugar in the blood" />
+            <Cutout src={A.blood} x={730} y={640} w={460} at={118} enter="slide-r" rotate={2} depth={0.08} shadow={2} />
+            <LabelChip x={360} y={920} at={112} text="Sugar in your blood" kicker="First" accent={VOX.red} size={28} rotate={-1.5} />
+            <Cutout src={A.muscle} x={350} y={1180} w={500} at={157} enter="slide-l" rotate={-1.5} depth={0.08} shadow={3} />
+            <Cutout src={A.torso} x={730} y={1170} w={420} at={172} enter="slide-r" rotate={1.5} depth={0.08} shadow={3} />
+            <LabelChip x={660} y={1050} at={163} text="Glycogen in your muscles" kicker="Stored" accent={VOX.teal} size={28} rotate={1.2} />
+            <DrainBar x={320} y={1560} w={380} label="BLOOD SUGAR" a={120} b={185} color={VOX.yellow} />
+            <DrainBar x={740} y={1560} w={380} label="GLYCOGEN" a={170} b={215} color={VOX.red} />
           </SceneFade>
         </Sequence>
 
         {/* THE SHIFT 16.7-22.4s (frames here are local to from=502) */}
         <Sequence from={502} durationInFrames={170} layout="none">
           <SceneFade out={167}>
-            <SerifStatement x={540} y={330} w={950} at={6} size={68} words={[{ t: 'Quick' }, { t: 'energy' }, { t: 'runs' }, { t: 'out.', hl: true }]} />
-            <DrainBar x={540} y={560} w={620} label="QUICK ENERGY" a={18} b={78} color={VOX.red} />
-            <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `rotate(${leverRot}deg)`, transformOrigin: '540px 1010px' }}>
-              <Cutout src={A.lever} x={540} y={880} w={430} at={54} enter="place" depth={0.08} shadow={3} />
+            <SerifStatement x={540} y={560} w={950} at={6} size={62} words={[{ t: 'Quick' }, { t: 'energy' }, { t: 'runs' }, { t: 'out.', hl: true }]} />
+            <DrainBar x={540} y={760} w={620} label="QUICK ENERGY" a={18} b={78} color={VOX.red} />
+            <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, transform: `rotate(${leverRot}deg)`, transformOrigin: '540px 1160px' }}>
+              <Cutout src={A.lever} x={540} y={1030} w={400} at={54} enter="place" depth={0.08} shadow={3} />
             </div>
-            <LabelChip x={540} y={1120} at={76} text="The body shifts" kicker="The switch" accent={VOX.red} size={32} rotate={-1} />
-            <Cutout src={A.torso} x={290} y={1330} w={380} at={94} enter="slide-l" depth={0.07} shadow={3} />
-            <Cutout src={A.droplets} x={740} y={1360} w={430} at={101} enter="place" depth={0.09} shadow={3} />
-            <Cutout src={A.flame} x={745} y={1120} w={185} at={108} enter="pop" depth={0.13} shadow={2} />
-            <LabelChip x={540} y={1620} at={117} text="Now burning fat" kicker="New fuel" accent={VOX.yellow} kickerColor={VOX.inkSoft} size={32} rotate={1} />
+            <LabelChip x={470} y={1270} at={76} text="The body shifts" kicker="The switch" accent={VOX.red} size={32} rotate={-1} />
+            <Cutout src={A.torso} x={300} y={1450} w={340} at={94} enter="slide-l" depth={0.07} shadow={3} />
+            <Cutout src={A.droplets} x={730} y={1470} w={380} at={101} enter="place" depth={0.09} shadow={3} />
+            <Cutout src={A.flame} x={800} y={1180} w={160} at={108} enter="pop" depth={0.13} shadow={2} />
+            <LabelChip x={540} y={1700} at={117} text="Now burning fat" kicker="New fuel" accent={VOX.yellow} kickerColor={VOX.inkSoft} size={32} rotate={1} />
           </SceneFade>
         </Sequence>
 
