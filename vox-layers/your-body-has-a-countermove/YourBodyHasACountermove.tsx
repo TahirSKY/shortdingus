@@ -102,7 +102,9 @@ const STOPS: Stop[] = [
   { ...loc(6, 540, 900, 1.03), a: 845, d: 1080, push: 0.02, bend: 130, arc: 0.3, route: true },
   { ...loc(7, 540, 950, 1.0), a: 1102, d: 1185, push: 0.02, bend: 120, arc: 0.3, route: true },
   { ...loc(8, 540, 900, 1.05), a: 1208, d: 1295, push: 0.02, bend: 140, arc: 0.32, route: true },
-  { ...loc(9, 540, 900, 1.08), a: 1312, d: 1533, push: 0.04 },
+  // Hold the payoff, then finish with a deliberate pull-back to the whole journey.
+  { ...loc(9, 540, 900, 1.08), a: 1312, d: 1450, push: 0.025, bend: 0, arc: 0.08 },
+  { x: 970, y: 4175, z: 0.22 / S, a: 1533, d: 1533, push: 0 },
 ];
 
 type Flight = { f0: number; f1: number; from: Pose; to: Pose; c1: Pt; c2: Pt; arc: number; route: boolean };
@@ -225,7 +227,7 @@ const WatchDial: React.FC<{ x: number; y: number; at: number }> = ({ x, y, at })
   const p = interpolate(frame, [at + 4, at + 66], [0, 1], { easing: EASE_OUT, ...clamp });
   const val = Math.round(6 + (412 - 6) * p);
   return (
-    <Layer x={x} y={y} at={at} dur={12} enter="pop">
+    <Layer x={x} y={y} at={at} dur={12} enter={at === 0 ? 'none' : 'pop'}>
       <div style={{ width: 330, height: 390, borderRadius: 64, background: VOX.ink, boxShadow: '0 18px 36px rgba(40,28,12,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: 282, height: 342, borderRadius: 44, background: '#171310', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ fontFamily: FONT_BODY, fontWeight: 800, fontSize: 96, color: VOX.cream, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{val}</div>
@@ -383,7 +385,7 @@ const TapedClip: React.FC<{ src: string; at: number; dur: number; rotate?: numbe
     const sat = useDrain ? lerp(1, 0, fp) : 1;
     const sep = useDrain ? lerp(0.32, 0.05, fp) : 0.32;
     return (
-      <div style={{ position: 'absolute', left: 270, top: 890, transform: `translate(-50%,-50%) rotate(${rotate}deg) scale(${interpolate(enter, [0, 1], [1.24, 1])})`, opacity: interpolate(enter, [0, 0.3, 1], [0, 1, 1]) }}>
+      <div style={{ position: 'absolute', left: 540, top: 890, transform: `translate(-50%,-50%) rotate(${rotate}deg) scale(${interpolate(enter, [0, 1], [1.24, 1])})`, opacity: interpolate(enter, [0, 0.3, 1], [0, 1, 1]) }}>
         <div style={{ background: VOX.cream, padding: 20, paddingBottom: 26, boxShadow: '0 22px 44px rgba(40,28,12,0.38)', width: 640 }}>
           <div style={{ width: 600, height: 900, overflow: 'hidden', background: '#111' }}>
             <OffthreadVideo src={src} muted startFrom={75} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})`, filter: `sepia(${sep}) saturate(${sat * 1.12}) contrast(1.05)` }} />
@@ -486,7 +488,7 @@ const MeasuresRow: React.FC<{ at: number }> = ({ at }) => {
   return (
     <div>
       {items.map((icon, i) => (
-        <Layer key={i} x={330 + i * 210} y={1745} at={at + i * 24} dur={11} enter="pop">
+        <Layer key={i} x={330 + i * 210} y={1580} at={at + i * 24} dur={11} enter="pop">
           <div style={{ width: 158, height: 158, borderRadius: '50%', background: VOX.cream, border: `5px solid ${VOX.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 22px rgba(40,28,12,0.25)' }}>
             {icon}
           </div>
@@ -578,8 +580,9 @@ const YourBodyHasACountermove: React.FC = () => {
 
         {/* 0 HOOK — frame 0: our guy already jogging; watch sprints; scale won't move */}
         <Island k={0}>
-          <Cutout src={CHAR.starter} x={310} y={1080} w={520} at={4} dur={18} enter="place" rotate={-1} />
-          <WatchDial x={770} y={700} at={42} />
+          {/* Thumbnail frame is already composed: athlete + live calorie counter at frame 0. */}
+          <Cutout src={CHAR.starter} x={310} y={1080} w={520} at={0} dur={1} enter="none" rotate={0} />
+          <WatchDial x={770} y={700} at={0} />
           <ScaleDial x={730} y={1380} at={118} />
           <Stamp text="Not losing" x={470} y={1700} at={176} size={60} />
         </Island>
@@ -590,6 +593,9 @@ const YourBodyHasACountermove: React.FC = () => {
             <div style={{ fontFamily: FONT_EDITORIAL, fontWeight: 900, fontSize: 210, color: VOX.red, transform: 'rotate(-6deg)' }}>?</div>
           </Layer>
           <Equation at={262} />
+          {/* Show both sides of the bad equation: calorie count climbs; scale needle barely moves. */}
+          <WatchDial x={280} y={1330} at={286} />
+          <ScaleDial x={800} y={1330} at={304} />
           <XDraw at={414} />
         </Island>
 
@@ -640,8 +646,8 @@ const YourBodyHasACountermove: React.FC = () => {
         {/* 9 PAYOFF — scale becomes one measure among many */}
         <Island k={9}>
           <ScaleDial x={300} y={620} at={1318} happy />
-          <Cutout src={CHAR.payoff} x={650} y={1180} w={560} at={1324} dur={18} enter="place" rotate={1} />
-          <Stamp text="Not wasted" x={430} y={1600} at={1330} size={56} color={VOX.teal} rotate={-6} />
+          <Cutout src={CHAR.payoff} x={700} y={1160} w={540} at={1324} dur={18} enter="place" rotate={1} />
+          <Stamp text="Not wasted" x={270} y={1050} at={1330} size={56} color={VOX.teal} rotate={-6} />
           <MeasuresRow at={1442} />
         </Island>
 
