@@ -1,6 +1,6 @@
 /* REMOTION_CONFIG = { fps: 30, durationInFrames: 1492, width: 1080, height: 1920 } */
 import React, { createContext } from 'react';
-import { AbsoluteFill, Audio, Easing, OffthreadVideo, Sequence, interpolate, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, useCurrentFrame } from 'remotion';
 
 // =============================================================================
 // YOUR MUSCLES ARE MORE THAN MACHINES — single-file VOX-style composition.
@@ -151,6 +151,19 @@ const Headline: React.FC<{ text: string; x: number; y: number; size?: number; co
     <div style={{ fontFamily: SERIF, fontSize: size, fontWeight: 900, lineHeight: 0.98, letterSpacing: -2, color, textAlign: align, maxWidth: 900, textTransform: 'uppercase' }}>{text}</div>
   </Layer>
 );
+const Cutout: React.FC<{ src: string; x: number; y: number; w: number; at?: number; dur?: number; rotate?: number }> = ({ src, x, y, w, at = 0, dur = 12, rotate = 0 }) => (
+  <Layer x={x} y={y} w={w} at={at} dur={dur} enter="place" rotate={rotate} z={7}>
+    <Img
+      src={src}
+      style={{
+        width: '100%',
+        display: 'block',
+        filter: 'drop-shadow(5px 0 0 #faf5ea) drop-shadow(-5px 0 0 #faf5ea) drop-shadow(0 5px 0 #faf5ea) drop-shadow(0 -5px 0 #faf5ea) drop-shadow(0 12px 16px rgba(40,34,23,.28))',
+      }}
+    />
+  </Layer>
+);
+
 const SmallLabel: React.FC<{ text: string; x: number; y: number; at: number; color?: string; bg?: string; size?: number; rotate?: number }> = ({ text, x, y, at, color = COLORS.ink, bg = COLORS.goldLight, size = 28, rotate = -2 }) => (
   <Layer x={x} y={y} at={at} dur={8} enter="place" rotate={rotate} z={8}>
     <div style={{ fontFamily: FONT, fontSize: size, letterSpacing: 3, fontWeight: 800, color, background: bg, padding: '12px 22px', border: `2px solid ${COLORS.ink}`, boxShadow: '0 7px 12px rgba(40,34,23,.19)', whiteSpace: 'nowrap' }}>{text}</div>
