@@ -22,7 +22,7 @@ function videoMeta(file: File) {
   });
 }
 
-function tusUpload(path: string, file: File, onProgress: (p: number) => void) {
+export function tusUpload(path: string, file: File, onProgress: (p: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const up = new tus.Upload(file, {
       endpoint: `${URL_}/storage/v1/upload/resumable`,

@@ -119,7 +119,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
     for (const f of Array.from(files)) {
       const key = `${f.name}-${f.size}-${Math.random()}`;
       setUploads((u) => ({ ...u, [key]: `Uploading ${f.name}…` }));
-      try { await uploadFile(group, f, projectId); setUploads((u) => { const { [key]: _, ...rest } = u; return rest; }); refresh(); }
+      try { await uploadFile(group, f, projectId, null, (p) => setUploads((u) => ({ ...u, [key]: `Uploading ${f.name}… ${Math.round(p * 100)}%` }))); setUploads((u) => { const { [key]: _, ...rest } = u; return rest; }); refresh(); }
       catch (e) { setUploads((u) => ({ ...u, [key]: `Failed: ${f.name} — ${(e as Error).message}` })); }
     }
   };
