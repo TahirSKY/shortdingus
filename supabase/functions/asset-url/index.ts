@@ -11,7 +11,8 @@ Deno.serve(async (req) => {
   if ((asset.meta as any)?.creating) return json({ error: "Still creating. Try again shortly." }, 409);
   if ((asset.meta as any)?.error && !asset.storage_path) return json({ error: (asset.meta as any).error }, 424);
   const part = new URL(req.url).searchParams.get("part");
-  let path = asset.storage_path;
+  // Heavy/4K videos have a 1080p render copy; previews and renders use it. part=original gets the upload.
+  let path = part === "original" ? asset.storage_path : ((asset.meta as any)?.render_path || asset.storage_path);
   if (part === "audio") {
     path = (asset.meta as any)?.audio_path;
     if (!path) return json({ error: "No sound copy yet. Press \"Prepare audio\" on the source in the clipping hub." }, 404);

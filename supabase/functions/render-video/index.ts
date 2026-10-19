@@ -290,6 +290,11 @@ Deno.serve(async (req) => {
     let sourceIds: string[] = [];
     const cuts: { src: string; cut: string; ranges: unknown }[] = [];
     if (ids.length) {
+      const { data: heavy } = await admin().from("assets").select("id, name, meta").eq("kind", "video").neq("role", "source").in("id", ids);
+      const unready = (heavy ?? []).find((x: any) => x.meta?.needs_render_copy && !x.meta?.render_path);
+      if (unready) {
+        return json({ error: `"${unready.name}" is too large to render directly (4K or very high quality). ${unready.meta?.render_copy_error ? "Making its smaller copy failed" : "Its smaller render copy isn't ready yet"} — open the hub library and press the "Make render copy" button on it, then render again.` }, 400);
+      }
       const { data: srcs } = await admin().from("assets").select("id, name, meta").eq("role", "source").in("id", ids);
       const { data: cutRows } = await admin().from("assets").select("id, meta, created_at").eq("role", "clip-cut").in("meta->>source_asset_id", ids).order("created_at", { ascending: false });
       // Pick the cut covering the code's SEGMENTS best (newest wins ties).

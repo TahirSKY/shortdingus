@@ -103,6 +103,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploads, setUploads] = useState<Record<string, string>>({});
   const [drag, setDrag] = useState(false);
+  const [copying, setCopying] = useState<string | null>(null);
   const [textName, setTextName] = useState("");
   const [textKind, setTextKind] = useState<AssetKind>("text");
   const [textBody, setTextBody] = useState("");
@@ -197,6 +198,15 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
                     {(a.kind === "video" || a.kind === "audio") && a.storage_path && <Button size="icon" variant="ghost" className="h-7 w-7" title="Transcribe with AssemblyAI (timed words, captions, cuts)" disabled={busy} onClick={async () => {
                       try { await runAnalysis(a.id, "assembly-transcript"); refresh(); toast.success("Transcript started"); } catch (e) { toast.error((e as Error).message); }
                     }}><AudioLines className="h-3.5 w-3.5" /></Button>}
+                    {a.kind === "video" && a.storage_path && a.role !== "source" && !(a.meta as any)?.render_path && <Button size="sm" variant={(a.meta as any)?.needs_render_copy ? "secondary" : "ghost"} className="h-7 px-2 text-xs" title="Make a 1080p high-quality copy so renders don't run out of memory" disabled={busy || copying === a.id} onClick={async () => {
+                      setCopying(a.id);
+                      const t = toast.loading("Making render copy… 0%");
+                      try {
+                        const { makeRenderCopyFromStorage } = await import("./render-copy");
+                        await makeRenderCopyFromStorage(a as any, (p) => toast.loading(`Making render copy… ${Math.round(p * 100)}%`, { id: t }));
+                        toast.success("Render copy ready", { id: t }); refresh();
+                      } catch (e) { toast.error((e as Error).message, { id: t }); } finally { setCopying(null); }
+                    }}>{copying === a.id ? "Copying…" : "Make render copy"}</Button>}
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete" onClick={async () => {
                       if (!confirm(`Delete ${a.name}?`)) return;
                       try { await deleteAsset(a); refresh(); } catch (e) { toast.error((e as Error).message); }
