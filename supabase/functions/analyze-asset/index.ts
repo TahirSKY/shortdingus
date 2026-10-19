@@ -20,9 +20,11 @@ Deno.serve(async (req) => {
   if (!asset) return json({ error: "Asset not found." }, 404);
 
   await expireStale(db);
-  if (tool === "gemini-frames") {
+  const bigVideo = asset.kind === "video" && Number(asset.size_bytes) > 19_000_000 && ["gemini-video", "gemini-reaction", "gemini-edit-style"].includes(tool);
+  if (bigVideo && !asset.meta?.frames?.sheets?.length) return json({ error: "This video is too big for the AI to watch whole. Its speech is transcribed; re-upload it to make picture snapshots." }, 400);
+  if (tool === "gemini-frames" || bigVideo) {
     if (!asset.meta?.frames?.sheets?.length) return json({ error: "This video has no snapshots yet." }, 400);
-    const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool, status: "running" }).select().single();
+    const { data: row, error } = await db.from("asset_analyses").insert({ asset_id: asset.id, group_id: asset.group_id, tool: "gemini-frames", status: "running" }).select().single();
     if (error || !row) return json({ error: "Could not start analysis." }, 500);
     EdgeRuntime.waitUntil(runFrames(row.id, asset));
     return json({ analysis: row }, 202);

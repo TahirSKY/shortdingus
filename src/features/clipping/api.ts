@@ -41,7 +41,7 @@ export function tusUpload(path: string, file: File, onProgress: (p: number) => v
 }
 
 /** Snapshots every few seconds from the local file, packed 4x4 into JPEG sheets, plus shot-change times. */
-async function makeSheets(file: File, duration: number, group: AssetGroup, id: string, onProgress: (p: number) => void) {
+export async function makeSheets(file: File, duration: number, group: AssetGroup, id: string, onProgress: (p: number) => void) {
   const interval = Math.max(2, Math.ceil(duration / 720));
   const times: number[] = [];
   for (let t = 0.5; t < duration; t += interval) times.push(+t.toFixed(2));

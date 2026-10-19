@@ -47,6 +47,7 @@ export async function runGemini(analysisId: string, asset: any) {
   try {
     const key = Deno.env.get("LOVABLE_API_KEY");
     if (!key) throw new Error("AI is not configured.");
+    if (Number(asset.size_bytes) > 19_000_000) throw new Error(`This video is ${(Number(asset.size_bytes) / 1048576).toFixed(0)} MB, too big for the AI to watch whole (about 19 MB max). Its speech is still transcribed; the picture is read from snapshots instead.`);
     const { data: signed, error } = await db.storage.from("hub-media").createSignedUrl(asset.storage_path, 1800);
     if (error || !signed) throw new Error("Could not open the video.");
     const duration = Number(asset.duration_seconds) || 0;
