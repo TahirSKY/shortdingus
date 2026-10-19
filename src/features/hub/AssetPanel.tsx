@@ -103,6 +103,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploads, setUploads] = useState<Record<string, string>>({});
   const [drag, setDrag] = useState(false);
+  const [copying, setCopying] = useState<string | null>(null);
   const [textName, setTextName] = useState("");
   const [textKind, setTextKind] = useState<AssetKind>("text");
   const [textBody, setTextBody] = useState("");
