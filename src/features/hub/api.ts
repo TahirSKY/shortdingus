@@ -98,7 +98,7 @@ function mediaDuration(file: File, kind: AssetKind) {
   });
 }
 
-export async function uploadFile(group: AssetGroup, file: File, projectId: string | null = null, role: string | null = null) {
+export async function uploadFile(group: AssetGroup, file: File, projectId: string | null = null, role: string | null = null, onProgress?: (p: number) => void) {
   const kind = kindFromFile(file);
   const id = crypto.randomUUID();
   const dims = await mediaDuration(file, kind);
@@ -109,8 +109,15 @@ export async function uploadFile(group: AssetGroup, file: File, projectId: strin
   if (lottie) { role = "lottie"; tags.push("lottie"); }
   const path = `groups/${group.slug}/${id}-${safeFile(file.name)}`;
   const mime = file.type || (file.name.endsWith(".json") ? "application/json" : "text/plain");
-  const up = await supabase.storage.from("hub-media").upload(path, file, { contentType: mime, upsert: false });
-  if (up.error) throw up.error;
+  if (file.size > 6 * 1024 * 1024) {
+    // Big files go up in resumable pieces with real progress.
+    const { tusUpload } = await import("@/features/clipping/api");
+    await tusUpload(path, new File([file], file.name, { type: mime }), (p) => onProgress?.(p));
+  } else {
+    const up = await supabase.storage.from("hub-media").upload(path, file, { contentType: mime, upsert: false });
+    if (up.error) throw up.error;
+    onProgress?.(1);
+  }
   const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: lottie ? lottie.duration : duration, project_id: projectId, role, tags, meta: lottie ? lottie.meta : {} });
   if (error) { await supabase.storage.from("hub-media").remove([path]); throw error; }
   await touch(group.id);
