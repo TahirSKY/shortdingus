@@ -121,7 +121,15 @@ export async function uploadFile(group: AssetGroup, file: File, projectId: strin
   const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: lottie ? lottie.duration : duration, project_id: projectId, role, tags, meta: lottie ? lottie.meta : {} });
   if (error) { await supabase.storage.from("hub-media").remove([path]); throw error; }
   await touch(group.id);
-  if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));
+  if (kind === "video" && file.size > 19_000_000) {
+    // Too big for the AI to watch whole: read the picture from snapshots instead.
+    (async () => {
+      const { makeSheets } = await import("@/features/clipping/api");
+      const frames = await makeSheets(file, duration || 60, group, id, () => {});
+      await db.from("assets").update({ meta: { width: dims.w, height: dims.h, frames } }).eq("id", id);
+      await runAnalysis(id, "gemini-frames");
+    })().catch((e) => console.warn("Snapshot analysis failed to start", e));
+  } else if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));
   if (kind === "image" && group.auto_cutout) makeCutout(id).catch((e) => console.warn("Auto cut-out failed to start", e));
   if (kind === "video" || (kind === "audio" && role !== "sfx" && role !== "music"))
     runAnalysis(id, "assembly-transcript").catch((e) => console.warn("Auto-transcript failed to start", e));
