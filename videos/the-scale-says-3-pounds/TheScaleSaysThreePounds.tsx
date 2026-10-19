@@ -1,9 +1,9 @@
-/* REMOTION_CONFIG = { fps: 30, durationInFrames: 1344, width: 1080, height: 1920 } */
+/* REMOTION_CONFIG = { fps: 30, durationInFrames: 1434, width: 1080, height: 1920 } */
 import React from 'react';
-import { AbsoluteFill, Audio, Easing, Freeze, OffthreadVideo, Sequence, interpolate, spring, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Audio, Easing, Freeze, Img, OffthreadVideo, Sequence, interpolate, spring, useCurrentFrame } from 'remotion';
 
 // Single-file editorial composition. All timings follow the supplied AssemblyAI VO.
-export const compositionConfig = { id: 'TheScaleSaysThreePounds', fps: 30, durationInSeconds: 44.8, width: 1080, height: 1920 };
+export const compositionConfig = { id: 'TheScaleSaysThreePounds', fps: 30, durationInSeconds: 47.8, width: 1080, height: 1920 };
 const C = { paper: '#efe6d3', light: '#faf5ea', ink: '#27231d', muted: '#827562', red: '#b83b30', gold: '#e1ad3c', yellow: '#f2d88c', teal: '#3d6c63', blue: '#537e91', paleBlue: '#d6e4e5', line: '#ccbea5' };
 const FONT = 'Arial, Helvetica, sans-serif';
 const SERIF = 'Georgia, "Times New Roman", serif';
@@ -28,7 +28,13 @@ const MEDIA = {
   pencil: asset('bf810aca-6f5a-418c-9f60-bb715550934c'),
   impact: asset('6157bf75-5603-4533-8e59-b93b815934bf'),
   chime: asset('2d70f904-7701-492f-8085-89ffed6e2861'),
+  stream: asset('7412fc38-a77a-4b0f-b187-bd5e459aa9fc'),
+  sparkle: asset('16d0b9a2-6984-4a90-ad8d-41be83b4f0df'),
+  shimmer: asset('1f09e50a-d002-4d4a-acde-d11eeed27e26'),
+  music: asset('f4a1ed94-671d-4de6-ba60-43370bfafe68'), // docu-pluck: Vox-style pizzicato bed, 63s
+  coreage: asset('4080f01f-a9db-4326-aa2b-766703362521'),
 };
+const DURATION = 1434; // 1344 VO + 90f CoreAge end card
 
 // No text captions: the pictures carry the narrative. Labels identify only key evidence.
 const BEATS = [
@@ -41,6 +47,7 @@ const BEATS = [
   { at: 900, x: 0, y: 4400, label: 'THE DISTINCTION' },
   { at: 982, x: 1400, y: 4400, label: 'WHAT THE SCALE SEES' },
   { at: 1217, x: 2800, y: 4400, label: 'THE BIGGER PICTURE' },
+  { at: 1344, x: 4200, y: 4400, label: 'COREAGE' },
 ];
 function cameraAt(f: number) {
   let i = BEATS.length - 1;
@@ -51,7 +58,7 @@ function cameraAt(f: number) {
     const t = travel(interpolate(f, [b.at - 18, b.at], [0, 1], CLAMP));
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 1 - .14 * Math.sin(t * Math.PI) };
   }
-  return { x: a.x, y: a.y, z: 1 + .012 * p(f, a.at, (b?.at ?? 1344) - a.at) };
+  return { x: a.x, y: a.y, z: 1 + .012 * p(f, a.at, (b?.at ?? DURATION) - a.at) };
 }
 
 const Paper: React.FC = () => <AbsoluteFill style={{ backgroundColor: C.paper }}>
@@ -104,7 +111,6 @@ const Calories: React.FC<{ f: number }> = ({ f }) => <>
   <Film src={MEDIA.eating} from={195} to={290} x={637} y={1045} w={240} h={360} rotate={5}/>
   <Place f={f} at={141} x={90} y={590} w={820}><div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 175, letterSpacing: -12, color: C.red }}>{Math.round(10500*p(f,141,60)).toLocaleString('en-US')}<span style={{ fontSize: 67 }}>+</span></div><div style={{ fontFamily: FONT, fontSize: 34, fontWeight: 800, letterSpacing: 3 }}>EXTRA CALORIES</div></Place>
   <Place f={f} at={249} x={133} y={1495} rotate={-3}><Slip>ABOVE WHAT YOU BURNED</Slip></Place>
-  <div style={{ position: 'absolute', left: 95, top: 1620, color: C.muted, fontFamily: FONT, fontSize: 24 }}>Rough energy estimate, not a one-day prediction.</div>
 </>;
 const Mystery: React.FC<{ f: number }> = ({ f }) => <>
   <Title>So what<br/>changed?</Title>
@@ -120,7 +126,7 @@ const Water: React.FC<{ f: number }> = ({ f }) => {
     <Film src={MEDIA.salt} from={365} to={413} x={100} y={600} w={410} h={690} trim={1} rotate={-3}/>
     <Film src={MEDIA.saltMacro} from={395} to={443} x={577} y={578} w={275} h={280} trim={2} rotate={4}/>
     <Film src={MEDIA.water} from={443} to={483} x={100} y={600} w={410} h={690} trim={3} rotate={-3}/>
-    <Place f={f} at={412} x={573} y={928} w={300} rotate={2}><svg width="300" height="450" viewBox="0 0 300 450"><defs><clipPath id="jar-water"><path d="M65 48H235L215 378Q150 405 85 378Z"/></clipPath></defs><path d="M65 48H235L215 378Q150 405 85 378Z" fill={C.light} stroke={C.ink} strokeWidth="5"/><g clipPath="url(#jar-water)"><rect x="60" y={350-t*220} width="180" height="300" fill={C.blue}/><path d={`M60 ${350-t*220}q45-20 90 0t90 0`} fill="none" stroke={C.paleBlue} strokeWidth="8"/>{[0,1,2,3,4].map(i=><circle key={i} cx={110+i%3*40} cy={350-t*165-i*17} r="7" fill={C.paleBlue} opacity=".8"/>)}</g><path d="M60 48h180M90 36h120" stroke={C.ink} strokeWidth="6"/><text x="150" y="443" textAnchor="middle" fontFamily={FONT} fontSize="25" fontWeight="800" fill={C.blue}>HELD FLUID</text></svg></Place>
+    <Place f={f} at={412} x={573} y={928} w={300} rotate={2}><svg width="300" height="450" viewBox="0 0 300 450"><defs><clipPath id="jar-water"><path d="M65 48H235L215 378Q150 405 85 378Z"/></clipPath></defs><path d="M65 48H235L215 378Q150 405 85 378Z" fill={C.light} stroke={C.ink} strokeWidth="5"/><g clipPath="url(#jar-water)"><rect x="60" y={350-t*220} width="180" height="300" fill={C.blue}/><path d={`M60 ${350-t*220}q45-20 90 0t90 0`} fill="none" stroke={C.paleBlue} strokeWidth="8"/>{[0,1,2,3,4].map(i=><circle key={i} cx={110+i%3*40} cy={350-t*165-i*17} r="7" fill={C.paleBlue} opacity=".8"/>)}</g><path d="M60 48h180M90 36h120" stroke={C.ink} strokeWidth="6"/><text x="150" y="443" textAnchor="middle" fontFamily={FONT} fontSize="30" fontWeight="800" fill={C.blue}>HELD FLUID</text></svg></Place>
     <svg width="1080" height="1920" style={{ position: 'absolute' }}><Draw d="M593 875Q778 862 735 945M735 945l-23-24M735 945l29-8" t={p(f,415,20)}/></svg>
     <Place f={f} at={446} x={150} y={1460} rotate={-2}><Slip>MORE FLUID. MORE WEIGHT.</Slip></Place>
   </>;
@@ -137,7 +143,7 @@ const Glycogen: React.FC<{ f: number }> = ({ f }) => {
       {nodes.map((n,i)=><g key={i} opacity={p(f,535+i*5,10)}><Hex x={n.x} y={n.y} r={32}/></g>)}
       {[{x:240,y:98},{x:355,y:85},{x:570,y:85},{x:665,y:160},{x:655,y:292},{x:400,y:310},{x:285,y:310},{x:490,y:345}].map((n,i)=><g key={i} opacity={p(f,592+i*3,12)} transform={`translate(${(1-water)*(i%2?-75:75)} ${(1-water)*-60})`}><Drop x={n.x} y={n.y} size={.7}/></g>)}
       <Draw d="M110 180H210M210 180l-19-15M210 180l-19 15" t={p(f,550,22)} color={C.ink} width={4}/>
-      <text x="18" y="163" fill={C.ink} fontFamily={FONT} fontSize="24" fontWeight="800">STORED</text><text x="18" y="193" fill={C.ink} fontFamily={FONT} fontSize="24" fontWeight="800">FUEL</text>
+      <text x="18" y="163" fill={C.ink} fontFamily={FONT} fontSize="28" fontWeight="800">STORED</text><text x="18" y="193" fill={C.ink} fontFamily={FONT} fontSize="28" fontWeight="800">FUEL</text>
     </svg></Place>
     <Place f={f} at={569} x={220} y={1006} rotate={-2}><Slip>GLYCOGEN</Slip></Place>
     <Place f={f} at={631} x={237} y={1530} rotate={1}><Slip color={C.light} bg={C.blue}>+ WATER</Slip></Place>
@@ -181,20 +187,39 @@ const Progress: React.FC<{ f: number }> = ({ f }) => {
   return <>
     <Title size={89}>One weigh-in.<br/><span style={{ color:C.teal }}>Not your story.</span></Title>
     <Film src={MEDIA.walk} from={1217} to={1344} x={103} y={660} w={760} h={755} trim={3} rotate={1}/>
-    <Place f={f} at={1248} x={134} y={1190} w={685} rotate={-3}><div style={{ padding:'22px 28px 10px',background:C.light,border:`2px solid ${C.ink}`,boxShadow:'5px 7px 0 #27231d20' }}><svg width="620" height="235" viewBox="0 0 620 235"><path d="M20 20v180h580M20 65h580M20 110h580M20 155h580" stroke={C.line} fill="none" strokeWidth="2"/><Draw d="M22 49L72 80L122 59L172 114L222 97L272 129L322 109L372 153L422 135L472 170L522 150L572 187" t={t} color={C.teal} width={6}/><circle cx="122" cy="59" r={13+Math.sin(f*.15)*2} fill={C.light} stroke={C.red} strokeWidth="5"/><text x="300" y="231" textAnchor="middle" fill={C.muted} fontFamily={FONT} fontSize="18" letterSpacing="2">ILLUSTRATIVE LONG-TERM TREND</text></svg></div></Place>
+    <Place f={f} at={1248} x={134} y={1190} w={685} rotate={-3}><div style={{ padding:'22px 28px 10px',background:C.light,border:`2px solid ${C.ink}`,boxShadow:'5px 7px 0 #27231d20' }}><svg width="620" height="235" viewBox="0 0 620 235"><path d="M20 20v180h580M20 65h580M20 110h580M20 155h580" stroke={C.line} fill="none" strokeWidth="2"/><Draw d="M22 49L72 80L122 59L172 114L222 97L272 129L322 109L372 153L422 135L472 170L522 150L572 187" t={t} color={C.teal} width={6}/><circle cx="122" cy="59" r={13+Math.sin(f*.15)*2} fill={C.light} stroke={C.red} strokeWidth="5"/></svg></div></Place>
     <Place f={f} at={1290} x={201} y={1550} rotate={-1}><Slip bg={C.teal} color={C.light}>ZOOM OUT.</Slip></Place>
   </>;
 };
-const SCENES = [Hook, Calories, Mystery, Water, Glycogen, Digestion, Verdict, Total, Progress];
+// Brand end card: the CoreAge screenshot at maximum size. No added text.
+const BrandEnd: React.FC<{ f: number }> = ({ f }) => <>
+  <Place f={f} at={1346} x={45} y={290} w={990} rotate={-1}>
+    <div style={{ position: 'relative', background: C.light, padding: '18px 18px 26px', border: `2px solid ${C.ink}`, boxShadow: '10px 18px 0 #27231d20' }}>
+      <Img src={MEDIA.coreage} style={{ width: '100%', height: 1260, objectFit: 'contain', display: 'block' }}/>
+      <Tape/><Tape right/>
+    </div>
+  </Place>
+</>;
+const SCENES = [Hook, Calories, Mystery, Water, Glycogen, Digestion, Verdict, Total, Progress, BrandEnd];
 const SFX = [
-  { at: 32, id: MEDIA.impact, volume: .5, frames: 30 },
-  { at: 200, id: MEDIA.impact, volume: .38, frames: 30 },
-  { at: 412, id: MEDIA.pencil, volume: .25, frames: 45 },
-  { at: 592, id: MEDIA.pencil, volume: .22, frames: 45 },
-  { at: 796, id: MEDIA.pencil, volume: .2, frames: 45 },
-  { at: 942, id: MEDIA.impact, volume: .48, frames: 30 },
-  { at: 1143, id: MEDIA.impact, volume: .35, frames: 30 },
-  { at: 1290, id: MEDIA.chime, volume: .24, frames: 48 },
+  // Every camera flight gets the pencil route-draw as the board travels.
+  ...BEATS.slice(1).map((b) => ({ at: b.at - 18, id: MEDIA.pencil, volume: .5, frames: 24 })),
+  { at: 32, id: MEDIA.impact, volume: 1, frames: 30 },
+  { at: 200, id: MEDIA.impact, volume: .9, frames: 30 },
+  { at: 412, id: MEDIA.pencil, volume: .65, frames: 45 },
+  { at: 443, id: MEDIA.stream, volume: .55, frames: 75 },
+  { at: 592, id: MEDIA.sparkle, volume: .6, frames: 26 },
+  { at: 796, id: MEDIA.pencil, volume: .65, frames: 45 },
+  { at: 942, id: MEDIA.impact, volume: 1, frames: 30 },
+  { at: 1068, id: MEDIA.impact, volume: .4, frames: 20 },
+  { at: 1095, id: MEDIA.impact, volume: .4, frames: 20 },
+  { at: 1104, id: MEDIA.impact, volume: .4, frames: 20 },
+  { at: 1122, id: MEDIA.impact, volume: .45, frames: 20 },
+  { at: 1143, id: MEDIA.impact, volume: .95, frames: 30 },
+  { at: 1263, id: MEDIA.pencil, volume: .5, frames: 45 },
+  { at: 1290, id: MEDIA.chime, volume: .55, frames: 48 },
+  { at: 1346, id: MEDIA.impact, volume: .5, frames: 30 },
+  { at: 1352, id: MEDIA.shimmer, volume: .7, frames: 66 },
 ];
 
 export default function TheScaleSaysThreePounds() {
@@ -203,17 +228,17 @@ export default function TheScaleSaysThreePounds() {
   const current = BEATS.reduce((index,b,i)=>f>=b.at?i:index,0);
   return <AbsoluteFill style={{ background:C.paper, fontFamily:FONT, overflow:'hidden' }}>
     <Paper/>
-    <div style={{ position:'absolute',left:0,top:0,width:4200,height:6320,transformOrigin:'0 0',transform:`translate(540px,960px) scale(${cam.z}) translate(${-cam.x-540}px,${-cam.y-960}px)` }}>
-      <svg width="4200" height="6320" style={{ position:'absolute',pointerEvents:'none' }}>{BEATS.slice(0,-1).map((b,i)=>{const n=BEATS[i+1];return <Draw key={i} d={`M${b.x+540} ${b.y+960} Q${b.x+540} ${n.y+960} ${n.x+540} ${n.y+960}`} t={p(f,n.at-18,18)} color={C.line} width={10}/>;})}</svg>
+    <div style={{ position:'absolute',left:0,top:0,width:5600,height:6320,transformOrigin:'0 0',transform:`translate(540px,960px) scale(${cam.z}) translate(${-cam.x-540}px,${-cam.y-960}px)` }}>
+      <svg width="5600" height="6320" style={{ position:'absolute',pointerEvents:'none' }}>{BEATS.slice(0,-1).map((b,i)=>{const n=BEATS[i+1];return <Draw key={i} d={`M${b.x+540} ${b.y+960} Q${b.x+540} ${n.y+960} ${n.x+540} ${n.y+960}`} t={p(f,n.at-18,18)} color={C.line} width={10}/>;})}</svg>
       {BEATS.map((b,i)=>{
         // Mount only the current and its immediate neighbours. No hidden off-board video farm.
         if (Math.abs(i-current)>1) return null;
         const Scene = SCENES[i];
-        return <div key={b.at} style={{ position:'absolute',left:b.x,top:b.y,width:1080,height:1920 }}><Paper/><div style={{ position:'absolute',left:90,right:170,top:173,borderTop:`2px solid ${C.line}`,paddingTop:19,fontFamily:FONT,fontSize:24,fontWeight:800,letterSpacing:4,color:C.muted }}>{b.label}</div><Scene f={f}/></div>;
+        return <div key={b.at} style={{ position:'absolute',left:b.x,top:b.y,width:1080,height:1920 }}><Paper/><div style={{ position:'absolute',inset:0,transform:'translateY(-110px)' }}><Scene f={f}/></div></div>;
       })}
     </div>
     <AbsoluteFill style={{ pointerEvents:'none',background:'radial-gradient(ellipse at 45% 45%,transparent 58%,#66503516 100%)' }}/>
-    <div style={{ position:'absolute',left:86,right:170,top:94,height:5,background:C.line }}><div style={{ width:`${f/1343*100}%`,height:'100%',background:C.red }}/></div>
+    <Audio src={MEDIA.music} volume={interpolate(f,[0,24,1344,1380,1394,1433],[0,.68,.68,.95,.95,0],CLAMP)}/>
     <Audio src={MEDIA.voice} volume={1}/>
     {SFX.map((s,i)=><Sequence key={i} from={s.at} durationInFrames={s.frames}><Audio src={s.id} volume={s.volume}/></Sequence>)}
   </AbsoluteFill>;
