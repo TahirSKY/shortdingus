@@ -62,6 +62,7 @@
     "input-otp": "^1.4.2",
     "lottie-web": "^5.13.0",
     "lucide-react": "^0.462.0",
+    "mediabunny": "^1.61.6",
     "motion": "^13.4.6",
     "mp4-muxer": "5",
     "mp4box": "0.5.2",
