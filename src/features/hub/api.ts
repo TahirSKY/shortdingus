@@ -118,15 +118,29 @@ export async function uploadFile(group: AssetGroup, file: File, projectId: strin
     if (up.error) throw up.error;
     onProgress?.(1);
   }
-  const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: lottie ? lottie.duration : duration, project_id: projectId, role, tags, meta: lottie ? lottie.meta : {} });
+  const { needsRenderCopy, makeRenderCopy } = await import("./render-copy");
+  // Long clipping sources are cut losslessly per clip instead (Prepare clip).
+  const heavy = kind === "video" && role !== "source" && needsRenderCopy(dims.w, dims.h, file.size, duration);
+  const baseMeta = lottie ? lottie.meta : heavy ? { width: dims.w, height: dims.h, needs_render_copy: true } : {};
+  const { error } = await db.from("assets").insert({ id, group_id: group.id, kind, name: file.name, storage_path: path, mime_type: mime, size_bytes: file.size, duration_seconds: lottie ? lottie.duration : duration, project_id: projectId, role, tags, meta: baseMeta });
   if (error) { await supabase.storage.from("hub-media").remove([path]); throw error; }
   await touch(group.id);
+  // Huge/4K videos: make a 1080p high-quality render copy so renders never run out of memory/disk.
+  const copyDone = heavy
+    ? makeRenderCopy(file, { id, storage_path: path }).catch(async (e) => {
+        console.warn("Render copy failed", e);
+        const { data } = await db.from("assets").select("meta").eq("id", id).maybeSingle();
+        await db.from("assets").update({ meta: { ...(data?.meta || {}), render_copy_error: String(e?.message || e) } }).eq("id", id);
+      })
+    : Promise.resolve();
   if (kind === "video" && file.size > 19_000_000) {
     // Too big for the AI to watch whole: read the picture from snapshots instead.
     (async () => {
       const { makeSheets } = await import("@/features/clipping/api");
       const frames = await makeSheets(file, duration || 60, group, id, () => {});
-      await db.from("assets").update({ meta: { width: dims.w, height: dims.h, frames } }).eq("id", id);
+      await copyDone;
+      const { data } = await db.from("assets").select("meta").eq("id", id).maybeSingle();
+      await db.from("assets").update({ meta: { ...(data?.meta || {}), width: dims.w, height: dims.h, frames } }).eq("id", id);
       await runAnalysis(id, "gemini-frames");
     })().catch((e) => console.warn("Snapshot analysis failed to start", e));
   } else if (kind === "image" || kind === "video") runAnalysis(id).catch((e) => console.warn("Auto-analysis failed to start", e));
