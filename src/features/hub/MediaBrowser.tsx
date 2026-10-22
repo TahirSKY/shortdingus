@@ -36,7 +36,8 @@ export default function MediaBrowser({ group, projectId }: { group: AssetGroup; 
     const current = ++request.current;
     setBusy(true); setError("");
     try {
-      const data = await searchMedia({ projectId, source, type, orientation, q, page: nextPage });
+      const mediaType = source === "pexels" ? (type === "photo" ? "photo" : "video") : (type === "stickers" ? "stickers" : "gifs");
+      const data = await searchMedia({ projectId, source, type: mediaType, orientation, q, page: nextPage });
       if (current !== request.current) return;
       setResults(data.results); setPage(data.page); setHasMore(data.hasMore); setLastQuery(q);
     } catch (e) { if (current === request.current) { setError((e as Error).message); setResults([]); } }
@@ -71,7 +72,7 @@ export default function MediaBrowser({ group, projectId }: { group: AssetGroup; 
         </div>
         <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); search(); }}>
           <Input aria-label="Search media" placeholder={source === "pexels" ? "Search B-roll…" : "Search GIFs…"} value={query} maxLength={50} onChange={(e) => setQuery(e.target.value)} className="min-w-0 flex-1 basis-40" />
-          <Select value={type} onValueChange={(v) => { setType(v as MediaType); reset(); }}><SelectTrigger className="w-28" aria-label="Media type"><SelectValue /></SelectTrigger><SelectContent>{(source === "pexels" ? [["video", "Videos"], ["photo", "Photos"]] : [["gifs", "GIFs"], ["stickers", "Stickers"]]).map(([v, label]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent></Select>
+          <Select key={source} value={type} onValueChange={(v) => { if (!v) return; setType(v as MediaType); reset(); }}><SelectTrigger className="w-28" aria-label="Media type"><SelectValue /></SelectTrigger><SelectContent>{(source === "pexels" ? [["video", "Videos"], ["photo", "Photos"]] : [["gifs", "GIFs"], ["stickers", "Stickers"]]).map(([v, label]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent></Select>
           {source === "pexels" && <Select value={orientation} onValueChange={(v) => { setOrientation(v); reset(); }}><SelectTrigger className="w-32" aria-label="Orientation"><SelectValue /></SelectTrigger><SelectContent>{[["any", "All shapes"], ["portrait", "Vertical"], ["landscape", "Horizontal"], ["square", "Square"]].map(([v, label]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent></Select>}
           <Button type="submit" disabled={busy || !query.trim()}><Search className="mr-2 h-4 w-4" />Search</Button>
         </form>
