@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import MediaBrowser from "./MediaBrowser";
 import {
   ASSET_KINDS, ROLES, type Analysis, type Asset, type AssetGroup, type AssetKind, addTextAsset, assetUrl, deleteAsset,
   fmtBytes, fmtTime, listAssets, makeCutout, relTime, runAnalysis, updateAssetTags, uploadFile,
@@ -132,6 +133,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
 
   return (
     <div>
+      {projectId && <div className="mb-3 flex justify-end"><MediaBrowser group={group} projectId={projectId} /></div>}
       <div
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}
