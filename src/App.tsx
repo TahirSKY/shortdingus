@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,8 @@ import RenderResult from "./pages/RenderResult";
 import RendersLibrary from "./pages/RendersLibrary";
 import VoiceStudio from "./pages/VoiceStudio";
 import NotFound from "./pages/NotFound";
+
+const SkillPackImport = lazy(() => import("./pages/SkillPackImport"));
 
 const queryClient = new QueryClient();
 
@@ -33,6 +36,7 @@ const App = () => (
           <Route path="/renders" element={<RendersLibrary />} />
           <Route path="/voice-studio" element={<VoiceStudio />} />
           <Route path="/voice" element={<VoiceStudio />} />
+          <Route path="/import" element={<Suspense fallback={<div className="studio-theme min-h-screen bg-background" />}><SkillPackImport /></Suspense>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
