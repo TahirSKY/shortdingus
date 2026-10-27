@@ -34,6 +34,7 @@ const App = () => (
           <Route path="/renders" element={<RendersLibrary />} />
           <Route path="/voice-studio" element={<VoiceStudio />} />
           <Route path="/voice" element={<VoiceStudio />} />
+          <Route path="/lottie-studio" element={<LottieStudio />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
