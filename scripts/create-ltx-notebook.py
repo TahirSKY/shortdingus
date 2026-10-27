@@ -1,4 +1,8 @@
-"""Build the downloadable, GPU-gated LTX experiment notebook without credentials."""
+"""Build the downloadable, GPU-gated LTX experiment notebook without credentials.
+
+Shared setup cells (GPU check, isolated env, FP16 patch, pinned model download)
+are reused by create-ltx-server-notebook.py for the app-connected server notebook.
+"""
 import json
 from pathlib import Path
 
@@ -11,8 +15,7 @@ def markdown(source):
     return {"cell_type": "markdown", "metadata": {}, "source": source.strip().splitlines(keepends=True)}
 
 
-cells = [
-    markdown("""
+INTRO = markdown("""
 # LTX video: first GPU test
 
 **Experimental, not GPU-validated yet.** This notebook tests the exact LTX-Video 2B 0.9.8 distilled model before connecting it to your projects. It is not the finished app-controlled workflow. No public server, tunnel, paid API, or app credentials are used here.
@@ -22,8 +25,9 @@ Choose **Runtime → Change runtime type → GPU**, then run the cells in order.
 The first pass is deliberately small (33 frames at 24 fps). Increase to 73 or 97 frames only after it works. Downloads can be large and GPU access can disappear. If a step fails, stop: there is no automatic retry or model substitution.
 
 Weights use the [LTXV Open Weights License](https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt); review it before use. See [Colab restrictions](https://research.google.com/colaboratory/faq.html). Use this notebook personally, without keep-alive or usage-limit workarounds.
-"""),
-    code("""
+""")
+
+GPU_CHECK = code("""
 # 1. Check the assigned machine before downloading anything.
 import json, os, shutil, subprocess, sys, time
 from pathlib import Path
@@ -41,8 +45,9 @@ print(f'System RAM: {ram_gib:.1f} GiB; free disk: {free_gib:.1f} GiB')
 if free_gib < 40:
     raise RuntimeError('This isolated test needs at least 40 GiB of free disk for dependencies and model files.')
 print('These checks do not guarantee model fit. Host RAM and GPU memory can still run out.')
-"""),
-    code("""
+""")
+
+ENV_SETUP = code("""
 # 2. Create an isolated Python environment; do not replace Colab's notebook packages.
 def run(args, **kwargs):
     subprocess.run([str(a) for a in args], check=True, **kwargs)
@@ -72,8 +77,9 @@ run(UV + ['pip', 'check', '--python', str(PYTHON)])
 resolved = subprocess.check_output(UV + ['pip', 'freeze', '--python', str(PYTHON)], text=True)
 (ROOT / 'environment.txt').write_text(resolved)
 print('Isolated environment ready. No model has generated anything yet.')
-"""),
-    code("""
+""")
+
+FP16_PATCH = code("""
 # 3. Apply explicit FP16 compatibility changes to this temporary pinned checkout.
 # Upstream uses BF16; changing the YAML alone is not sufficient on a T4.
 source_path = REPO / 'ltx_video/inference.py'
@@ -95,8 +101,9 @@ for old, new in changes:
 compile(source, str(source_path), 'exec')
 source_path.write_text(source)
 print('FP16 loader prepared. Its numerical quality and memory use still need a real GPU test.')
-"""),
-    code("""
+""")
+
+MODEL_DOWNLOAD = code("""
 # 4. Download only pinned required components; disable extra prompt-enhancement models.
 setup = r'''
 import json
@@ -122,7 +129,40 @@ print('Pinned components ready.', flush=True)
 '''
 (ROOT / 'setup_models.py').write_text(setup)
 run([PYTHON, ROOT / 'setup_models.py'])
-"""),
+""")
+
+# The single-shot runner, shared by the manual test cell and the server notebook.
+RUNNER = r'''
+import json, sys, time
+from pathlib import Path
+import torch
+from ltx_video.inference import InferenceConfig, infer
+
+settings = json.loads(Path(sys.argv[1]).read_text())
+torch.cuda.reset_peak_memory_stats()
+started = time.monotonic()
+try:
+    infer(InferenceConfig(**settings))
+except Exception as error:
+    print('TEST STOPPED:', type(error).__name__, str(error), flush=True)
+    raise
+finally:
+    report = {'generation_seconds': time.monotonic()-started,
+        'peak_gpu_allocated_gib': torch.cuda.max_memory_allocated()/1024**3,
+        'peak_gpu_reserved_gib': torch.cuda.max_memory_reserved()/1024**3,
+        'gpu': torch.cuda.get_device_name(0), 'torch': torch.__version__}
+    Path(settings['output_path'], 'measurement.json').write_text(json.dumps(report, indent=2))
+    print(json.dumps(report, indent=2), flush=True)
+'''
+
+RUNNER_CELL = code("""
+# Write the shared single-shot runner used to generate one take per call.
+runner = r'''""" + RUNNER + """'''
+(ROOT / 'run_shot.py').write_text(runner)
+print('Runner ready.')
+""")
+
+MANUAL_CELLS = [
     markdown("""
 ## First shot
 Use text alone initially, or set `IMAGE_PATH` to an image already in the Colab files panel. For later comparisons use your own realistic, 2D and stylized-3D references. This test does not ask you to download any generated video.
@@ -155,29 +195,6 @@ print(f'Test: {WIDTH} × {HEIGHT}, {FRAMES} frames, {FRAMES/FPS:.2f} seconds; se
 # 6. Generate one take. Do not restart automatically after failure.
 attempt = ROOT / 'outputs' / str(time.time_ns())
 attempt.mkdir(parents=True)
-runner = r'''
-import json, sys, time
-from pathlib import Path
-import torch
-from ltx_video.inference import InferenceConfig, infer
-
-settings = json.loads(Path(sys.argv[1]).read_text())
-torch.cuda.reset_peak_memory_stats()
-started = time.monotonic()
-try:
-    infer(InferenceConfig(**settings))
-except Exception as error:
-    print('TEST STOPPED:', type(error).__name__, str(error), flush=True)
-    raise
-finally:
-    report = {'generation_seconds': time.monotonic()-started,
-        'peak_gpu_allocated_gib': torch.cuda.max_memory_allocated()/1024**3,
-        'peak_gpu_reserved_gib': torch.cuda.max_memory_reserved()/1024**3,
-        'gpu': torch.cuda.get_device_name(0), 'torch': torch.__version__}
-    Path(settings['output_path'], 'measurement.json').write_text(json.dumps(report, indent=2))
-    print(json.dumps(report, indent=2), flush=True)
-'''
-(ROOT / 'run_shot.py').write_text(runner)
 settings = dict(prompt=PROMPT, width=WIDTH, height=HEIGHT, num_frames=FRAMES,
     frame_rate=FPS, seed=SEED, offload_to_cpu=True,
     pipeline_config=str(ROOT / 'test-config.yaml'), output_path=str(attempt))
@@ -202,13 +219,24 @@ print('If it failed, share the error and assigned GPU name—not credentials or 
 """),
 ]
 
-notebook = {
-    "nbformat": 4,
-    "nbformat_minor": 5,
-    "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}, "colab": {"name": "LTX video GPU test.ipynb"}, "accelerator": "GPU"},
-    "cells": [{**cell, "id": f"ltx-test-{i}"} for i, cell in enumerate(cells)],
-}
-destination = Path(__file__).resolve().parents[1] / "public/colab/ltx-video-test.ipynb"
-destination.parent.mkdir(parents=True, exist_ok=True)
-destination.write_text(json.dumps(notebook, indent=2) + "\n")
-print(f"Created {destination.relative_to(destination.parents[2])}")
+
+def base_cells():
+    """Pinned setup shared by the manual test notebook and the server notebook."""
+    return [GPU_CHECK, ENV_SETUP, FP16_PATCH, MODEL_DOWNLOAD, RUNNER_CELL]
+
+
+def write_notebook(cells, name, filename):
+    notebook = {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}, "colab": {"name": name}, "accelerator": "GPU"},
+        "cells": [{**cell, "id": f"{filename.split('.')[0]}-{i}"} for i, cell in enumerate(cells)],
+    }
+    destination = Path(__file__).resolve().parents[1] / "public/colab" / filename
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(notebook, indent=2) + "\n")
+    print(f"Created {destination.relative_to(destination.parents[2])}")
+
+
+if __name__ == "__main__":
+    write_notebook([INTRO] + base_cells() + MANUAL_CELLS, "LTX video GPU test.ipynb", "ltx-video-test.ipynb")

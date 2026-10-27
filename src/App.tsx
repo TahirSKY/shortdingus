@@ -12,6 +12,8 @@ import Examples from "./pages/Examples";
 import RenderResult from "./pages/RenderResult";
 import RendersLibrary from "./pages/RendersLibrary";
 import VoiceStudio from "./pages/VoiceStudio";
+import LottieStudio from "./pages/LottieStudio";
+import VideoStudio from "./pages/VideoStudio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
           <Route path="/renders" element={<RendersLibrary />} />
           <Route path="/voice-studio" element={<VoiceStudio />} />
           <Route path="/voice" element={<VoiceStudio />} />
+          <Route path="/lottie-studio" element={<LottieStudio />} />
+          <Route path="/video-studio" element={<VideoStudio />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -1,12 +1,13 @@
 import { useLocation, Link } from "react-router-dom";
-import { Folder, Sparkles, Film, LayoutGrid } from "lucide-react";
+import { Folder, Sparkles, Film, Shapes, Clapperboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", label: "Hubs", icon: Folder },
   { to: "/playground", label: "Play", icon: Sparkles },
   { to: "/renders", label: "Renders", icon: Film },
-  { to: "/examples", label: "Examples", icon: LayoutGrid },
+  { to: "/lottie-studio", label: "Lottie", icon: Shapes },
+  { to: "/video-studio", label: "Video", icon: Clapperboard },
 ];
 
 const MobileBottomNav = () => {
