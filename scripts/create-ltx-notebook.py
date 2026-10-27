@@ -155,9 +155,9 @@ finally:
     print(json.dumps(report, indent=2), flush=True)
 '''
 
-RUNNER_CELL = code(f"""
+RUNNER_CELL = code("""
 # Write the shared single-shot runner used to generate one take per call.
-runner = r'''{RUNNER}'''
+runner = r'''""" + RUNNER + """'''
 (ROOT / 'run_shot.py').write_text(runner)
 print('Runner ready.')
 """)
