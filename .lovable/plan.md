@@ -12,9 +12,9 @@ Leave Lottie polishing aside; do not replace or repair the avatar in this task.
 
 ## What the research established
 
-I inspected Vibe Voice Studio’s code: it starts VibeVoice-1.5B, exposes a Cloudflare link and proxies voice requests. History is browser-local; there is no durable queue or app-managed worker credential. Reuse its easy setup, not its public-link/long-request architecture.
+I inspected Vibe Voice Studio: VibeVoice-1.5B through a Cloudflare link, browser-local history, no durable queue or worker credential. Reuse its easy setup, not its public-link architecture.
 
-Paid APIs charge for generated duration and additional attempts. Open weights remove that provider charge, not the underlying computation. Free Colab can provide occasional GPU access; storage, transfers, existing AI calls and AWS export remain separate costs.
+Paid APIs charge per generated duration/attempt. Open weights remove the provider charge, not computation costs. Free Colab offers occasional access; existing app/render costs remain.
 
 Google does not guarantee free GPU type or availability. Sessions can terminate early; “up to 12 hours” is a maximum, not an allocation. Free-tier restrictions include external web-UI control and distributed workers. Outbound polling does not automatically avoid them. Colab terms also prohibit providing direct or indirect Colab access to third parties.
 
@@ -68,9 +68,7 @@ Generate three short I2V tests—realistic, 2D and stylized 3D—and one T2V tes
 
 ### Phase 2 — Connect one model to all projects
 
-Add the project generation panel, durable request/history records, secure notebook pairing, manual request approval in Colab and direct output storage. This is the first working end-to-end core. Reuse existing asset cards, editor handoff and hub/shared references.
-
-Test saving a request → pairing → generating → uploading → playback in project → editor use → final Remotion export. Also test interruption, repeated clicks and upload recovery. Keep completed files independently of the notebook session.
+Build generation requests/history, secure pairing, manual Colab approval and direct storage. Reuse asset cards and editor handoff. Test request → generation → saved playback → editor → export, plus interruption, repeated clicks and upload recovery. Files must outlive the notebook.
 
 ### Phase 3 — Add models that earn their place
 
