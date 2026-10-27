@@ -12,6 +12,7 @@ import Examples from "./pages/Examples";
 import RenderResult from "./pages/RenderResult";
 import RendersLibrary from "./pages/RendersLibrary";
 import VoiceStudio from "./pages/VoiceStudio";
+import LottieStudio from "./pages/LottieStudio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

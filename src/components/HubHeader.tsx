@@ -7,6 +7,7 @@ const links = [
   { to: "/renders", label: "Renders" },
   { to: "/examples", label: "Examples" },
   { to: "/voice-studio", label: "Voice" },
+  { to: "/lottie-studio", label: "Lottie" },
 ];
 
 export default function HubHeader() {
