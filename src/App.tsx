@@ -36,6 +36,7 @@ const App = () => (
           <Route path="/voice-studio" element={<VoiceStudio />} />
           <Route path="/voice" element={<VoiceStudio />} />
           <Route path="/lottie-studio" element={<LottieStudio />} />
+          <Route path="/video-studio" element={<VideoStudio />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
