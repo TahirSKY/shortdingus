@@ -2,13 +2,13 @@
 
 ## Recommendation
 
-Build **one shared video-generation system**, not separate generators for each hub. Start with short, image-led shots using **LTX-Video 2B distilled**, then add a small Wan text-to-video option and stronger models when the available GPU can actually run them.
+Build **one shared video-generation system across hubs**. Start with image-led **LTX-Video 2B distilled** shots, then add small Wan T2V and stronger models when the GPU supports them.
 
-Your laptop only runs the browser. Google’s GPU does the generation. Finished videos return to the project library and work with the existing editor, voiceovers and Remotion export.
+Your laptop runs the browser; Google’s GPU generates. Finished videos return to project files for voiceover/editing and Remotion export.
 
-**Important change from Vibe Voice Studio:** start with generation controlled inside the Colab notebook, not a public server link. Google restricts using free Colab primarily through an external web interface. A working tunnel is not proof that Google permits it. This is an occasional, personal-use experiment—not an unlimited free service for customers.
+**Change from Vibe Voice Studio:** control generation in the notebook, not through a public server link. Google restricts external-web-UI use on free Colab. This is a personal experiment, not an unlimited customer service.
 
-Leave further Lottie mouth/eye polishing aside. This project is about generating new shots; it does not silently replace or repair the existing avatar.
+Leave Lottie polishing aside; do not replace or repair the avatar in this task.
 
 ## What the research established
 
@@ -20,20 +20,20 @@ Google does not guarantee free GPU type or availability. Sessions can terminate 
 
 ### Model shortlist
 
-These are documentation-based findings, **not models I have run on your Colab GPU**. GPU-memory figures describe published configurations, not guarantees for all settings.
+Documentation-based findings, **not tests on your GPU**. Memory figures are published configurations, not universal minimums.
 
-| Model | Inputs | Place in the system | Main limitation |
-|---|---|---|---|
-| **LTX-Video `ltxv-2b-0.9.8-distilled`** | Text or image | First experiment: both input modes with a relatively small model | Lower detail than larger models; real T4 fit/speed still needs testing. Checkpoint is about 6.34 GB before auxiliary components. |
-| **Wan2.1-T2V-1.3B** | Text | Second small-model option with Apache-2.0 licensing | Not native image-to-video. Published 8.19 GB GPU memory; full repository download about 17.6 GB. Published four-minute example uses a 4090, not T4. |
-| **Wan2.2-TI2V-5B** | Text or image | Stronger next tier when a suitable GPU is available | Official 720p example needs at least 24 GB GPU memory with offloading. Not a stock 16 GB T4 promise. About 34.2 GB repository download. |
-| **Wan2.2 T2V/I2V A14B** | Separate text/image variants | Quality-focused optional tier | Official example specifies 80 GB GPU memory. Smaller-memory adaptations are experimental and can be very slow. |
-| **LTX-2.5 22B** | Text or image; additional audio/control workflows | Later evaluation for richer audiovisual shots | Current documented starter download is roughly 66 GiB. Not a sensible first free-T4 setup. |
-| **HunyuanVideo-1.5 480p I2V step-distilled** | Image; other variants support text | Conditional research candidate, not enabled initially | Published 14 GB with offloading does not prove reliable T4 operation. License excludes EU, UK and South Korea, making it unsuitable as a broadly available default. |
+| Model | Inputs | Recommendation / limitation |
+|---|---|---|
+| **LTX-Video `ltxv-2b-0.9.8-distilled`** | Text/image | First experiment. Small enough to be plausible on T4; lower detail than larger models. Checkpoint ~6.34 GB plus auxiliary files. T4 speed/fit untested. |
+| **Wan2.1-T2V-1.3B** | Text only | Second small model; Apache-2.0. Published 8.19 GB VRAM, ~17.6 GB download. Four-minute/5-second example uses a 4090, not T4. |
+| **Wan2.2-TI2V-5B** | Text/image | Stronger next tier. Official 720p example needs 24 GB VRAM with offloading; ~34.2 GB download. Not a stock T4 promise. |
+| **Wan2.2 T2V/I2V A14B** | Separate variants | Quality-focused optional tier. Official example specifies 80 GB VRAM; smaller-memory adaptations can be very slow. |
+| **LTX-2.5 22B** | Text/image; audio/control workflows | Later audiovisual evaluation. Starter download ~66 GiB; not a first free-T4 target. |
+| **HunyuanVideo-1.5 480p I2V step-distilled** | Image | Research candidate only. Published 14 GB with offloading does not prove T4 reliability. License excludes EU, UK and South Korea. |
 
-LTX-Video 0.9.8 and modern LTX weights use custom licenses, not simply their code repository’s license. Commercial entities with annual revenue at or above **$10 million** need a separate commercial agreement; use restrictions also apply. Wan’s Apache-2.0 license is simpler. Record and review the exact weight license before enabling a model; never generalize one family’s license to every release.
+LTX weights use custom licenses: commercial entities at **$10M+ annual revenue** need a separate agreement; use restrictions also apply. Wan’s Apache-2.0 is simpler. Review exact weight licenses before enabling models.
 
-The latest downloadable LTX release found was **LTX-2.5**. This research did not establish newer open-weight general-purpose Wan releases beyond **2.2**; a newer hosted product name is not evidence of downloadable weights.
+Latest downloadable LTX found: **2.5**. No newer general-purpose open-weight Wan beyond **2.2** was established; hosted product branding is not evidence of downloadable weights.
 
 ## Getting less broken-looking video
 
@@ -102,9 +102,9 @@ Project asset → editor → Remotion / AWS export
 
 ## Cost and validation boundaries
 
-**Potentially $0 for the video-model compute:** occasional personal runs within free Colab availability, using permitted open weights. **Not guaranteed $0 for the overall app:** storage, bandwidth, existing AI calls, final renders and any voluntarily purchased GPU access remain separate.
+**Potentially $0 video-model compute**, within variable free Colab access—not guaranteed $0 overall. Storage/bandwidth, existing AI calls, AWS export and any voluntarily purchased GPU remain separate.
 
-No models were generated during this research and no GPU availability was verified for your account. Actual T4 performance, output quality, model-cache practicality and your Cloud allowance remain to be checked in Phase 1. Stronger models may require paid GPU access; the app will not purchase it automatically.
+No GPU/model execution or account allowance was verified here. Phase 1 must establish actual speed, memory and full-clip quality. Stronger models may need paid GPUs; none will be purchased automatically.
 
 ## Primary sources
 
