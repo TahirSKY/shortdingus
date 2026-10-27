@@ -30,7 +30,7 @@ class NotebookTests(unittest.TestCase):
         tree = ast.parse(self.code)
         budget = next(n for n in ast.walk(tree) if isinstance(n, ast.If) and ast.unparse(n.test) == 'FRAMES < 9 or FRAMES > 97 or (FRAMES - 1) % 8')
         for frames, rejected in [(33, False), (73, False), (97, False), (32, True), (105, True), (1, True)]:
-            self.assertEqual(eval(compile(ast.Expression(budget.test), '<frame-budget>', 'eval'), {}, {'FRAMES': frames}), rejected)
+            self.assertEqual(bool(eval(compile(ast.Expression(budget.test), '<frame-budget>', 'eval'), {}, {'FRAMES': frames})), rejected)
 
     def test_no_output_or_execution_results_are_embedded(self):
         for cell in self.book['cells']:
