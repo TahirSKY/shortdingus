@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Clarify personal-use video workflow in the selected plan passage
 - [x] Research and propose a shared Colab-powered AI video-generation core using Vibe Voice Studio as reference
 - [x] Finish Lottie project playback, editor handoff, and verify video export
 - [x] Project Pexels/GIPHY search, preview, and save selected media
