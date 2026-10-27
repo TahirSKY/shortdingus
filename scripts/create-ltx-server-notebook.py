@@ -5,11 +5,13 @@ token-protected HTTP API through a cloudflared tunnel so the app's Video page
 can request generations and pull the MP4 straight into a hub — no PC download.
 Personal, single-user workflow; no third-party access.
 """
+import importlib.util
 from pathlib import Path
-import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from create_ltx_notebook import base_cells, code, markdown, write_notebook  # noqa: E402
+_spec = importlib.util.spec_from_file_location("create_ltx_notebook", Path(__file__).resolve().parent / "create-ltx-notebook.py")
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+base_cells, code, markdown, write_notebook = _mod.base_cells, _mod.code, _mod.markdown, _mod.write_notebook
 
 SERVER_PY = r'''
 import json, os, queue, secrets, subprocess, threading, time, urllib.request, uuid
