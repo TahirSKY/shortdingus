@@ -15,7 +15,7 @@ export function readLottie(data: unknown) {
 
 export function lottieCode(url: string, data: unknown) {
   const l = readLottie(data);
-  return `/* REMOTION_CONFIG { width: ${l.width}, height: ${l.height}, fps: ${l.fps}, durationInFrames: ${l.frames} } */
+  return `/* REMOTION_CONFIG {width: ${l.width}, height: ${l.height}, fps: ${l.fps}, durationInFrames: ${l.frames}, durationInSeconds: ${l.frames / l.fps}} */
 /* compositionConfig = { width: ${l.width}, height: ${l.height}, fps: ${l.fps}, durationInSeconds: ${l.frames / l.fps} } */
 import React, {useEffect, useState} from "react";
 import {AbsoluteFill, delayRender, continueRender, cancelRender} from "remotion";

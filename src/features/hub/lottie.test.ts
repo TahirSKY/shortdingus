@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lottieCode, readLottie } from "./lottie";
+import { detectConfig } from "@/lib/detect-config";
 
 describe("Lottie timing", () => {
   const soy = { fr: 30, ip: 0, op: 110, w: 1920, h: 1080, layers: Array(33).fill({}), markers: [] };
@@ -13,6 +14,6 @@ describe("Lottie timing", () => {
     expect(() => readLottie({ ...soy, fr: 0 })).toThrow();
   });
   it("hands off the same 110 frames at 30fps to Remotion", () => {
-    expect(lottieCode("https://example.com/animation.json", soy)).toContain("fps: 30, durationInFrames: 110");
+    expect(detectConfig(lottieCode("https://example.com/animation.json", soy))).toEqual({ width: 1920, height: 1080, fps: 30, durationInFrames: 110, durationInSeconds: 110 / 30 });
   });
 });

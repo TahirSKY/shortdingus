@@ -50,13 +50,13 @@ export default function LottiePreview({ asset, group }: { asset: Asset; group: A
   return <>
     <Button size="sm" variant="secondary" onClick={() => setOpen(true)}><Play className="mr-1 h-3.5 w-3.5" />Preview animation</Button>
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
         <DialogHeader><DialogTitle className="break-all pr-6">{asset.name}</DialogTitle></DialogHeader>
         {isPending && <p className="text-sm text-muted-foreground">Loading animation…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error.message}</p>}
         {data && <>
           <div className="overflow-hidden rounded border border-border bg-muted">
-            <Player component={Animation} inputProps={{ data: data.animation }} compositionWidth={data.config.width} compositionHeight={data.config.height} fps={data.config.fps} durationInFrames={data.config.frames} controls loop className="w-full" />
+            <Player component={Animation} inputProps={{ data: data.animation }} compositionWidth={data.config.width} compositionHeight={data.config.height} fps={data.config.fps} durationInFrames={data.config.frames} controls loop style={{ width: "100%", aspectRatio: `${data.config.width}/${data.config.height}` }} />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">{data.config.width} × {data.config.height} · {data.config.fps} fps · {(data.config.frames / data.config.fps).toFixed(2)}s</p>
