@@ -16,7 +16,7 @@ I inspected Vibe Voice Studio: VibeVoice-1.5B through a Cloudflare link, browser
 
 Paid APIs charge per generated duration/attempt. Open weights remove the provider charge, not computation costs. Free Colab offers occasional access; existing app/render costs remain.
 
-Google does not guarantee free GPU type or availability. Sessions can terminate early; “up to 12 hours” is a maximum, not an allocation. Free-tier restrictions include external web-UI control and distributed workers. Outbound polling does not automatically avoid them. Colab terms also prohibit providing direct or indirect Colab access to third parties.
+Google does not guarantee free GPU type or availability. Sessions can terminate early; “up to 12 hours” is a maximum, not an allocation. Free-tier restrictions include external web-UI control and distributed workers. This is solely your personal-use app, with no third-party access or subscriptions; the third-party-access concern does not apply to your stated use. Your required workflow is: start Colab, generate from this app like Vibe Voice Studio, and save the finished video directly into the project—never download it to your PC and re-upload it. The notebook-side Generate step elsewhere in this plan differs from that requirement and is not the workflow you requested. Personal use does not remove Google’s free-tier web-UI restrictions, so the exact Vibe Voice-style connection remains subject to that limitation.
 
 ### Model shortlist
 
