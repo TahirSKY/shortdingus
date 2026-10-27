@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import MediaBrowser from "./MediaBrowser";
+import LottiePreview from "./LottiePreview";
 import {
   ASSET_KINDS, ROLES, type Analysis, type Asset, type AssetGroup, type AssetKind, addTextAsset, assetUrl, deleteAsset,
   fmtBytes, fmtTime, listAssets, makeCutout, relTime, runAnalysis, updateAssetTags, uploadFile,
@@ -178,7 +179,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
             return (
               <div key={a.id} className="p-3">
                 <div className="flex items-start gap-3">
-                  <Preview asset={a} />
+                  {a.role !== "lottie" && <Preview asset={a} />}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="break-all text-sm">{a.name}</span>
@@ -187,6 +188,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
                     </div>
                     {desc && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{desc}</p>}
                     <TagEditor a={a} onSaved={refresh} />
+                    {a.role === "lottie" && <div className="mt-3"><LottiePreview asset={a} group={group} /></div>}
                   </div>
                   <div className="flex shrink-0 gap-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy link" onClick={() => copy(assetUrl(a.id))}><Copy className="h-3.5 w-3.5" /></Button>
