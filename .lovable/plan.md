@@ -116,4 +116,4 @@ No GPU/model execution or account allowance was verified here. Phase 1 must esta
 - [HunyuanVideo-1.5 runtime guidance](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5) and [license](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5/blob/master/LICENSE)
 - [Diffusers memory optimization](https://huggingface.co/docs/diffusers/optimization/memory)
 
-**Proposed first milestone:** one genuinely usable LTX image-to-video shot, generated in your Colab notebook, automatically saved into this app and successfully exported with your voiceover—before investing in multiple models or new hubs.
+**First milestone:** a usable Colab-generated LTX shot, saved here and exported with voiceover, before adding models/hubs.
