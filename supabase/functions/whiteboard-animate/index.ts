@@ -21,6 +21,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 import potrace from "npm:potrace@2.1.8";
+import { Buffer } from "node:buffer";
 import { admin, assetUrl, cors, isUuid, json, safeName } from "../_shared/hub.ts";
 import { HAND_PNG_B64, HAND_TIP } from "../_shared/whiteboard-hand.ts";
 
@@ -59,7 +60,7 @@ async function toLineArt(bytes: Uint8Array): Promise<Uint8Array> {
     b[i] = b[i + 1] = b[i + 2] = ink;
     b[i + 3] = 255;
   }
-  return img.encode(0); // 0 = PNG... imagescript: encode() defaults to PNG
+  return img.encode(); // PNG
 }
 
 /** Flatten one potrace subpath string into a polyline. */
@@ -101,8 +102,9 @@ function traceStrokes(png: Uint8Array): Promise<{ strokes: Stroke[]; width: numb
   return new Promise((resolve, reject) => {
     potrace.trace(Buffer.from(png), { threshold: 128, turdSize: 24, optiTolerance: 0.5 }, (err: Error | null, svg: string) => {
       if (err) return reject(err);
-      const w = Number(svg.match(/width="(\d+)/)?.[1] || 0);
-      const h = Number(svg.match(/height="(\d+)/)?.[1] || 0);
+      const vb = svg.match(/viewBox="[\d.]+ [\d.]+ ([\d.]+) ([\d.]+)"/);
+      const w = Number(vb?.[1] || svg.match(/width="([\d.]+)/)?.[1] || 0);
+      const h = Number(vb?.[2] || svg.match(/height="([\d.]+)/)?.[1] || 0);
       const strokes: Stroke[] = [];
       for (const m of svg.matchAll(/d="([^"]+)"/g)) {
         // Each path may hold several subpaths; split on M.
