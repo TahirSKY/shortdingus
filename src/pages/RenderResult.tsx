@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { ArrowLeft, Download, Loader2, Sparkles, BookmarkPlus, Check } from "lucide-react";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -31,21 +31,6 @@ const RenderResult = () => {
       ? [singleUrl]
       : [];
   const url = urls[0] || null;
-  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!url?.includes('/functions/v1/asset-url')) { setPlaybackUrl(url); return; }
-    let active = true;
-    let objectUrl: string | undefined;
-    setPlaybackUrl(null);
-    fetch(url).then(async (response) => {
-      if (!response.ok) throw new Error('Could not open the saved video.');
-      const blob = await response.blob();
-      if (!active) return;
-      objectUrl = URL.createObjectURL(blob);
-      setPlaybackUrl(objectUrl);
-    }).catch(() => { if (active) setPlaybackUrl(url); });
-    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [url]);
   const isMultiPage = urls.length > 1;
 
   const isImage = mode === "poster";
@@ -190,7 +175,7 @@ const RenderResult = () => {
             />
           ) : (
             <video
-              src={playbackUrl ?? undefined}
+              src={url ?? undefined}
               controls
               autoPlay
               className="max-w-full max-h-[75vh] rounded-lg border border-border shadow-lg"
