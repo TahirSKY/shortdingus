@@ -169,13 +169,13 @@ const RenderResult = () => {
             </div>
           ) : isImage ? (
             <img
-              src={url!}
+              src={url ?? undefined}
               alt="Rendered poster"
               className="max-w-full max-h-[75vh] rounded-lg border border-border shadow-lg object-contain"
             />
           ) : (
             <video
-              src={url!}
+              src={url ?? undefined}
               controls
               autoPlay
               className="max-w-full max-h-[75vh] rounded-lg border border-border shadow-lg"
