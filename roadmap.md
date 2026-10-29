@@ -13,3 +13,4 @@
 
 - [x] Dedicated AI video generation page (/video-studio) + Colab server notebook
 - [x] Whiteboard engine: whiteboard-animate edge function (image → traced strokes → Remotion code asset), editor whiteboard_animate tool, frame-verified locally (Lambda render not yet run)
+- [x] Whiteboard hub + "Muscle Signals" vertical short: 4 AI line-art scenes, borrowed Movie1 voiceover, 42 word-timed captions, 51.84s 1080x1920 composition v2 frame-verified locally (user to run Lambda render)
