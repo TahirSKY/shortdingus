@@ -12,3 +12,4 @@
 - [ ] Step 5: GPU face/person tracking + audio-visual active speaker detection for hard footage (livestreams)
 
 - [x] Dedicated AI video generation page (/video-studio) + Colab server notebook
+- [x] Whiteboard engine: whiteboard-animate edge function (image → traced strokes → Remotion code asset), editor whiteboard_animate tool, frame-verified locally (Lambda render not yet run)
