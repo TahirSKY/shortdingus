@@ -151,6 +151,27 @@ Deno.serve(async (req) => {
         return r.error ? r : { id: r.id, url: r.url, status: "creating — ready in ~30-60s" };
       },
     }),
+    whiteboard_animate: tool({
+      description: "Turn an image into a hand-drawn whiteboard animation clip: traces the image into strokes and saves a ready Remotion composition (realistic pencil hand follows the drawing) as a new project code asset. Best with clear dark-line art on a light background; works on any image via automatic line-art conversion. Optional voiceover plays under the clip; optional colorAssetId fades the finished colored image in at the end. Render the saved code asset through the normal render flow, or stitch several clips into a bigger video.",
+      inputSchema: z.object({
+        assetId: z.string().describe("image asset id from list_files"),
+        title: z.string(),
+        duration: z.number().nullable().describe("seconds; null = derive from stroke length"),
+        voiceoverAssetId: z.string().nullable(),
+        colorAssetId: z.string().nullable(),
+        hand: z.boolean().nullable(),
+      }),
+      execute: async ({ assetId, title, duration, voiceoverAssetId, colorAssetId, hand }) => {
+        const r = await callFn("whiteboard-animate", {
+          assetId, projectId: project.id, title,
+          ...(duration ? { duration } : {}),
+          ...(voiceoverAssetId ? { voiceoverAssetId } : {}),
+          ...(colorAssetId ? { colorAssetId } : {}),
+          ...(hand === false ? { hand: false } : {}),
+        });
+        return r.error ? r : { id: r.assetId, name: r.name, strokes: r.strokes, duration: r.duration, status: "saved as a code asset — render or open it like any video version" };
+      },
+    }),
     save_style_reference: tool({
       description: "Save the current video's look as a reusable style reference. First read_code, then write a style card (markdown): fonts, colors, caption style, image treatment (e.g. taped photos, paper, shadows), backgrounds/textures, transitions and motion feel, pacing habits, sound habits, plus the key code techniques that create the look. Describe style, not this video's story or timings.",
       inputSchema: z.object({ name: z.string(), card: z.string(), summary: z.string(), user_note: z.string().nullable(), shared: z.boolean() }),
