@@ -29,11 +29,9 @@ const lifter=geometry([line(curve(480,215,55,62)),line([[479,281],[454,381],[398
 const fibers=geometry([line([[165,241],[223,192],[495,193],[557,240],[498,296],[223,295],[165,241]],C.ink,5),...Array.from({length:8},(_,i)=>line([[218,207+i*10],[490,207+i*10]],C.coral,5)),...arrow([574,242],[750,242]),...envelope(785,205)]);
 const network=geometry([...cell(910,440,128),...arrow([1040,430],[1320,237]),...brain(1465,220),...arrow([1040,453],[1340,482]),...bone(1460,493),...arrow([910,540],[1090,730]),...cell(1190,778,68),...arrow([780,445],[525,268]),...gears(394,251),...arrow([780,480],[540,690]),...cell(398,755,82)]);
 const notebook=geometry([line([[595,220],[1260,220],[1260,650],[595,650],[595,220]]),line([[654,220],[654,650]],C.teal,5),...Array.from({length:5},(_,i)=>line([[693,285+i*65],[1195,285+i*65]],C.muted,3)),line([[720,360],[743,389],[785,338]],C.teal,7),line([[1070,488],[1095,454],[1140,465],[1150,496],[1116,518],[1116,547]],C.coral,7),line([[1116,572],[1116,576]],C.coral,10)]);
-function Marker({x,y,scale=1}) {return <g transform={`translate(${x} ${y}) scale(${scale}) rotate(-26)`}>
- <path d="M-3 0 L5 1 L14 -32 L7 -35Z" fill={C.ink}/><path d="M7 -34 L15 -31 L40 -119 Q45 -133 33 -138 Q25 -139 23 -129Z" fill={C.teal} stroke={C.ink} strokeWidth="2"/>
- <path d="M22 -73 Q8 -84 8 -102 Q7 -113 17 -115 L29 -93 L34 -113 Q38 -125 49 -120 L64 -90 Q72 -102 83 -91 L125 -40 L154 14 L91 45 L59 5 Q47 -7 40 -29 L22 -73Z" fill="#f3cbb3" stroke={C.ink} strokeWidth="3"/>
- <path d="M33 -91 L54 -53 M47 -100 L70 -63 M61 -92 L85 -53 M87 -42 Q71 -42 61 -30" fill="none" stroke="#bd8b70" strokeWidth="2.5"/>
- <path d="M94 41 L152 6 L181 48 L119 80Z" fill={C.coral} stroke={C.ink} strokeWidth="3"/>
+// Pencil tip is at (98, 849) in the 1024px cutout; anchor it to the stroke endpoint.
+function Marker({x,y,scale=1}) {return <g transform={`translate(${x} ${y}) scale(${scale})`}>
+ <image href={HAND_EMBEDDED} x={-98*.31} y={-849*.31} width={1024*.31} height={1024*.31}/>
  </g>;}
 function Draw({g,t,start,duration,tx=0,ty=0,scale=1,hand=true}){const p=clamp((t-start)/duration),dist=g.total*p;const active=g.strokes.find(s=>dist>=s.offset&&dist<s.offset+s.length);const pen=active?locate(active,dist-active.offset):null;
  return <g transform={`translate(${tx} ${ty}) scale(${scale})`}>{g.strokes.map((s,i)=>{const amount=clamp(dist-s.offset,0,s.length);if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${s.length} ${s.length}`} strokeDashoffset={s.length-amount}/>;})}{hand&&pen&&p>0&&p<1?<Marker x={pen[0]} y={pen[1]} scale={1/scale}/>:null}</g>;}
