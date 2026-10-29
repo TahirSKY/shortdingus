@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Generate and save a realistic cutout pencil hand and updated Movie1 whiteboard code; check hand-tip tracking
+- [x] Generate and save a realistic cutout pencil hand and updated Movie1 whiteboard code; hand-tip frame and project readback checked (new MP4 export not performed)
 - [x] Build and save 52-second narrated whiteboard proof in Movie Theatre / Movie1 and Renders; clean export validated with frame/audio inspection (Lambda SVG artifacts required raster fallback)
 - [x] Provide a pinned LTX Colab GPU-test notebook and pass structural tests
 - [ ] Validate LTX memory use and full-clip quality — blocked on a real user-started Colab GPU run; no GPU is available here
