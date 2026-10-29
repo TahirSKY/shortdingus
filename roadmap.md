@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Build and export a narrated whiteboard proof in the Movie Theatre project using its existing voiceover
 - [x] Provide a pinned LTX Colab GPU-test notebook and pass structural tests
 - [ ] Validate LTX memory use and full-clip quality — blocked on a real user-started Colab GPU run; no GPU is available here
 - [ ] Connect app-controlled generation and direct project saving after the GPU quality gate passes
