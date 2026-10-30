@@ -66,6 +66,7 @@ export function describe(a: any, analyses: any[], full: boolean) {
   const an = analyses.filter((x) => x.asset_id === a.id);
   const lines = [`- ${a.name} | id ${a.id} | ${a.kind}${a.role ? ` role=${a.role}` : ""}${a.tags?.length ? ` tags=${a.tags.join(",")}` : ""}${a.duration_seconds ? ` ${Number(a.duration_seconds).toFixed(1)}s` : ""} | url ${assetUrl(a.id)}`];
   const m = a.meta || {};
+  if (a.tags?.includes("whiteboard-clip")) lines.push(`  drawing: ${m.error ? "error: " + m.error : m.creating ? m.whiteboard_status || "rendering" : "ready"}; source image=${m.source_asset_id}; drawSeconds=${m.draw_seconds ?? "pending"}; holdSeconds=${m.hold_seconds ?? "pending"}`);
   if (m.peak_time != null) lines.push(`  sound: peak ${m.peak_time}s, trim ${m.trim_start ?? 0}-${m.trim_end ?? "end"}`);
   if (a.inline_content) lines.push(full ? `  content:\n${a.inline_content}` : `  content: ${clip(a.inline_content, 300)}`);
   let wordsShown = false;
