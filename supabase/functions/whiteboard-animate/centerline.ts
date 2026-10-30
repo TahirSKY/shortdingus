@@ -8,7 +8,7 @@ export type Pt = [number, number];
 export type Stroke = { points: Pt[]; length: number };
 export type Traced = { strokes: Stroke[]; width: number; height: number; penWidth: number };
 
-const MIN_STROKE = 12;
+const MIN_STROKE = 8;
 const MAX_STROKES = 700;
 
 function thin(m: Uint8Array, w: number, h: number) {
@@ -112,9 +112,18 @@ export function traceCenterlines(ink: Uint8Array, w: number, h: number): Traced 
       let prev = start, cur = first;
       while (true) {
         const ns = nbrs(cur).filter((j) => j !== prev && !used.has(ek(cur, j)));
-        if (nbrs(cur).length > 2 || !ns.length) break; // junction or end
-        // Prefer 4-neighbours to avoid diagonal shortcuts.
-        const next = ns[0];
+        if (!ns.length) break;
+        // Keep going straight: pick the neighbour with the smallest turn (pen glides through junctions).
+        const hx = (cur % w) - (prev % w), hy = ((cur / w) | 0) - ((prev / w) | 0);
+        let next = ns[0], bestDot = -Infinity;
+        for (const j of ns) {
+          const dx = (j % w) - (cur % w), dy = ((j / w) | 0) - ((cur / w) | 0);
+          const dot = (dx * hx + dy * hy) / Math.hypot(dx, dy);
+          if (dot > bestDot) { bestDot = dot; next = j; }
+        }
+        if (bestDot < -0.1) break; // sharp U-turn: lift the pen
+        // Mark the staircase shortcut edges around this step as used so they don't become specks.
+        for (const j of ns) if (j !== next && Math.abs((j % w) - (next % w)) <= 1 && Math.abs(((j / w) | 0) - ((next / w) | 0)) <= 1) used.add(ek(cur, j));
         used.add(ek(cur, next));
         path.push(next); prev = cur; cur = next;
       }
