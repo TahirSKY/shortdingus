@@ -11,7 +11,7 @@
  *     colorAssetId?: string, hand?: boolean }
  *
  * POST body (multi-scene short):
- *   { scenes: [{ assetId: string, duration?: number, start?: number /* seconds into voiceover */ }], projectId: string,
+ *   { scenes: [{ assetId: string, duration?: number, start?: number }], projectId: string,
  *     title?: string, voiceoverAssetId?: string,  // paces scenes + adds audio
  *     captions?: boolean,                          // word-timed captions from the voiceover transcript
  *     format?: "vertical" | "horizontal", hand?: boolean }
