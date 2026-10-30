@@ -10,6 +10,9 @@
  *     duration?: number, drawSpeed?: number, voiceoverAssetId?: string,
  *     colorAssetId?: string, hand?: boolean }
  *
+ * POST body (clips — preferred): { clips: [{ assetId, drawSeconds?, holdSeconds?, finish?: "original"|"lines" }],
+ *   projectId, format?, hand?, drawSpeed? } → one finished MP4 video asset per image, rendered in background.
+ *
  * POST body (multi-scene short):
  *   { scenes: [{ assetId: string, duration?: number, start?: number }], projectId: string,
  *     title?: string, voiceoverAssetId?: string,  // paces scenes + adds audio
@@ -20,21 +23,14 @@
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
-import potrace from "npm:potrace@2.1.8";
-import { Buffer } from "node:buffer";
+import { traceCenterlines, type Pt, type Stroke, type Traced } from "./centerline.ts";
 import { admin, assetUrl, cors, isUuid, json, safeName } from "../_shared/hub.ts";
 import { HAND_PNG_B64, HAND_TIP } from "../_shared/whiteboard-hand.ts";
 
 const TRACE_MAX = 900; // longest side for tracing
-const MIN_STROKE = 15; // drop specks shorter than this (px, trace space)
-const MAX_STROKES = 500;
 
-type Pt = [number, number];
-type Stroke = { points: Pt[]; length: number };
-type Traced = { strokes: Stroke[]; width: number; height: number };
-
-/** Preprocess: grayscale, autocontrast, threshold to clean black-on-white line art. */
-async function toLineArt(bytes: Uint8Array): Promise<Uint8Array> {
+/** Preprocess: grayscale, autocontrast, threshold → ink mask, then centre-line trace. */
+async function traceBytes(bytes: Uint8Array): Promise<Traced> {
   const img = await decode(bytes);
   if (!(img instanceof Image)) throw new Error("Animated images are not supported.");
   const scale = Math.min(1, TRACE_MAX / Math.max(img.width, img.height));
@@ -51,91 +47,11 @@ async function toLineArt(bytes: Uint8Array): Promise<Uint8Array> {
     if (g < mn) mn = g;
     if (g > mx) mx = g;
   }
-  // Autocontrast, then threshold slightly above mid-ink so pencil-grey lines survive.
   const spread = Math.max(1, mx - mn);
   const thr = Math.max(90, Math.min(200, mn + spread * 0.55));
-  for (let p = 0; p < n; p++) {
-    const i = p * 4;
-    const v = Math.round(((gray[p] - mn) / spread) * 255);
-    const ink = v < thr ? 0 : 255;
-    b[i] = b[i + 1] = b[i + 2] = ink;
-    b[i + 3] = 255;
-  }
-  return img.encode(); // PNG
-}
-
-/** Flatten one potrace subpath string into a polyline. */
-function flattenPath(d: string): Pt[] {
-  const tokens = d.match(/[MLCZ]|-?\d*\.?\d+(?:e-?\d+)?/gi) || [];
-  const pts: Pt[] = [];
-  let cur: Pt = [0, 0];
-  let i = 0;
-  const num = () => parseFloat(tokens[i++]);
-  while (i < tokens.length) {
-    const cmd = tokens[i++].toUpperCase();
-    if (cmd === "M") {
-      cur = [num(), num()];
-      pts.push(cur);
-    } else if (cmd === "L") {
-      cur = [num(), num()];
-      pts.push(cur);
-    } else if (cmd === "C") {
-      const c1: Pt = [num(), num()];
-      const c2: Pt = [num(), num()];
-      const end: Pt = [num(), num()];
-      const from = cur;
-      for (let s = 1; s <= 6; s++) {
-        const t = s / 6, u = 1 - t;
-        pts.push([
-          u * u * u * from[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * end[0],
-          u * u * u * from[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * end[1],
-        ]);
-      }
-      cur = end;
-    } else if (cmd === "Z") {
-      if (pts.length) pts.push(pts[0]);
-    }
-  }
-  return pts;
-}
-
-function traceStrokes(png: Uint8Array): Promise<Traced> {
-  return new Promise((resolve, reject) => {
-    potrace.trace(Buffer.from(png), { threshold: 128, turdSize: 24, optiTolerance: 0.5 }, (err: Error | null, svg: string) => {
-      if (err) return reject(err);
-      const vb = svg.match(/viewBox="[\d.]+ [\d.]+ ([\d.]+) ([\d.]+)"/);
-      const w = Number(vb?.[1] || svg.match(/width="([\d.]+)/)?.[1] || 0);
-      const h = Number(vb?.[2] || svg.match(/height="([\d.]+)/)?.[1] || 0);
-      const strokes: Stroke[] = [];
-      for (const m of svg.matchAll(/d="([^"]+)"/g)) {
-        // Each path may hold several subpaths; split on M.
-        for (const sub of m[1].split(/(?=M)/)) {
-          const points = flattenPath(sub);
-          if (points.length < 2) continue;
-          let length = 0;
-          for (let i = 1; i < points.length; i++) length += Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]);
-          if (length >= MIN_STROKE) strokes.push({ points, length });
-        }
-      }
-      // Keep the longest strokes, then order by nearest-neighbour travel.
-      strokes.sort((a, b) => b.length - a.length);
-      const kept = strokes.slice(0, MAX_STROKES);
-      const ordered: Stroke[] = [];
-      let at: Pt = [0, 0];
-      const pool = kept.slice();
-      while (pool.length) {
-        let best = 0, bd = Infinity;
-        for (let i = 0; i < pool.length; i++) {
-          const d = Math.hypot(pool[i].points[0][0] - at[0], pool[i].points[0][1] - at[1]);
-          if (d < bd) { bd = d; best = i; }
-        }
-        const s = pool.splice(best, 1)[0];
-        ordered.push(s);
-        at = s.points[s.points.length - 1];
-      }
-      resolve({ strokes: ordered, width: w, height: h });
-    });
-  });
+  const ink = new Uint8Array(n);
+  for (let p = 0; p < n; p++) ink[p] = (((gray[p] - mn) / spread) * 255) < thr ? 1 : 0;
+  return traceCenterlines(ink, img.width, img.height);
 }
 
 async function traceAsset(db: ReturnType<typeof admin>, assetId: string): Promise<Traced> {
@@ -151,7 +67,7 @@ async function traceAsset(db: ReturnType<typeof admin>, assetId: string): Promis
   }
   if (!res.ok) throw new Error(`Could not download ${asset.name} (${res.status}) after waiting for it to finish uploading.`);
   const bytes = new Uint8Array(await res.arrayBuffer());
-  const traced = await traceStrokes(await toLineArt(bytes));
+  const traced = await traceBytes(bytes);
   if (!traced.strokes.length) throw new Error(`No drawable lines found in ${asset.name} — use clear dark lines on a light background.`);
   return traced;
 }
@@ -186,8 +102,10 @@ function buildCode(opts: {
   strokes: Stroke[]; traceW: number; traceH: number;
   width: number; height: number; fps: number; duration: number;
   hand: boolean; voice?: string | null; colorArt?: string | null; title: string;
+  penWidth?: number; hold?: number;
 }): string {
   const { width, height, fps, duration } = opts;
+  const hold = opts.hold ?? 0;
   const margin = Math.round(Math.min(width, height) * 0.08);
   const scale = Math.min((width - margin * 2) / opts.traceW, (height - margin * 2) / opts.traceH);
   const ox = Math.round((width - opts.traceW * scale) / 2);
@@ -205,12 +123,13 @@ ${SHARED_HELPERS}
 const G=geometry(TRACES);
 ${markerCode(width)}
 function Draw({t,duration,hand}){const p=clamp(t/duration),dist=G.total*p;const active=G.strokes.find(s=>dist>=s.offset&&dist<s.offset+s.length);const pen=active?locate(active,dist-active.offset):null;
- return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=clamp(dist-s.offset,0,s.length);if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, Math.round(3 / scale))}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}{hand&&pen&&p>0&&p<1?<Marker x={pen[0]} y={pen[1]}/>:null}</g>;}
+ return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=clamp(dist-s.offset,0,s.length);if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, (opts.penWidth ?? 3)).toFixed(2)}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}{hand&&pen&&p>0&&p<1?<Marker x={pen[0]} y={pen[1]}/>:null}</g>;}
 export default function WhiteboardClip(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
- const drawEnd=${Math.max(0.5, duration - (opts.colorArt ? 1.2 : 0)).toFixed(2)};
- const color=COLOR_ART?ease((t-drawEnd)/.9):0;
- const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/>{COLOR_ART?<image href={COLOR_ART} x={BOARD.x} y={BOARD.y} width={${Math.round(opts.traceW * scale)}} height={${Math.round(opts.traceH * scale)}} opacity={color}/>:null}<g opacity={1-color}><Draw t={t} duration={drawEnd} hand={${opts.hand}}/></g></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/></AbsoluteFill>;
+ const drawEnd=${Math.max(0.5, duration - hold - (opts.colorArt && !hold ? 1.2 : 0)).toFixed(2)};
+ // The finished artwork settles in over the traced lines so tiny details (dots, fills) end exact.
+ const color=COLOR_ART?ease((t-drawEnd+.15)/.6):0;
+ const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/><Draw t={t} duration={drawEnd} hand={${opts.hand}}/></svg>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}</AbsoluteFill>;
 }
 `;
 }
@@ -236,7 +155,7 @@ function buildScenesCode(opts: {
       },
       start: Math.round(s.start * 100) / 100,
       end: Math.round(s.end * 100) / 100,
-      strokeWidth: Math.max(2, Math.round(3 / scale)),
+      strokeWidth: Math.round(Math.max(2, s.traced.penWidth) * 100) / 100,
     };
   });
   const frames = Math.round(duration * fps);
@@ -261,6 +180,48 @@ export default function WhiteboardShort(){const f=useCurrentFrame(),{fps}=useVid
 `;
 }
 
+const FN = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
+async function postFn(name: string, body: unknown) {
+  const res = await fetch(`${FN()}/${name}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || ""}` }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.error) throw new Error(data?.error || `${name} failed (${res.status})`);
+  return data;
+}
+
+async function renderOnce(clip: { code: string; vertical: boolean }): Promise<string | null> {
+  const start = await postFn("render-video", { code: clip.code, format: clip.vertical ? "tiktok" : "youtube" });
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 6000));
+    const pr: any = await postFn("check-render-progress", { renderId: start.renderId, bucketName: start.bucketName }).catch(() => ({}));
+    if (pr.fatal) throw new Error(pr.errors?.[0]?.message || "Render failed.");
+    if (pr.done && pr.outputFile) return pr.outputFile;
+  }
+  return null;
+}
+
+/** Render one clip's code on Lambda, then store the MP4 on its (placeholder) video asset. */
+async function renderClipToAsset(db: ReturnType<typeof admin>, clip: { id: string; name: string; code: string; vertical: boolean; slug: string; meta: Record<string, unknown> }) {
+  try {
+    let out: string | null = null;
+    // AWS concurrency is small on this account: retry with backoff when Lambda is busy.
+    for (let attempt = 0; attempt < 6 && !out; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 15000 * attempt));
+      try { out = await renderOnce(clip); }
+      catch (e) { if (!/concurrency|rate exceeded|429|too many/i.test(String((e as Error).message)) || attempt === 5) throw e; }
+    }
+    if (!out) throw new Error("Render timed out.");
+    const res = await fetch(out);
+    if (!res.ok) throw new Error(`Could not fetch rendered clip (${res.status}).`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const path = `groups/${clip.slug}/${clip.id}-${clip.name}`;
+    const up = await db.storage.from("hub-media").upload(path, bytes, { contentType: "video/mp4", upsert: true });
+    if (up.error) throw new Error(up.error.message);
+    await db.from("assets").update({ storage_path: path, mime_type: "video/mp4", size_bytes: bytes.byteLength, meta: { ...clip.meta, creating: false } }).eq("id", clip.id);
+  } catch (e) {
+    await db.from("assets").update({ meta: { ...clip.meta, creating: false, error: `Whiteboard clip failed: ${(e as Error).message}` } }).eq("id", clip.id);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
@@ -276,6 +237,52 @@ Deno.serve(async (req) => {
   const voice = isUuid(String(p.voiceoverAssetId || "")) ? String(p.voiceoverAssetId) : null;
   const hand = p.hand !== false;
   const fps = 30;
+
+  // ---- Clips mode: every image becomes its own finished MP4 drawing clip ----
+  if (Array.isArray(p.clips) && p.clips.length) {
+    const inputs = p.clips.slice(0, 12);
+    for (const c of inputs) if (!isUuid(String(c?.assetId || ""))) return json({ error: "Each clip needs an image assetId." }, 400);
+    const { data: group } = await db.from("asset_groups").select("slug").eq("id", project.group_id).maybeSingle();
+    const fmt = String(p.format || "").toLowerCase();
+    const made: any[] = [];
+    const jobs: Parameters<typeof renderClipToAsset>[1][] = [];
+    for (const c of inputs) {
+      const id = String(c.assetId);
+      let traced: Traced;
+      try { traced = await traceAsset(db, id); } catch (e) { made.push({ sourceAssetId: id, error: (e as Error).message }); continue; }
+      const { data: src } = await db.from("assets").select("name").eq("id", id).maybeSingle();
+      // A retry replaces earlier failed clips of the same image.
+      await db.from("assets").delete().eq("project_id", projectId).contains("tags", ["whiteboard-clip"]).eq("meta->>source_asset_id", id).not("meta->>error", "is", null);
+      const vertical = fmt === "vertical" || (fmt !== "horizontal" && traced.height > traced.width);
+      const width = vertical ? 1080 : 1920, height = vertical ? 1920 : 1080;
+      const totalLen = traced.strokes.reduce((a, s) => a + s.length, 0);
+      const drawSeconds = Math.max(1.5, Math.min(30, Number(c.drawSeconds) || totalLen / (Number(p.drawSpeed) || 900)));
+      const hold = Math.max(0.3, Math.min(5, Number(c.holdSeconds) || 1));
+      const duration = drawSeconds + hold;
+      const margin = Math.round(Math.min(width, height) * 0.08);
+      const scale = Math.min((width - margin * 2) / traced.width, (height - margin * 2) / traced.height);
+      const code = buildCode({
+        strokes: traced.strokes, traceW: traced.width, traceH: traced.height, width, height, fps, duration, hand,
+        colorArt: c.finish === "lines" ? null : assetUrl(id), title: "clip", penWidth: traced.penWidth, hold,
+      });
+      void scale;
+      const name = `${safeName(`whiteboard-${(src?.name || "image").replace(/\.[a-z0-9]+$/i, "")}`)}.mp4`;
+      const meta = { creating: true, source: "whiteboard-animate", source_asset_id: id, strokes: traced.strokes.length, draw_seconds: Math.round(drawSeconds * 100) / 100, hold_seconds: hold, width, height };
+      const { data: row, error } = await db.from("assets").insert({
+        group_id: project.group_id, project_id: projectId, kind: "video", role: "clip", tags: ["whiteboard-clip"],
+        name, mime_type: "video/mp4", duration_seconds: Math.round(duration * 100) / 100, meta,
+      }).select("id").single();
+      if (error) { made.push({ sourceAssetId: id, error: error.message }); continue; }
+      jobs.push({ id: row.id, name, code, vertical, slug: group?.slug || "hub", meta });
+      made.push({ id: row.id, name, sourceAssetId: id, strokes: traced.strokes.length, drawSeconds: meta.draw_seconds, holdSeconds: hold, duration: Math.round(duration * 100) / 100, width, height, url: assetUrl(row.id) });
+    }
+    // Render one at a time in the background (AWS concurrency on this account is small).
+    const queue = jobs.slice();
+    const worker = async () => { while (queue.length) await renderClipToAsset(db, queue.shift()!); };
+    // @ts-ignore EdgeRuntime is provided by the Supabase runtime
+    EdgeRuntime.waitUntil(worker());
+    return json({ clips: made, status: "rendering", note: "Each clip is a video asset (role clip, tag whiteboard-clip). Its URL answers 409 until the MP4 is ready (usually 1-3 minutes); meta.error is set if it fails." }, 202);
+  }
 
   // ---- Multi-scene mode ----
   if (Array.isArray(p.scenes) && p.scenes.length) {
@@ -375,7 +382,7 @@ Deno.serve(async (req) => {
 
   let traced: Traced;
   try {
-    traced = await traceStrokes(await toLineArt(bytes));
+    traced = await traceBytes(bytes);
   } catch (e) {
     return json({ error: `Tracing failed: ${(e as Error).message}` }, 422);
   }

@@ -16,6 +16,7 @@ const SKILLS: [string, string, boolean][] = [
   ["make-ai-short", "Make AI-character short", true], ["make-vox", "Make Vox collage short", true],
   ["suggest-sfx", "Suggest sound effects", true], ["vidtsx-2d-generator", "2D visual generator + style presets", true],
   ["edit-raw-footage", "Edit raw footage", false], ["packaging", "Packaging: titles + thumbnails", false], ["final-check", "Final check before render", false],
+  ["whiteboard", "Make whiteboard video", false],
 ];
 
 for (const [slug, name, imported] of SKILLS) {
