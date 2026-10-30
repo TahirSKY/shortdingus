@@ -99,8 +99,10 @@ function buildCode(opts: {
   strokes: Stroke[]; traceW: number; traceH: number;
   width: number; height: number; fps: number; duration: number;
   hand: boolean; voice?: string | null; colorArt?: string | null; title: string;
+  penWidth?: number; hold?: number;
 }): string {
   const { width, height, fps, duration } = opts;
+  const hold = opts.hold ?? 0;
   const margin = Math.round(Math.min(width, height) * 0.08);
   const scale = Math.min((width - margin * 2) / opts.traceW, (height - margin * 2) / opts.traceH);
   const ox = Math.round((width - opts.traceW * scale) / 2);
@@ -118,12 +120,13 @@ ${SHARED_HELPERS}
 const G=geometry(TRACES);
 ${markerCode(width)}
 function Draw({t,duration,hand}){const p=clamp(t/duration),dist=G.total*p;const active=G.strokes.find(s=>dist>=s.offset&&dist<s.offset+s.length);const pen=active?locate(active,dist-active.offset):null;
- return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=clamp(dist-s.offset,0,s.length);if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, Math.round(3 / scale))}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}{hand&&pen&&p>0&&p<1?<Marker x={pen[0]} y={pen[1]}/>:null}</g>;}
+ return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=clamp(dist-s.offset,0,s.length);if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, (opts.penWidth ?? 3)).toFixed(2)}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}{hand&&pen&&p>0&&p<1?<Marker x={pen[0]} y={pen[1]}/>:null}</g>;}
 export default function WhiteboardClip(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
- const drawEnd=${Math.max(0.5, duration - (opts.colorArt ? 1.2 : 0)).toFixed(2)};
- const color=COLOR_ART?ease((t-drawEnd)/.9):0;
- const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/>{COLOR_ART?<image href={COLOR_ART} x={BOARD.x} y={BOARD.y} width={${Math.round(opts.traceW * scale)}} height={${Math.round(opts.traceH * scale)}} opacity={color}/>:null}<g opacity={1-color}><Draw t={t} duration={drawEnd} hand={${opts.hand}}/></g></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/></AbsoluteFill>;
+ const drawEnd=${Math.max(0.5, duration - hold - (opts.colorArt && !hold ? 1.2 : 0)).toFixed(2)};
+ // The finished artwork settles in over the traced lines so tiny details (dots, fills) end exact.
+ const color=COLOR_ART?ease((t-drawEnd+.15)/.6):0;
+ const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/><Draw t={t} duration={drawEnd} hand={${opts.hand}}/></svg>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}</AbsoluteFill>;
 }
 `;
 }
@@ -149,7 +152,7 @@ function buildScenesCode(opts: {
       },
       start: Math.round(s.start * 100) / 100,
       end: Math.round(s.end * 100) / 100,
-      strokeWidth: Math.max(2, Math.round(3 / scale)),
+      strokeWidth: Math.round(Math.max(2, s.traced.penWidth) * 100) / 100,
     };
   });
   const frames = Math.round(duration * fps);
