@@ -413,12 +413,84 @@ export type Database = {
           },
         ]
       }
+      whiteboard_jobs: {
+        Row: {
+          bucket_name: string | null
+          clip_id: string
+          code: string | null
+          created_at: string
+          error: string | null
+          id: string
+          payload: Json
+          project_id: string
+          render_id: string | null
+          status: string
+        }
+        Insert: {
+          bucket_name?: string | null
+          clip_id: string
+          code?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload: Json
+          project_id: string
+          render_id?: string | null
+          status?: string
+        }
+        Update: {
+          bucket_name?: string | null
+          clip_id?: string
+          code?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload?: Json
+          project_id?: string
+          render_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whiteboard_jobs_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: true
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whiteboard_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whiteboard_worker_lease: {
+        Row: {
+          expires_at: string
+          id: number
+          owner: string
+        }
+        Insert: {
+          expires_at: string
+          id: number
+          owner: string
+        }
+        Update: {
+          expires_at?: string
+          id?: number
+          owner?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_whiteboard_worker: { Args: { worker: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
