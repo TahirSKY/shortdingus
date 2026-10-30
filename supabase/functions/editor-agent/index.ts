@@ -152,8 +152,10 @@ Deno.serve(async (req) => {
       },
     }),
     whiteboard_animate: tool({
-      description: "Turn an image into a hand-drawn whiteboard animation clip: traces the image into strokes and saves a ready Remotion composition (realistic pencil hand follows the drawing) as a new project code asset. Best with clear dark-line art on a light background; works on any image via automatic line-art conversion. Optional voiceover plays under the clip; optional colorAssetId fades the finished colored image in at the end. Render the saved code asset through the normal render flow, or stitch several clips into a bigger video.",
+      description: "PREFERRED: pass `clips` to turn each image into its own finished MP4 drawing clip (video asset, tag whiteboard-clip, returns drawSeconds/holdSeconds; renders in background 1-3 min) — then stitch the clips with OffthreadVideo + playbackRate to fit the voiceover. Legacy: single image or `scenes` builds one fixed code version. Traces the image into strokes and saves a ready Remotion composition (realistic pencil hand follows the drawing) as a new project code asset. Best with clear dark-line art on a light background; works on any image via automatic line-art conversion. Optional voiceover plays under the clip; optional colorAssetId fades the finished colored image in at the end. Render the saved code asset through the normal render flow, or stitch several clips into a bigger video.",
       inputSchema: z.object({
+        clips: z.array(z.object({ assetId: z.string(), drawSeconds: z.number().nullable(), holdSeconds: z.number().nullable() })).nullable()
+          .describe("clip mode (preferred): one MP4 drawing clip per image"),
         assetId: z.string().nullable().describe("single-image mode: image asset id from list_files"),
         scenes: z.array(z.object({ assetId: z.string(), start: z.number().nullable().describe("seconds into the voiceover where this scene begins (from transcript word timings); give it for all scenes or none") })).nullable()
           .describe("multi-scene mode (preferred for a full video): ordered images drawn one after another, paced to the voiceover"),
@@ -165,8 +167,12 @@ Deno.serve(async (req) => {
         colorAssetId: z.string().nullable(),
         hand: z.boolean().nullable(),
       }),
-      execute: async ({ assetId, scenes, format, captions, title, duration, voiceoverAssetId, colorAssetId, hand }) => {
-        if (!scenes?.length && !assetId) return { error: "Give assetId or scenes." };
+      execute: async ({ clips, assetId, scenes, format, captions, title, duration, voiceoverAssetId, colorAssetId, hand }) => {
+        if (clips?.length) {
+          const r = await callFn("whiteboard-animate", { projectId: project.id, clips: clips.map((c) => ({ assetId: c.assetId, ...(c.drawSeconds ? { drawSeconds: c.drawSeconds } : {}), ...(c.holdSeconds ? { holdSeconds: c.holdSeconds } : {}) })), ...(format ? { format } : {}), ...(hand === false ? { hand: false } : {}) });
+          return r.error ? r : { clips: r.clips, status: "rendering in background (1-3 min); check list_files for the whiteboard-clip videos before building" };
+        }
+        if (!scenes?.length && !assetId) return { error: "Give clips, assetId or scenes." };
         const r = await callFn("whiteboard-animate", {
           ...(scenes?.length ? { scenes: scenes.map((s) => (s.start == null ? { assetId: s.assetId } : s)) } : { assetId }),
           ...(format ? { format } : {}), ...(captions === false ? { captions: false } : {}),

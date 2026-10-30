@@ -1,52 +1,45 @@
 ---
 name: whiteboard
-description: Make a hand-drawn whiteboard video (short or long) from a voiceover — plan scenes from the transcript, generate bold line-art images, send them to the whiteboard-animate engine (it traces and draws them with a realistic pencil hand, paced to the voice, with captions), then render. Use in the Whiteboard hub or whenever the user asks for a whiteboard / hand-drawn / doodle explainer.
+description: Make a hand-drawn whiteboard video (short or long) from a voiceover — plan scenes from the transcript, generate bold line-art images, send them to the whiteboard-animate engine which returns one finished MP4 drawing clip per image, then edit those clips (speed, trim, hold, order) to the voiceover in Remotion. Use in the Whiteboard hub or whenever the user asks for a whiteboard / hand-drawn / doodle explainer.
 ---
 
 # Whiteboard video — from voiceover to finished drawing
 
-The drawing itself is done by the **whiteboard-animate engine**, like transcription or cut-outs:
-images in, finished Remotion composition out. Your job is the creative part: what to draw, and when.
-Never hand-write stroke code yourself.
+The drawing is done by the **whiteboard-animate engine**, like transcription or cut-outs: image in, finished
+MP4 drawing clip out. It traces the centre of every line (one pen pass per line), draws big shapes first then
+details, moves a realistic pencil hand along the pen tip, and settles into the exact original artwork at the end.
+Your job is the creative part: what to draw, and how the clips flow with the voice. Never write stroke code.
 
-## How the system works
-1. A voiceover lands in the project → it is transcribed automatically (word timings + caption lines).
-2. You read the transcript and split it into **scenes** — one idea per drawing, usually one scene every 5–12 s
-   (shorter for punchy shorts, longer for calm explainers; it's guidance, not a rule).
-3. For each scene you generate one image (or use an uploaded one) — **bold line art** (rules below).
-4. You call the engine once with all scenes + the voiceover. It traces every image into pen strokes, orders them,
-   draws them with the pencil hand inside each scene's time window, crossfades between scenes, adds word-timed
-   captions and the voice. It saves the result as a new code version in the project.
-5. The user (or you) renders that version through the normal Render button → MP4.
-
-## Step by step
-1. `list_files` → find the voiceover (audio) and its transcript in the file analyses. No voiceover? Ask for one,
-   or work from a script with explicit scene durations.
-2. Propose the scene plan in chat: for each scene → start time (seconds, taken from the transcript word where that
-   idea begins), the sentence it covers, and what will be drawn. Wait for a go-ahead before generating images
-   (images cost credits).
-3. Generate each image with `generate_image`. Prompt template (adapt the subject):
-   > "Whiteboard line-art illustration of <subject>, thick black marker outlines on a pure white background,
-   > simple clean shapes, no shading, no hatching, no gray, no text, no background details, centered,
-   > generous white margin, <portrait 9:16 | landscape 16:9> composition"
-   Name them `scene-01-<idea>`, `scene-02-…` so order is obvious. Wait until they appear in `list_files`.
-4. Call `whiteboard_animate` with:
-   - `scenes`: `[{ assetId, start }]` in story order (start = seconds into the voiceover; give all or none —
-     without starts the engine shares the time by drawing complexity),
-   - `voiceoverAssetId`, `format` (`vertical` for shorts, `horizontal` for YouTube), `captions` (default on), `title`.
-5. Tell the user the new version is saved and ready to render. Re-timing = call again with new `start` values;
-   swapping a drawing = generate a new image and call again. Small style tweaks to the saved code (caption look,
-   colors, background) can be done with normal exact edits — never rewrite the TRACES/SCENES data by hand.
+## Flow
+1. Voiceover lands in the project → transcribed automatically (word timings + caption lines).
+2. Read the transcript; split into **scenes** — one idea per drawing (often every 3–10 s; guidance, not a rule).
+3. Propose the scene plan in chat (start time from the transcript word, sentence, what's drawn). Wait for go-ahead.
+4. Generate one image per scene with `generate_image` (prompt rules below), named `scene-01-<idea>`, …
+5. Call `whiteboard_animate` with `clips: [{ assetId }]` (all scenes in one call, `format` vertical/horizontal).
+   The engine waits for images still uploading. It returns one **video asset per image** (role `clip`, tag
+   `whiteboard-clip`) with `drawSeconds` (drawing time) and `holdSeconds` (finished picture held). They render in
+   the background — usually 1–3 minutes; `list_files` shows them once ready (an error in meta means retry that one).
+6. Build the video in Remotion with the clips as footage, the voiceover as `<Audio>`, plus captions/titles:
+   - Each scene = `<Sequence from={start*fps} durationInFrames={len*fps}>` with `<OffthreadVideo src={clipUrl} playbackRate={r} muted/>`.
+   - Fit the drawing to the line it illustrates: `r = drawSeconds / secondsYouWantTheDrawingToTake`
+     (keep r between ~0.5 and 2.5 so the hand looks natural). If the scene lasts longer than the drawing,
+     freeze on the finished picture (the clip's last frame) or add a slow push-in / highlight.
+   - Use `startFrom` to skip into a drawing, cuts or crossfades between scenes, gentle camera moves — creative choices are yours.
+7. Re-timing = edit the Sequence/playbackRate numbers. Swapping a drawing = new image → `whiteboard_animate` for just that one.
 
 ## Line-art rules (the engine depends on them)
-- Dark, thick outlines on white. Shading, gradients, hatching, photos and dense detail trace badly
-  (too many strokes or blank areas). If a drawing comes back with very few or hundreds of strokes, regenerate it simpler.
-- One clear subject per scene; 1–3 supporting objects at most. Keep text out of the image — captions carry words.
-- Keep the same drawing style across scenes (same line weight, same character design if there is a character).
-- Up to 12 scenes per call. For longer videos, make several calls (e.g. per chapter) and stitch the saved clips.
+- Thick dark outlines on pure white. No shading, gradients, hatching, gray, photos or dense detail.
+  Prompt: "Whiteboard line-art illustration of <subject>, thick black marker outlines on a pure white background,
+  simple clean shapes, no shading, no hatching, no gray, no text, centered, generous white margin, <portrait 9:16 | landscape 16:9>".
+- One clear subject, 1–3 supporting objects. Text out of the image — captions carry words.
+- Same line weight and character design across scenes.
+- Very few strokes (<5) or a blank drawing → regenerate the image simpler/bolder.
+
+## Older mode
+`scenes: [{assetId, start}]` + `voiceoverAssetId` still builds a single all-in-one code version, but its timing is
+fixed. Prefer `clips` — they can be sped, slowed and re-cut freely.
 
 ## External agents (HTTP)
-`POST {FUNCTIONS_URL}/whiteboard-animate` with `{ token, projectId, title, format, voiceoverAssetId,
-scenes: [{ assetId, start? }], captions? }` — or single image: `{ token, projectId, assetId | imageUrl, duration? }`.
-Create the images first with `agent-create` (`kind: "image", prompt, role: "image"`). The response gives the new
-code asset id; render it with `render-video` like any other version.
+`POST {FUNCTIONS_URL}/whiteboard-animate` with `{ token, projectId, format, clips: [{ assetId, drawSeconds?, holdSeconds? }] }`
+→ 202 `{ clips: [{ id, url, drawSeconds, holdSeconds, duration }] }`. Poll the url (409 = still rendering).
+Create images first with `agent-create` (`kind: "image", prompt, role: "image"`).
