@@ -188,18 +188,28 @@ async function postFn(name: string, body: unknown) {
   return data;
 }
 
+async function renderOnce(clip: { code: string; vertical: boolean }): Promise<string | null> {
+  const start = await postFn("render-video", { code: clip.code, format: clip.vertical ? "tiktok" : "youtube" });
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 6000));
+    const pr: any = await postFn("check-render-progress", { renderId: start.renderId, bucketName: start.bucketName }).catch(() => ({}));
+    if (pr.fatal) throw new Error(pr.errors?.[0]?.message || "Render failed.");
+    if (pr.done && pr.outputFile) return pr.outputFile;
+  }
+  return null;
+}
+
 /** Render one clip's code on Lambda, then store the MP4 on its (placeholder) video asset. */
 async function renderClipToAsset(db: ReturnType<typeof admin>, clip: { id: string; name: string; code: string; vertical: boolean; slug: string; meta: Record<string, unknown> }) {
   try {
-    const start = await postFn("render-video", { code: clip.code, format: clip.vertical ? "tiktok" : "youtube" });
     let out: string | null = null;
-    for (let i = 0; i < 60 && !out; i++) {
-      await new Promise((r) => setTimeout(r, 6000));
-      const pr = await postFn("check-render-progress", { renderId: start.renderId, bucketName: start.bucketName }).catch((e) => ({ transient: String(e) }));
-      if ((pr as any).fatal) throw new Error(((pr as any).errors?.[0]?.message) || "Render failed.");
-      if ((pr as any).done && (pr as any).outputFile) out = (pr as any).outputFile;
+    // AWS concurrency is small on this account: retry with backoff when Lambda is busy.
+    for (let attempt = 0; attempt < 6 && !out; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 15000 * attempt));
+      try { out = await renderOnce(clip); }
+      catch (e) { if (!/concurrency|rate exceeded|429|too many/i.test(String((e as Error).message)) || attempt === 5) throw e; }
     }
-    if (!out) throw new Error("Render timed out.");
+    if (!out) throw new Error("Render timed out.");: string | null = null;
     const res = await fetch(out);
     if (!res.ok) throw new Error(`Could not fetch rendered clip (${res.status}).`);
     const bytes = new Uint8Array(await res.arrayBuffer());
@@ -264,11 +274,11 @@ Deno.serve(async (req) => {
       jobs.push({ id: row.id, name, code, vertical, slug: group?.slug || "hub", meta });
       made.push({ id: row.id, name, sourceAssetId: id, strokes: traced.strokes.length, drawSeconds: meta.draw_seconds, holdSeconds: hold, duration: Math.round(duration * 100) / 100, width, height, url: assetUrl(row.id) });
     }
-    // Render two at a time in the background so AWS concurrency isn't flooded.
+    // Render one at a time in the background (AWS concurrency on this account is small).
     const queue = jobs.slice();
     const worker = async () => { while (queue.length) await renderClipToAsset(db, queue.shift()!); };
     // @ts-ignore EdgeRuntime is provided by the Supabase runtime
-    EdgeRuntime.waitUntil(Promise.all([worker(), worker()]));
+    EdgeRuntime.waitUntil(worker());
     return json({ clips: made, status: "rendering", note: "Each clip is a video asset (role clip, tag whiteboard-clip). Its URL answers 409 until the MP4 is ready (usually 1-3 minutes); meta.error is set if it fails." }, 202);
   }
 
