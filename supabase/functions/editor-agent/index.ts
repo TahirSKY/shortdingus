@@ -93,6 +93,8 @@ Deno.serve(async (req) => {
       description: "Start the background build of the complete video file from a detailed brief. Returns right away; the finished version is saved automatically in a few minutes.",
       inputSchema: z.object({ brief: z.string().min(200), summary: z.string() }),
       execute: async ({ brief, summary }) => {
+        const { data: drawings } = await db.from("assets").select("id,name,meta").eq("project_id", project.id).contains("tags", ["whiteboard-clip"]).eq("meta->>creating", "true");
+        if (drawings?.length) return { error: "Drawing clips are still queued/rendering. Stop here; the user checks completion and asks you to continue. Do not build with unfinished MP4 URLs.", pending: drawings.map(a => a.name) };
         const { data: running } = await db.from("editor_builds").select("id, updated_at").eq("project_id", project.id).eq("status", "running").limit(1);
         if (running?.length && Date.now() - new Date(running[0].updated_at).getTime() < 4 * 60 * 1000) return { error: "A build is already running for this project. Wait for it to finish." };
         const { data, error } = await db.from("editor_builds").insert({ project_id: project.id, model: modelId, brief, summary: summary.slice(0, 300) }).select("id").single();
