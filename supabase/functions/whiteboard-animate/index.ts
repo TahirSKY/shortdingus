@@ -209,7 +209,7 @@ async function renderClipToAsset(db: ReturnType<typeof admin>, clip: { id: strin
       try { out = await renderOnce(clip); }
       catch (e) { if (!/concurrency|rate exceeded|429|too many/i.test(String((e as Error).message)) || attempt === 5) throw e; }
     }
-    if (!out) throw new Error("Render timed out.");: string | null = null;
+    if (!out) throw new Error("Render timed out.");
     const res = await fetch(out);
     if (!res.ok) throw new Error(`Could not fetch rendered clip (${res.status}).`);
     const bytes = new Uint8Array(await res.arrayBuffer());
@@ -251,6 +251,8 @@ Deno.serve(async (req) => {
       let traced: Traced;
       try { traced = await traceAsset(db, id); } catch (e) { made.push({ sourceAssetId: id, error: (e as Error).message }); continue; }
       const { data: src } = await db.from("assets").select("name").eq("id", id).maybeSingle();
+      // A retry replaces earlier failed clips of the same image.
+      await db.from("assets").delete().eq("project_id", projectId).contains("tags", ["whiteboard-clip"]).eq("meta->>source_asset_id", id).not("meta->>error", "is", null);
       const vertical = fmt === "vertical" || (fmt !== "horizontal" && traced.height > traced.width);
       const width = vertical ? 1080 : 1920, height = vertical ? 1920 : 1080;
       const totalLen = traced.strokes.reduce((a, s) => a + s.length, 0);
