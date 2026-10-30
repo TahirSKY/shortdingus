@@ -142,8 +142,14 @@ async function traceAsset(db: ReturnType<typeof admin>, assetId: string): Promis
   const { data: asset } = await db.from("assets").select("id, name, kind").eq("id", assetId).maybeSingle();
   if (!asset) throw new Error(`Unknown image asset ${assetId}.`);
   if (asset.kind !== "image") throw new Error(`${asset.name} is not an image.`);
-  const res = await fetch(assetUrl(asset.id));
-  if (!res.ok) throw new Error(`Could not download ${asset.name} (${res.status}).`);
+  // Freshly generated images may still be uploading (asset-url answers 409/404): wait and retry up to ~60s.
+  let res = await fetch(assetUrl(asset.id));
+  for (let i = 0; !res.ok && [404, 409, 425, 502, 503].includes(res.status) && i < 12; i++) {
+    await res.body?.cancel();
+    await new Promise((r) => setTimeout(r, 5000));
+    res = await fetch(assetUrl(asset.id));
+  }
+  if (!res.ok) throw new Error(`Could not download ${asset.name} (${res.status}) after waiting for it to finish uploading.`);
   const bytes = new Uint8Array(await res.arrayBuffer());
   const traced = await traceStrokes(await toLineArt(bytes));
   if (!traced.strokes.length) throw new Error(`No drawable lines found in ${asset.name} — use clear dark lines on a light background.`);
