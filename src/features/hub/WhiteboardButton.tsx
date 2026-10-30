@@ -19,7 +19,7 @@ export default function WhiteboardButton({ asset, projectId, clips, onStarted }:
   const [format, setFormat] = useState("vertical");
   const [finish, setFinish] = useState("original");
   const [hand, setHand] = useState(true);
-  const pending = clips.some((c) => c.meta?.source_asset_id === asset.id && whiteboardClipState(c) === "rendering");
+  const pending = clips.some((c) => c.meta?.source_asset_id === asset.id && ["queued", "rendering"].includes(whiteboardClipState(c)));
   async function create() {
     setSubmitting(true);
     try {
@@ -32,7 +32,7 @@ export default function WhiteboardButton({ asset, projectId, clips, onStarted }:
       if (data?.error || !data?.clips?.[0]?.id) throw new Error(data?.error || data?.clips?.[0]?.error || "Drawing video could not be started.");
       onStarted();
       setOpen(false);
-      toast.success("Drawing video started — your MP4 will appear in this project.");
+      toast.success("Drawing video queued — renders run one at a time.");
     } catch (e) { toast.error((e as Error).message); }
     finally { setSubmitting(false); }
   }

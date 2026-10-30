@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import MediaBrowser from "./MediaBrowser";
 import LottiePreview from "./LottiePreview";
 import WhiteboardButton from "./WhiteboardButton";
+import WhiteboardQueue from "./WhiteboardQueue";
 import { whiteboardClipState } from "./whiteboard";
 import {
   ASSET_KINDS, ROLES, type Analysis, type Asset, type AssetGroup, type AssetKind, addTextAsset, assetUrl, deleteAsset,
@@ -137,6 +138,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
 
   return (
     <div>
+      {projectId && (group.slug === "whiteboard" || all.some(a => a.tags?.includes("whiteboard-clip"))) && <WhiteboardQueue assets={all} projectId={projectId} refresh={refresh} />}
       {projectId && <div className="mb-3 flex justify-end"><MediaBrowser group={group} projectId={projectId} /></div>}
       <div
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
@@ -222,6 +224,7 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
                   </div>
                 </div>
                 {a.tags?.includes("whiteboard-clip") && <div className="mt-2 text-xs" role="status">
+                  {whiteboardClipState(a) === "queued" && <p className="text-muted-foreground">Queued for drawing · waiting its turn</p>}
                   {whiteboardClipState(a) === "rendering" && <p className="animate-pulse text-muted-foreground">Making drawing video… started {relTime(a.created_at)}</p>}
                   {whiteboardClipState(a) === "error" && <p className="text-destructive">{String(a.meta.error)}</p>}
                   {whiteboardClipState(a) === "ready" && <p className="text-muted-foreground">Drawing video ready · <a className="underline" href={assetUrl(a.id)} target="_blank" rel="noreferrer">Open MP4</a></p>}
