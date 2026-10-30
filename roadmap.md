@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Serialize drawing renders across manual/agent requests; project batch start/resume and manual agent handoff added; two real clips completed sequentially despite overlapping resume, five tests passed
 - [x] Add manual image-to-whiteboard MP4 button; test2 button produced a saved 7-second vertical clip in 29 seconds, settings/status checked and 3 tests passed
 - [x] Generate and save a realistic cutout pencil hand and updated Movie1 whiteboard code; hand-tip frame and project readback checked (new MP4 export not performed)
 - [x] Build and save 52-second narrated whiteboard proof in Movie Theatre / Movie1 and Renders; clean export validated with frame/audio inspection (Lambda SVG artifacts required raster fallback)

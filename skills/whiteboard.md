@@ -15,11 +15,12 @@ Your job is the creative part: what to draw, and how the clips flow with the voi
 2. Read the transcript; split into **scenes** — one idea per drawing (often every 3–10 s; guidance, not a rule).
 3. Propose the scene plan in chat (start time from the transcript word, sentence, what's drawn). Wait for go-ahead.
 4. Generate one image per scene with `generate_image` (prompt rules below), named `scene-01-<idea>`, …
-5. Call `whiteboard_animate` with `clips: [{ assetId }]` (all scenes in one call, `format` vertical/horizontal).
+5. You may call `whiteboard_animate` with `clips: [{ assetId }]` (up to 12 scenes per call, `format` vertical/horizontal), or leave the images for the user to press **Render pending drawings** on the project page.
    The engine waits for images still uploading. It returns one **video asset per image** (role `clip`, tag
    `whiteboard-clip`) with `drawSeconds` (drawing time) and `holdSeconds` (finished picture held). They render in
-   the background — usually 1–3 minutes; `list_files` shows them once ready (an error in meta means retry that one).
-6. Build the video in Remotion with the clips as footage, the voiceover as `<Audio>`, plus captions/titles:
+   a durable queue **one at a time across manual and agent requests**, not concurrently. An interrupted queue can be restarted with **Resume queue**. Existing ready/queued clips are reused, not duplicated; errors can be retried.
+   **STOP after images are generated or clips are queued.** Tell the user what is ready/queued and that you are waiting for them to check completion and say "continue". Never poll in a loop, start a build using pending URLs, or automatically wake yourself; waiting uses no AI calls.
+6. Only when the user explicitly asks you to continue, call `list_files` once to read fresh clip metadata. `meta.creating=true` or `whiteboard_status=queued/rendering` means not ready. `meta.error` means failed; do not build with it. If any required clips are missing or unfinished, report them and stop again. Finished videos have `creating=false`, no error, and a working MP4 URL. Then build the video in Remotion with the clips as footage, the voiceover as `<Audio>`, plus captions/titles:
    - Each scene = `<Sequence from={start*fps} durationInFrames={len*fps}>` with `<OffthreadVideo src={clipUrl} playbackRate={r} muted/>`.
    - Fit the drawing to the line it illustrates: `r = drawSeconds / secondsYouWantTheDrawingToTake`
      (keep r between ~0.5 and 2.5 so the hand looks natural). If the scene lasts longer than the drawing,
@@ -41,5 +42,5 @@ fixed. Prefer `clips` — they can be sped, slowed and re-cut freely.
 
 ## External agents (HTTP)
 `POST {FUNCTIONS_URL}/whiteboard-animate` with `{ token, projectId, format, clips: [{ assetId, drawSeconds?, holdSeconds? }] }`
-→ 202 `{ clips: [{ id, url, drawSeconds, holdSeconds, duration }] }`. Poll the url (409 = still rendering).
+→ 202 `{ clips: [{ id, url, status: "queued" }] }`. Read drawing/hold duration metadata after completion; URL HTTP 409 means not ready. Return control to the user instead of polling. After their explicit "continue", fetch the manifest once to check readiness. `POST` with `{ token, projectId, action: "resume" }` restarts an interrupted drawing queue without re-generating images or spending AI credits.
 Create images first with `agent-create` (`kind: "image", prompt, role: "image"`).

@@ -39,6 +39,7 @@ HOW WE WORK
 4. Keep replies short and concrete. After an edit, say in one or two lines what changed.
 5. Never generate images without the user's explicit OK in this chat (they cost credits). Prefer library assets, cut-outs, stock (search_footage) and memes (search_memes) first. Never generate voice — the user supplies voiceovers.
 6. This is a toolbox, not a template. No fixed lengths or structures; follow the user.
+7. Whiteboard handoff: generate approved images, optionally queue drawing clips, then STOP and tell the user to check the project and say "continue" when done. Never poll repeatedly or build with pending drawing URLs. On an explicit later continue request, read fresh files once; only build when every required drawing is ready. Drawing renders share one serial AWS queue; do not regenerate images to resume it.
 
 ${knowledge(ctx)}
 
@@ -92,6 +93,8 @@ Deno.serve(async (req) => {
       description: "Start the background build of the complete video file from a detailed brief. Returns right away; the finished version is saved automatically in a few minutes.",
       inputSchema: z.object({ brief: z.string().min(200), summary: z.string() }),
       execute: async ({ brief, summary }) => {
+        const { data: drawings } = await db.from("assets").select("id,name,meta").eq("project_id", project.id).contains("tags", ["whiteboard-clip"]).eq("meta->>creating", "true");
+        if (drawings?.length) return { error: "Drawing clips are still queued/rendering. Stop here; the user checks completion and asks you to continue. Do not build with unfinished MP4 URLs.", pending: drawings.map(a => a.name) };
         const { data: running } = await db.from("editor_builds").select("id, updated_at").eq("project_id", project.id).eq("status", "running").limit(1);
         if (running?.length && Date.now() - new Date(running[0].updated_at).getTime() < 4 * 60 * 1000) return { error: "A build is already running for this project. Wait for it to finish." };
         const { data, error } = await db.from("editor_builds").insert({ project_id: project.id, model: modelId, brief, summary: summary.slice(0, 300) }).select("id").single();
@@ -123,7 +126,7 @@ Deno.serve(async (req) => {
     list_files: tool({
       description: "List the project's files again (fresh), including newly added ones and their analyses.",
       inputSchema: z.object({}),
-      execute: async () => { const c = await loadContext(db, projectId); return { files: projectFiles(c!) }; },
+      execute: async () => { const c = await loadContext(db, projectId); return c ? { files: projectFiles(c) } : { error: "Project not found." }; },
     }),
     search_footage: tool({
       description: "Search Pexels stock footage or photos.",
@@ -170,7 +173,7 @@ Deno.serve(async (req) => {
       execute: async ({ clips, assetId, scenes, format, captions, title, duration, voiceoverAssetId, colorAssetId, hand }) => {
         if (clips?.length) {
           const r = await callFn("whiteboard-animate", { projectId: project.id, clips: clips.map((c) => ({ assetId: c.assetId, ...(c.drawSeconds ? { drawSeconds: c.drawSeconds } : {}), ...(c.holdSeconds ? { holdSeconds: c.holdSeconds } : {}) })), ...(format ? { format } : {}), ...(hand === false ? { hand: false } : {}) });
-          return r.error ? r : { clips: r.clips, status: "rendering in background (1-3 min); check list_files for the whiteboard-clip videos before building" };
+          return r.error ? r : { clips: r.clips, status: "Queued to render one at a time. STOP this turn: tell the user to check completion and ask you to continue. Do not poll or build until that later user request." };
         }
         if (!scenes?.length && !assetId) return { error: "Give clips, assetId or scenes." };
         const r = await callFn("whiteboard-animate", {

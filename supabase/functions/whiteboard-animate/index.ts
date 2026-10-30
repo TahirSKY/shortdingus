@@ -26,6 +26,7 @@ import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 import { traceCenterlines, type Pt, type Stroke, type Traced } from "./centerline.ts";
 import { admin, assetUrl, cors, isUuid, json, safeName } from "../_shared/hub.ts";
 import { HAND_PNG_B64, HAND_TIP } from "../_shared/whiteboard-hand.ts";
+import { runSerialQueue } from "./queue.ts";
 
 const TRACE_MAX = 900; // longest side for tracing
 
@@ -180,48 +181,6 @@ export default function WhiteboardShort(){const f=useCurrentFrame(),{fps}=useVid
 `;
 }
 
-const FN = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
-async function postFn(name: string, body: unknown) {
-  const res = await fetch(`${FN()}/${name}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || ""}` }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data?.error) throw new Error(data?.error || `${name} failed (${res.status})`);
-  return data;
-}
-
-async function renderOnce(clip: { code: string; vertical: boolean }): Promise<string | null> {
-  const start = await postFn("render-video", { code: clip.code, format: clip.vertical ? "tiktok" : "youtube" });
-  for (let i = 0; i < 60; i++) {
-    await new Promise((r) => setTimeout(r, 6000));
-    const pr: any = await postFn("check-render-progress", { renderId: start.renderId, bucketName: start.bucketName }).catch(() => ({}));
-    if (pr.fatal) throw new Error(pr.errors?.[0]?.message || "Render failed.");
-    if (pr.done && pr.outputFile) return pr.outputFile;
-  }
-  return null;
-}
-
-/** Render one clip's code on Lambda, then store the MP4 on its (placeholder) video asset. */
-async function renderClipToAsset(db: ReturnType<typeof admin>, clip: { id: string; name: string; code: string; vertical: boolean; slug: string; meta: Record<string, unknown> }) {
-  try {
-    let out: string | null = null;
-    // AWS concurrency is small on this account: retry with backoff when Lambda is busy.
-    for (let attempt = 0; attempt < 6 && !out; attempt++) {
-      if (attempt) await new Promise((r) => setTimeout(r, 15000 * attempt));
-      try { out = await renderOnce(clip); }
-      catch (e) { if (!/concurrency|rate exceeded|429|too many/i.test(String((e as Error).message)) || attempt === 5) throw e; }
-    }
-    if (!out) throw new Error("Render timed out.");
-    const res = await fetch(out);
-    if (!res.ok) throw new Error(`Could not fetch rendered clip (${res.status}).`);
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    const path = `groups/${clip.slug}/${clip.id}-${clip.name}`;
-    const up = await db.storage.from("hub-media").upload(path, bytes, { contentType: "video/mp4", upsert: true });
-    if (up.error) throw new Error(up.error.message);
-    await db.from("assets").update({ storage_path: path, mime_type: "video/mp4", size_bytes: bytes.byteLength, meta: { ...clip.meta, creating: false } }).eq("id", clip.id);
-  } catch (e) {
-    await db.from("assets").update({ meta: { ...clip.meta, creating: false, error: `Whiteboard clip failed: ${(e as Error).message}` } }).eq("id", clip.id);
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
@@ -229,8 +188,21 @@ Deno.serve(async (req) => {
   try { p = await req.json(); } catch { return json({ error: "Body must be JSON." }, 400); }
 
   const projectId = String(p.projectId || "");
-  if (!isUuid(projectId)) return json({ error: "projectId is required." }, 400);
   const db = admin();
+  const buildQueued = async (q: any) => {
+    const traced = await traceAsset(db, q.assetId);
+    const vertical = q.format !== "horizontal";
+    const width = vertical ? 1080 : 1920, height = vertical ? 1920 : 1080;
+    const draw = Math.max(1.5, Math.min(30, Number(q.drawSeconds) || traced.strokes.reduce((a, s) => a + s.length, 0) / 900));
+    const hold = Math.max(.3, Math.min(5, Number(q.holdSeconds) || 1));
+    const meta = { source: "whiteboard-animate", source_asset_id: q.assetId, strokes: traced.strokes.length, draw_seconds: Math.round(draw * 100) / 100, hold_seconds: hold, width, height };
+    return { code: buildCode({ strokes: traced.strokes, traceW: traced.width, traceH: traced.height, width, height, fps: 30, duration: draw + hold, hand: q.hand !== false, colorArt: q.finish === "lines" ? null : assetUrl(q.assetId), title: "clip", penWidth: traced.penWidth, hold }), meta, name: q.name, vertical };
+  };
+  if (p.action === "resume" && p.workerToken && p.workerToken === Deno.env.get("HUB_WRITE_TOKEN")) {
+    EdgeRuntime.waitUntil(runSerialQueue(db, buildQueued, Math.max(0, Math.min(24, Number(p.budget) || 0))));
+    return json({ status: "queued" }, 202);
+  }
+  if (!isUuid(projectId)) return json({ error: "projectId is required." }, 400);
   const { data: project } = await db.from("projects").select("id, group_id, name").eq("id", projectId).maybeSingle();
   if (!project) return json({ error: "Unknown project." }, 404);
 
@@ -238,50 +210,33 @@ Deno.serve(async (req) => {
   const hand = p.hand !== false;
   const fps = 30;
 
-  // ---- Clips mode: every image becomes its own finished MP4 drawing clip ----
+  if (p.action === "resume") {
+    EdgeRuntime.waitUntil(runSerialQueue(db, buildQueued));
+    return json({ status: "queued" }, 202);
+  }
+
+  // Persist the whole batch first; all callers share one leased worker, not one worker per request.
   if (Array.isArray(p.clips) && p.clips.length) {
-    const inputs = p.clips.slice(0, 12);
-    for (const c of inputs) if (!isUuid(String(c?.assetId || ""))) return json({ error: "Each clip needs an image assetId." }, 400);
+    if (p.clips.length > 12) return json({ error: "Submit at most 12 images per batch." }, 400);
     const { data: group } = await db.from("asset_groups").select("slug").eq("id", project.group_id).maybeSingle();
-    const fmt = String(p.format || "").toLowerCase();
     const made: any[] = [];
-    const jobs: Parameters<typeof renderClipToAsset>[1][] = [];
-    for (const c of inputs) {
-      const id = String(c.assetId);
-      let traced: Traced;
-      try { traced = await traceAsset(db, id); } catch (e) { made.push({ sourceAssetId: id, error: (e as Error).message }); continue; }
-      const { data: src } = await db.from("assets").select("name").eq("id", id).maybeSingle();
-      // A retry replaces earlier failed clips of the same image.
-      await db.from("assets").delete().eq("project_id", projectId).contains("tags", ["whiteboard-clip"]).eq("meta->>source_asset_id", id).not("meta->>error", "is", null);
-      const vertical = fmt === "vertical" || (fmt !== "horizontal" && traced.height > traced.width);
-      const width = vertical ? 1080 : 1920, height = vertical ? 1920 : 1080;
-      const totalLen = traced.strokes.reduce((a, s) => a + s.length, 0);
-      const drawSeconds = Math.max(1.5, Math.min(30, Number(c.drawSeconds) || totalLen / (Number(p.drawSpeed) || 900)));
-      const hold = Math.max(0.3, Math.min(5, Number(c.holdSeconds) || 1));
-      const duration = drawSeconds + hold;
-      const margin = Math.round(Math.min(width, height) * 0.08);
-      const scale = Math.min((width - margin * 2) / traced.width, (height - margin * 2) / traced.height);
-      const code = buildCode({
-        strokes: traced.strokes, traceW: traced.width, traceH: traced.height, width, height, fps, duration, hand,
-        colorArt: c.finish === "lines" ? null : assetUrl(id), title: "clip", penWidth: traced.penWidth, hold,
-      });
-      void scale;
-      const name = `${safeName(`whiteboard-${(src?.name || "image").replace(/\.[a-z0-9]+$/i, "")}`)}.mp4`;
-      const meta = { creating: true, source: "whiteboard-animate", source_asset_id: id, strokes: traced.strokes.length, draw_seconds: Math.round(drawSeconds * 100) / 100, hold_seconds: hold, width, height };
-      const { data: row, error } = await db.from("assets").insert({
-        group_id: project.group_id, project_id: projectId, kind: "video", role: "clip", tags: ["whiteboard-clip"],
-        name, mime_type: "video/mp4", duration_seconds: Math.round(duration * 100) / 100, meta,
-      }).select("id").single();
-      if (error) { made.push({ sourceAssetId: id, error: error.message }); continue; }
-      jobs.push({ id: row.id, name, code, vertical, slug: group?.slug || "hub", meta });
-      made.push({ id: row.id, name, sourceAssetId: id, strokes: traced.strokes.length, drawSeconds: meta.draw_seconds, holdSeconds: hold, duration: Math.round(duration * 100) / 100, width, height, url: assetUrl(row.id) });
+    for (const c of p.clips) {
+      if (!isUuid(String(c?.assetId || ""))) return json({ error: "Each clip needs an image assetId." }, 400);
+      const { data: src } = await db.from("assets").select("name,kind,meta").eq("id", c.assetId).maybeSingle();
+      if (!src || src.kind !== "image") { made.push({ sourceAssetId: c.assetId, error: "Image not found." }); continue; }
+      const { data: existing } = await db.from("assets").select("id,meta,storage_path,name").eq("project_id", projectId).contains("tags", ["whiteboard-clip"]).eq("meta->>source_asset_id", c.assetId).order("created_at", { ascending: false });
+      const reuse = existing?.find(a => a.meta?.creating || (a.storage_path && !a.meta?.error));
+      if (reuse) { made.push({ id: reuse.id, sourceAssetId: c.assetId, status: reuse.storage_path ? "ready" : "queued", url: assetUrl(reuse.id) }); continue; }
+      const name = `${safeName(`whiteboard-${src.name.replace(/\.[a-z0-9]+$/i, "")}`)}.mp4`;
+      const { data: row, error } = await db.from("assets").insert({ group_id: project.group_id, project_id: projectId, kind: "video", role: "clip", tags: ["whiteboard-clip"], name, mime_type: "video/mp4", meta: { creating: true, whiteboard_status: "queued", source: "whiteboard-animate", source_asset_id: c.assetId } }).select("id").single();
+      if (error) { made.push({ sourceAssetId: c.assetId, error: error.message }); continue; }
+      const payload = { ...c, name, slug: group?.slug || "hub", format: p.format || "vertical", hand };
+      const queued = await db.from("whiteboard_jobs").insert({ clip_id: row.id, project_id: projectId, payload });
+      if (queued.error) { await db.from("assets").update({ meta: { creating: false, source_asset_id: c.assetId, error: queued.error.message } }).eq("id", row.id); made.push({ sourceAssetId: c.assetId, error: queued.error.message }); continue; }
+      made.push({ id: row.id, name, sourceAssetId: c.assetId, status: "queued", url: assetUrl(row.id) });
     }
-    // Render one at a time in the background (AWS concurrency on this account is small).
-    const queue = jobs.slice();
-    const worker = async () => { while (queue.length) await renderClipToAsset(db, queue.shift()!); };
-    // @ts-ignore EdgeRuntime is provided by the Supabase runtime
-    EdgeRuntime.waitUntil(worker());
-    return json({ clips: made, status: "rendering", note: "Each clip is a video asset (role clip, tag whiteboard-clip). Its URL answers 409 until the MP4 is ready (usually 1-3 minutes); meta.error is set if it fails." }, 202);
+    EdgeRuntime.waitUntil(runSerialQueue(db, buildQueued));
+    return json({ clips: made, status: "queued", note: "Drawing clips render one at a time across all requests. Stop here; the user checks completion and asks the agent to continue. Resume the queue manually if interrupted." }, 202);
   }
 
   // ---- Multi-scene mode ----
