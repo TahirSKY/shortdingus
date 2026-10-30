@@ -43,6 +43,10 @@ function thin(m: Uint8Array, w: number, h: number) {
 function rdp(pts: Pt[], eps: number): Pt[] {
   if (pts.length < 3) return pts;
   const [a, b] = [pts[0], pts[pts.length - 1]];
+  if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 2) { // closed loop: simplify each half
+    const m = pts.length >> 1;
+    return [...rdp(pts.slice(0, m + 1), eps).slice(0, -1), ...rdp(pts.slice(m), eps)];
+  }
   const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
   let idx = 0, dmax = 0;
   for (let i = 1; i < pts.length - 1; i++) {
