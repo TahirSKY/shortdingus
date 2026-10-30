@@ -154,22 +154,29 @@ Deno.serve(async (req) => {
     whiteboard_animate: tool({
       description: "Turn an image into a hand-drawn whiteboard animation clip: traces the image into strokes and saves a ready Remotion composition (realistic pencil hand follows the drawing) as a new project code asset. Best with clear dark-line art on a light background; works on any image via automatic line-art conversion. Optional voiceover plays under the clip; optional colorAssetId fades the finished colored image in at the end. Render the saved code asset through the normal render flow, or stitch several clips into a bigger video.",
       inputSchema: z.object({
-        assetId: z.string().describe("image asset id from list_files"),
+        assetId: z.string().nullable().describe("single-image mode: image asset id from list_files"),
+        scenes: z.array(z.object({ assetId: z.string(), start: z.number().nullable().describe("seconds into the voiceover where this scene begins (from transcript word timings); give it for all scenes or none") })).nullable()
+          .describe("multi-scene mode (preferred for a full video): ordered images drawn one after another, paced to the voiceover"),
+        format: z.enum(["vertical", "horizontal"]).nullable(),
+        captions: z.boolean().nullable().describe("word-timed captions from the voiceover transcript (default on)"),
         title: z.string(),
         duration: z.number().nullable().describe("seconds; null = derive from stroke length"),
         voiceoverAssetId: z.string().nullable(),
         colorAssetId: z.string().nullable(),
         hand: z.boolean().nullable(),
       }),
-      execute: async ({ assetId, title, duration, voiceoverAssetId, colorAssetId, hand }) => {
+      execute: async ({ assetId, scenes, format, captions, title, duration, voiceoverAssetId, colorAssetId, hand }) => {
+        if (!scenes?.length && !assetId) return { error: "Give assetId or scenes." };
         const r = await callFn("whiteboard-animate", {
-          assetId, projectId: project.id, title,
+          ...(scenes?.length ? { scenes: scenes.map((s) => (s.start == null ? { assetId: s.assetId } : s)) } : { assetId }),
+          ...(format ? { format } : {}), ...(captions === false ? { captions: false } : {}),
+          projectId: project.id, title,
           ...(duration ? { duration } : {}),
           ...(voiceoverAssetId ? { voiceoverAssetId } : {}),
           ...(colorAssetId ? { colorAssetId } : {}),
           ...(hand === false ? { hand: false } : {}),
         });
-        return r.error ? r : { id: r.assetId, name: r.name, strokes: r.strokes, duration: r.duration, status: "saved as a code asset — render or open it like any video version" };
+        return r.error ? r : { id: r.assetId, name: r.name, scenes: r.scenes, strokes: r.strokes, duration: r.duration, captions: r.captions, status: "saved as a code asset — render or open it like any video version" };
       },
     }),
     save_style_reference: tool({

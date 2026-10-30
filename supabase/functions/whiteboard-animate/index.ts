@@ -11,7 +11,7 @@
  *     colorAssetId?: string, hand?: boolean }
  *
  * POST body (multi-scene short):
- *   { scenes: [{ assetId: string, duration?: number }], projectId: string,
+ *   { scenes: [{ assetId: string, duration?: number, start?: number /* seconds into voiceover */ }], projectId: string,
  *     title?: string, voiceoverAssetId?: string,  // paces scenes + adds audio
  *     captions?: boolean,                          // word-timed captions from the voiceover transcript
  *     format?: "vertical" | "horizontal", hand?: boolean }
@@ -301,6 +301,17 @@ Deno.serve(async (req) => {
     const explicit = sceneInputs.map((s: any) => Number(s.duration) || 0);
     const explicitTotal = explicit.reduce((a: number, b: number) => a + b, 0);
     const total = voiceDuration || explicitTotal || Math.max(3, Math.min(120, weights.reduce((a, b) => a + b, 0) / (Number(p.drawSpeed) || 1200)));
+    // Optional explicit start times (seconds, e.g. from transcript word timings) win over pacing.
+    const starts = sceneInputs.map((s: any) => (s.start === undefined || s.start === null ? NaN : Number(s.start)));
+    if (starts.every((v: number) => isFinite(v) && v >= 0)) {
+      const end = voiceDuration || explicitTotal || Math.max(...starts) + 6;
+      const order = tracedScenes.map((traced, i) => ({ traced, start: starts[i] })).sort((a, b) => a.start - b.start);
+      order[0].start = 0;
+      const timed = order.map((o, i) => ({ traced: o.traced, start: o.start, end: i + 1 < order.length ? order[i + 1].start : end }));
+      explicit.splice(0, explicit.length, ...timed.map((t) => t.end - t.start));
+      tracedScenes.splice(0, tracedScenes.length, ...timed.map((t) => t.traced));
+      weights.splice(0, weights.length, ...explicit);
+    }
     let at = 0;
     const scenes = tracedScenes.map((traced, i) => {
       const share = explicit[i] || total * (weights[i] / weights.reduce((a, b) => a + b, 0));
