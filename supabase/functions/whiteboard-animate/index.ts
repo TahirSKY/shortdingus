@@ -26,6 +26,7 @@ import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 import { traceCenterlines, type Pt, type Stroke, type Traced } from "./centerline.ts";
 import { admin, assetUrl, cors, isUuid, json, safeName } from "../_shared/hub.ts";
 import { HAND_PNG_B64, HAND_TIP } from "../_shared/whiteboard-hand.ts";
+import { runSerialQueue } from "./queue.ts";
 
 const TRACE_MAX = 900; // longest side for tracing
 
@@ -229,14 +230,56 @@ Deno.serve(async (req) => {
   try { p = await req.json(); } catch { return json({ error: "Body must be JSON." }, 400); }
 
   const projectId = String(p.projectId || "");
-  if (!isUuid(projectId)) return json({ error: "projectId is required." }, 400);
   const db = admin();
+  const buildQueued = async (q: any) => {
+    const traced = await traceAsset(db, q.assetId);
+    const vertical = q.format !== "horizontal";
+    const width = vertical ? 1080 : 1920, height = vertical ? 1920 : 1080;
+    const draw = Math.max(1.5, Math.min(30, Number(q.drawSeconds) || traced.strokes.reduce((a, s) => a + s.length, 0) / 900));
+    const hold = Math.max(.3, Math.min(5, Number(q.holdSeconds) || 1));
+    const meta = { source: "whiteboard-animate", source_asset_id: q.assetId, strokes: traced.strokes.length, draw_seconds: Math.round(draw * 100) / 100, hold_seconds: hold, width, height };
+    return { code: buildCode({ strokes: traced.strokes, traceW: traced.width, traceH: traced.height, width, height, fps: 30, duration: draw + hold, hand: q.hand !== false, colorArt: q.finish === "lines" ? null : assetUrl(q.assetId), title: "clip", penWidth: traced.penWidth, hold }), meta, name: q.name, vertical };
+  };
+  if (p.action === "resume" && p.workerToken && p.workerToken === Deno.env.get("HUB_WRITE_TOKEN")) {
+    EdgeRuntime.waitUntil(runSerialQueue(db, buildQueued, Math.max(0, Math.min(24, Number(p.budget) || 0))));
+    return json({ status: "queued" }, 202);
+  }
+  if (!isUuid(projectId)) return json({ error: "projectId is required." }, 400);
   const { data: project } = await db.from("projects").select("id, group_id, name").eq("id", projectId).maybeSingle();
   if (!project) return json({ error: "Unknown project." }, 404);
 
   const voice = isUuid(String(p.voiceoverAssetId || "")) ? String(p.voiceoverAssetId) : null;
   const hand = p.hand !== false;
   const fps = 30;
+
+  if (p.action === "resume") {
+    EdgeRuntime.waitUntil(runSerialQueue(db, buildQueued));
+    return json({ status: "queued" }, 202);
+  }
+
+  // Persist the whole batch first; all callers share one leased worker, not one worker per request.
+  if (Array.isArray(p.clips) && p.clips.length) {
+    if (p.clips.length > 12) return json({ error: "Submit at most 12 images per batch." }, 400);
+    const { data: group } = await db.from("asset_groups").select("slug").eq("id", project.group_id).maybeSingle();
+    const made: any[] = [];
+    for (const c of p.clips) {
+      if (!isUuid(String(c?.assetId || ""))) return json({ error: "Each clip needs an image assetId." }, 400);
+      const { data: src } = await db.from("assets").select("name,kind,meta").eq("id", c.assetId).maybeSingle();
+      if (!src || src.kind !== "image") { made.push({ sourceAssetId: c.assetId, error: "Image not found." }); continue; }
+      const { data: existing } = await db.from("assets").select("id,meta,storage_path,name").eq("project_id", projectId).contains("tags", ["whiteboard-clip"]).eq("meta->>source_asset_id", c.assetId).order("created_at", { ascending: false });
+      const reuse = existing?.find(a => a.meta?.creating || (a.storage_path && !a.meta?.error));
+      if (reuse) { made.push({ id: reuse.id, sourceAssetId: c.assetId, status: reuse.storage_path ? "ready" : "queued", url: assetUrl(reuse.id) }); continue; }
+      const name = `${safeName(`whiteboard-${src.name.replace(/\.[a-z0-9]+$/i, "")}`)}.mp4`;
+      const { data: row, error } = await db.from("assets").insert({ group_id: project.group_id, project_id: projectId, kind: "video", role: "clip", tags: ["whiteboard-clip"], name, mime_type: "video/mp4", meta: { creating: true, whiteboard_status: "queued", source: "whiteboard-animate", source_asset_id: c.assetId } }).select("id").single();
+      if (error) { made.push({ sourceAssetId: c.assetId, error: error.message }); continue; }
+      const payload = { ...c, name, slug: group?.slug || "hub", format: p.format || "vertical", hand };
+      const queued = await db.from("whiteboard_jobs").insert({ clip_id: row.id, project_id: projectId, payload });
+      if (queued.error) { await db.from("assets").update({ meta: { creating: false, source_asset_id: c.assetId, error: queued.error.message } }).eq("id", row.id); made.push({ sourceAssetId: c.assetId, error: queued.error.message }); continue; }
+      made.push({ id: row.id, name, sourceAssetId: c.assetId, status: "queued", url: assetUrl(row.id) });
+    }
+    EdgeRuntime.waitUntil(runSerialQueue(db, buildQueued));
+    return json({ clips: made, status: "queued", note: "Drawing clips render one at a time across all requests. Stop here; the user checks completion and asks the agent to continue. Resume the queue manually if interrupted." }, 202);
+  }
 
   // ---- Clips mode: every image becomes its own finished MP4 drawing clip ----
   if (Array.isArray(p.clips) && p.clips.length) {
@@ -278,7 +321,7 @@ Deno.serve(async (req) => {
     }
     // Render one at a time in the background (AWS concurrency on this account is small).
     const queue = jobs.slice();
-    const worker = async () => { while (queue.length) await renderClipToAsset(db, queue.shift()!); };
+    const worker = async () => { for (const clip of queue) await renderClipToAsset(db, clip); };
     // @ts-ignore EdgeRuntime is provided by the Supabase runtime
     EdgeRuntime.waitUntil(worker());
     return json({ clips: made, status: "rendering", note: "Each clip is a video asset (role clip, tag whiteboard-clip). Its URL answers 409 until the MP4 is ready (usually 1-3 minutes); meta.error is set if it fails." }, 202);
