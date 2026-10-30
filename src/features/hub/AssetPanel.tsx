@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import MediaBrowser from "./MediaBrowser";
 import LottiePreview from "./LottiePreview";
+import WhiteboardButton from "./WhiteboardButton";
+import { whiteboardClipState } from "./whiteboard";
 import {
   ASSET_KINDS, ROLES, type Analysis, type Asset, type AssetGroup, type AssetKind, addTextAsset, assetUrl, deleteAsset,
   fmtBytes, fmtTime, listAssets, makeCutout, relTime, runAnalysis, updateAssetTags, uploadFile,
@@ -78,6 +80,7 @@ export function AnalysisView({ a, defaultOpen = false }: { a: Analysis; defaultO
 
 function Preview({ asset }: { asset: Asset }) {
   const url = assetUrl(asset.id);
+  if (asset.meta?.creating || asset.meta?.error) return null;
   if (asset.kind === "image") return <img src={url} alt={asset.name} className="h-12 w-12 rounded object-cover" loading="lazy" />;
   if (asset.kind === "video") return <video src={url} controls preload="none" className="h-24 rounded" />;
   if (asset.kind === "audio") return <audio src={url} controls preload="none" className="h-8 w-48" />;
@@ -190,12 +193,13 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
                     <TagEditor a={a} onSaved={refresh} />
                     {a.role === "lottie" && <div className="mt-3"><LottiePreview asset={a} group={group} /></div>}
                   </div>
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex max-w-40 shrink-0 flex-wrap justify-end gap-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy link" onClick={() => copy(assetUrl(a.id))}><Copy className="h-3.5 w-3.5" /></Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7" title="Open" asChild><a href={assetUrl(a.id)} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a></Button>
                     {a.kind === "image" && a.storage_path && !a.tags?.includes("cutout") && <Button size="icon" variant="ghost" className="h-7 w-7" title="Make cut-out (transparent background)" disabled={busy} onClick={async () => {
                       try { await makeCutout(a.id, true); refresh(); toast.success("Cut-out started"); } catch (e) { toast.error((e as Error).message); }
                     }}><Scissors className="h-3.5 w-3.5" /></Button>}
+                    {projectId && a.kind === "image" && a.storage_path && <WhiteboardButton asset={a} projectId={projectId} clips={all} onStarted={refresh} />}
                     {(a.kind === "video" || (a.kind === "image" && !(a.meta as any)?.creating)) && <Button size="icon" variant="ghost" className="h-7 w-7" title="Describe / analyse" disabled={busy} onClick={async () => {
                       try { await runAnalysis(a.id); refresh(); toast.success("Analysis started"); } catch (e) { toast.error((e as Error).message); }
                     }}><ScanSearch className="h-3.5 w-3.5" /></Button>}
@@ -217,6 +221,11 @@ export default function AssetPanel({ group, projectId = null, title }: { group: 
                     }}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
+                {a.tags?.includes("whiteboard-clip") && <div className="mt-2 text-xs" role="status">
+                  {whiteboardClipState(a) === "rendering" && <p className="animate-pulse text-muted-foreground">Making drawing video… started {relTime(a.created_at)}</p>}
+                  {whiteboardClipState(a) === "error" && <p className="text-destructive">{String(a.meta.error)}</p>}
+                  {whiteboardClipState(a) === "ready" && <p className="text-muted-foreground">Drawing video ready · <a className="underline" href={assetUrl(a.id)} target="_blank" rel="noreferrer">Open MP4</a></p>}
+                </div>}
                 {mine.length > 0 && <div className="mt-3 space-y-2 rounded bg-muted/30 p-3">{mine.map((x) => <AnalysisView key={x.id} a={x} />)}</div>}
               </div>
             );
