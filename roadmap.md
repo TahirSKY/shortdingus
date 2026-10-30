@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Add manual image-to-whiteboard MP4 button, verify project readback, and report observed generation time
 - [x] Generate and save a realistic cutout pencil hand and updated Movie1 whiteboard code; hand-tip frame and project readback checked (new MP4 export not performed)
 - [x] Build and save 52-second narrated whiteboard proof in Movie Theatre / Movie1 and Renders; clean export validated with frame/audio inspection (Lambda SVG artifacts required raster fallback)
 - [x] Provide a pinned LTX Colab GPU-test notebook and pass structural tests
