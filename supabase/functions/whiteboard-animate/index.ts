@@ -25,7 +25,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 import { traceCenterlines, type Pt, type Stroke, type Traced } from "./centerline.ts";
 import { admin, assetUrl, cors, isUuid, json, safeName } from "../_shared/hub.ts";
-import { HAND_PNG_B64, HAND_TIP } from "../_shared/whiteboard-hand.ts";
+import { MARKER_PNG_B64 } from "../_shared/whiteboard-marker-image.ts";
+import { markerRuntime } from "../_shared/whiteboard-pose.ts";
 import { runSerialQueue } from "./queue.ts";
 
 const TRACE_MAX = 900; // longest side for tracing
@@ -90,12 +91,8 @@ const escapeXml=v=>String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replac
 function svgMarkup(node){if(node==null||node===false)return '';if(Array.isArray(node))return node.map(svgMarkup).join('');if(typeof node!=='object')return escapeXml(node);if(node.type===React.Fragment)return svgMarkup(node.props.children);if(typeof node.type==='function')return svgMarkup(node.type(node.props));const attrs=Object.entries(node.props).filter(([k,v])=>k!=='children'&&k!=='key'&&v!=null).map(([k,v])=>\` \${k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase()).replace('view-box','viewBox').replace('path-length','pathLength')}="\${escapeXml(v)}"\`).join('');return \`<\${node.type}\${attrs}>\${svgMarkup(node.props.children)}</\${node.type}>\`;}
 `;
 
-function markerCode(width: number): string {
-  const handScale = Math.max(0.22, Math.min(0.4, width / 4800));
-  const tipX = HAND_TIP.x * handScale, tipY = HAND_TIP.y * handScale, handPx = HAND_TIP.size * handScale;
-  return `function Marker({x,y}) {return <g transform={\`translate(\${x} \${y})\`}>
- <image href={HAND_EMBEDDED} x={${-tipX}} y={${-tipY}} width={${handPx}} height={${handPx}}/>
- </g>;}`;
+function markerCode(width: number, height: number): string {
+  return `const WIDTH=${width},HEIGHT=${height};\n${markerRuntime()}`;
 }
 
 /** Build the self-contained Remotion composition for one traced drawing. */
@@ -115,22 +112,24 @@ function buildCode(opts: {
   return `/* REMOTION_CONFIG { "fps": ${fps}, "durationInFrames": ${frames}, "width": ${width}, "height": ${height} } */
 import React from 'react';
 import {AbsoluteFill, Audio, Img, useCurrentFrame, useVideoConfig} from 'remotion';
-const HAND_EMBEDDED = "data:image/png;base64,${HAND_PNG_B64}";
+const HAND_EMBEDDED = "data:image/png;base64,${MARKER_PNG_B64}";
 const VOICE = ${opts.voice ? `"${opts.voice}"` : "null"};
 const COLOR_ART = ${opts.colorArt ? `"${opts.colorArt}"` : "null"};
 const TRACES = ${JSON.stringify(roundTraces(opts.strokes))};
 const BOARD = {x: ${ox}, y: ${oy}, scale: ${scale}};
 ${SHARED_HELPERS}
 const G=geometry(TRACES);
-${markerCode(width)}
-function Draw({t,duration,hand}){const p=clamp(t/duration),dist=G.total*p;const active=G.strokes.find(s=>dist>=s.offset&&dist<s.offset+s.length);const pen=active?locate(active,dist-active.offset):null;
- return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=clamp(dist-s.offset,0,s.length);if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, (opts.penWidth ?? 3)).toFixed(2)}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}{hand&&pen&&p>0&&p<1?<Marker x={pen[0]} y={pen[1]}/>:null}</g>;}
+${markerCode(width, height)}
+const DRAW_END=${Math.max(0.5, duration - hold - (opts.colorArt && !hold ? 1.2 : 0)).toFixed(2)};
+const TIMELINE=drawingTimeline(G.strokes,DRAW_END,BOARD.scale);
+function Draw({state}){
+ return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=state.amounts[i];if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, (opts.penWidth ?? 3)).toFixed(2)}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}</g>;}
 export default function WhiteboardClip(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
- const drawEnd=${Math.max(0.5, duration - hold - (opts.colorArt && !hold ? 1.2 : 0)).toFixed(2)};
+ const drawEnd=DRAW_END,state=drawingState(G.strokes,TIMELINE,t);
  // The finished artwork settles in over the traced lines so tiny details (dots, fills) end exact.
  const color=COLOR_ART?ease((t-drawEnd+.15)/.6):0;
- const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/><Draw t={t} duration={drawEnd} hand={${opts.hand}}/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}</AbsoluteFill>;
+ const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/><Draw state={state}/></svg>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}{${opts.hand}?<Marker pen={state.pen} board={BOARD} lifted={state.lifted}/>:null}</AbsoluteFill>;
 }
 `;
 }
@@ -163,20 +162,21 @@ function buildScenesCode(opts: {
   return `/* REMOTION_CONFIG { "fps": ${fps}, "durationInFrames": ${frames}, "width": ${width}, "height": ${height} } */
 import React from 'react';
 import {AbsoluteFill, Audio, Img, useCurrentFrame, useVideoConfig} from 'remotion';
-const HAND_EMBEDDED = "data:image/png;base64,${HAND_PNG_B64}";
+const HAND_EMBEDDED = "data:image/png;base64,${MARKER_PNG_B64}";
 const VOICE = ${opts.voice ? `"${opts.voice}"` : "null"};
 const SCENES = ${JSON.stringify(scenes)};
 const CAPTIONS = ${JSON.stringify(opts.captions)};
 ${SHARED_HELPERS}
-const GS=SCENES.map(s=>({...s,g:geometry(s.traces)}));
-${markerCode(width)}
+${markerCode(width, height)}
+const GS=SCENES.map(s=>{const g=geometry(s.traces);return {...s,g,timeline:drawingTimeline(g.strokes,Math.max(.1,s.end-s.start-.3),s.board.scale)};});
 function Scene({s,t,hand}){const local=t-s.start,p=clamp(local/(s.end-s.start-.3)),dist=s.g.total*p;const active=s.g.strokes.find(st=>dist>=st.offset&&dist<st.offset+st.length);const pen=active?locate(active,dist-active.offset):null;
  const fadeIn=ease(local/.35),fadeOut=1-ease((t-(s.end-.25))/.25);
- return <g opacity={Math.min(fadeIn,fadeOut)}><g transform={\`translate(\${s.board.x} \${s.board.y}) scale(\${s.board.scale})\`}>{s.g.strokes.map((st,i)=>{const amount=clamp(dist-st.offset,0,st.length);if(!amount)return null;return <polyline key={i} points={st.points.map(p=>p.join(',')).join(' ')} pathLength={st.length} fill="none" stroke="#202829" strokeWidth={s.strokeWidth} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${st.length} \${st.length}\`} strokeDashoffset={st.length-amount}/>;})}{hand&&pen&&p>0&&p<1?<Marker x={pen[0]} y={pen[1]}/>:null}</g></g>;}
+ const state=drawingState(s.g.strokes,s.timeline,local);
+ return <g opacity={Math.min(fadeIn,fadeOut)}><g transform={\`translate(\${s.board.x} \${s.board.y}) scale(\${s.board.scale})\`}>{s.g.strokes.map((st,i)=>{const amount=state.amounts[i];if(!amount)return null;return <polyline key={i} points={st.points.map(p=>p.join(',')).join(' ')} pathLength={st.length} fill="none" stroke="#202829" strokeWidth={s.strokeWidth} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${st.length} \${st.length}\`} strokeDashoffset={st.length-amount}/>;})}</g></g>;}
 export default function WhiteboardShort(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
  const caption=CAPTIONS.find(c=>t>=c.start&&t<=c.end+.15);
  const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/>{GS.map((s,i)=>t>=s.start-.01&&t<=s.end+.01?<Scene key={i} s={s} t={t} hand={${opts.hand}}/>:null)}{caption?<text x={${width / 2}} y={${height - Math.round(height * 0.055)}} textAnchor="middle" fill="#202829" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="${Math.round(width * 0.042)}">{caption.text}</text>:null}<rect x="${margin}" y="${height - 24}" width={${width - margin * 2}*clamp(t/${duration.toFixed(2)})} height="6" rx="3" fill="#12aeaa"/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/></AbsoluteFill>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/>{${opts.hand}?GS.map((s,i)=>{if(t<s.start||t>=s.end)return null;const state=drawingState(s.g.strokes,s.timeline,t-s.start);return <Marker key={i} pen={state.pen} board={s.board} lifted={state.lifted}/>;}):null}</AbsoluteFill>;
 }
 `;
 }
