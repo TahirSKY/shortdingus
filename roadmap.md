@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Replace the pencil cutout with a realistic female marker-hand system; plan natural reach and arm framing in vertical/horizontal, then verify drawing-tip alignment and actual exports
 - [x] Serialize drawing renders across manual/agent requests; project batch start/resume and manual agent handoff added; two real clips completed sequentially despite overlapping resume, five tests passed
 - [x] Add manual image-to-whiteboard MP4 button; test2 button produced a saved 7-second vertical clip in 29 seconds, settings/status checked and 3 tests passed
 - [x] Generate and save a realistic cutout pencil hand and updated Movie1 whiteboard code; hand-tip frame and project readback checked (new MP4 export not performed)
