@@ -129,7 +129,7 @@ export default function WhiteboardClip(){const f=useCurrentFrame(),{fps}=useVide
  // The finished artwork settles in over the traced lines so tiny details (dots, fills) end exact.
  const color=COLOR_ART?ease((t-drawEnd+.15)/.6):0;
  const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/><Draw state={state}/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}{${opts.hand}?<Marker pen={state.pen} board={BOARD} lifted={state.lifted}/>:null}</AbsoluteFill>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}{${opts.hand}?<HandMotion state={state} strokes={G.strokes} board={BOARD} t={t} end={DRAW_END}/>:null}</AbsoluteFill>;
 }
 `;
 }
@@ -176,7 +176,7 @@ function Scene({s,t,hand}){const local=t-s.start,p=clamp(local/(s.end-s.start-.3
 export default function WhiteboardShort(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
  const caption=CAPTIONS.find(c=>t>=c.start&&t<=c.end+.15);
  const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/>{GS.map((s,i)=>t>=s.start-.01&&t<=s.end+.01?<Scene key={i} s={s} t={t} hand={${opts.hand}}/>:null)}{caption?<text x={${width / 2}} y={${height - Math.round(height * 0.055)}} textAnchor="middle" fill="#202829" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="${Math.round(width * 0.042)}">{caption.text}</text>:null}<rect x="${margin}" y="${height - 24}" width={${width - margin * 2}*clamp(t/${duration.toFixed(2)})} height="6" rx="3" fill="#12aeaa"/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/>{${opts.hand}?GS.map((s,i)=>{if(t<s.start||t>=s.end)return null;const state=drawingState(s.g.strokes,s.timeline,t-s.start);return <Marker key={i} pen={state.pen} board={s.board} lifted={state.lifted}/>;}):null}</AbsoluteFill>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/>{${opts.hand}?GS.map((s,i)=>{if(t<s.start||t>=s.end)return null;const state=drawingState(s.g.strokes,s.timeline,t-s.start);return <HandMotion key={i} state={state} strokes={s.g.strokes} board={s.board} t={t-s.start} end={Math.max(.1,s.end-s.start-.3)}/>;}):null}</AbsoluteFill>;
 }
 `;
 }
