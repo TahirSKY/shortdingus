@@ -27,6 +27,7 @@ import { traceCenterlines, type Pt, type Stroke, type Traced } from "./centerlin
 import { admin, assetUrl, cors, isUuid, json, safeName } from "../_shared/hub.ts";
 import { MARKER_PNG_B64 } from "../_shared/whiteboard-marker-image.ts";
 import { markerRuntime } from "../_shared/whiteboard-pose.ts";
+import { DRAWING_SOUND_ASSET_ID, drawingAudioRuntime } from "../_shared/whiteboard-audio.ts";
 import { runSerialQueue } from "./queue.ts";
 
 const TRACE_MAX = 900; // longest side for tracing
@@ -100,7 +101,7 @@ function buildCode(opts: {
   strokes: Stroke[]; traceW: number; traceH: number;
   width: number; height: number; fps: number; duration: number;
   hand: boolean; voice?: string | null; colorArt?: string | null; title: string;
-  penWidth?: number; hold?: number;
+  penWidth?: number; hold?: number; sound?: boolean;
 }): string {
   const { width, height, fps, duration } = opts;
   const hold = opts.hold ?? 0;
@@ -122,14 +123,16 @@ const G=geometry(TRACES);
 ${markerCode(width, height)}
 const DRAW_END=${Math.max(0.5, duration - hold - (opts.colorArt && !hold ? 1.2 : 0)).toFixed(2)};
 const TIMELINE=drawingTimeline(G.strokes,DRAW_END,BOARD.scale);
+${drawingAudioRuntime(assetUrl(DRAWING_SOUND_ASSET_ID), opts.sound !== false)}
 function Draw({state}){
  return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=state.amounts[i];if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, (opts.penWidth ?? 3)).toFixed(2)}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}</g>;}
 export default function WhiteboardClip(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
  const drawEnd=DRAW_END,state=drawingState(G.strokes,TIMELINE,t);
+ const drawingAudio=DRAWING_SOUND?<Audio src={DRAWING_SOUND} loop volume={frame=>drawingSoundVolume(TIMELINE,frame/fps)}/>:null;
  // The finished artwork settles in over the traced lines so tiny details (dots, fills) end exact.
  const color=COLOR_ART?ease((t-drawEnd+.15)/.6):0;
  const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/><Draw state={state}/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}{${opts.hand}?<HandMotion state={state} strokes={G.strokes} board={BOARD} t={t} end={DRAW_END}/>:null}</AbsoluteFill>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}{drawingAudio}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}{${opts.hand}?<HandMotion state={state} strokes={G.strokes} board={BOARD} t={t} end={DRAW_END}/>:null}</AbsoluteFill>;
 }
 `;
 }
@@ -139,7 +142,7 @@ function buildScenesCode(opts: {
   scenes: { traced: Traced; start: number; end: number }[];
   width: number; height: number; fps: number; duration: number;
   hand: boolean; voice?: string | null; captions: { start: number; end: number; text: string }[];
-  title: string;
+  title: string; sound?: boolean;
 }): string {
   const { width, height, fps, duration } = opts;
   const margin = Math.round(Math.min(width, height) * 0.07);
@@ -169,14 +172,16 @@ const CAPTIONS = ${JSON.stringify(opts.captions)};
 ${SHARED_HELPERS}
 ${markerCode(width, height)}
 const GS=SCENES.map(s=>{const g=geometry(s.traces);return {...s,g,timeline:drawingTimeline(g.strokes,Math.max(.1,s.end-s.start-.3),s.board.scale)};});
+${drawingAudioRuntime(assetUrl(DRAWING_SOUND_ASSET_ID), opts.sound !== false)}
 function Scene({s,t,hand}){const local=t-s.start,p=clamp(local/(s.end-s.start-.3)),dist=s.g.total*p;const active=s.g.strokes.find(st=>dist>=st.offset&&dist<st.offset+st.length);const pen=active?locate(active,dist-active.offset):null;
  const fadeIn=ease(local/.35),fadeOut=1-ease((t-(s.end-.25))/.25);
  const state=drawingState(s.g.strokes,s.timeline,local);
  return <g opacity={Math.min(fadeIn,fadeOut)}><g transform={\`translate(\${s.board.x} \${s.board.y}) scale(\${s.board.scale})\`}>{s.g.strokes.map((st,i)=>{const amount=state.amounts[i];if(!amount)return null;return <polyline key={i} points={st.points.map(p=>p.join(',')).join(' ')} pathLength={st.length} fill="none" stroke="#202829" strokeWidth={s.strokeWidth} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${st.length} \${st.length}\`} strokeDashoffset={st.length-amount}/>;})}</g></g>;}
 export default function WhiteboardShort(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
  const caption=CAPTIONS.find(c=>t>=c.start&&t<=c.end+.15);
+ const drawingAudio=DRAWING_SOUND?<Audio src={DRAWING_SOUND} loop volume={frame=>{const now=frame/fps,s=GS.find(s=>now>=s.start&&now<s.end);return s?drawingSoundVolume(s.timeline,now-s.start):0;}}/>:null;
  const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/>{GS.map((s,i)=>t>=s.start-.01&&t<=s.end+.01?<Scene key={i} s={s} t={t} hand={${opts.hand}}/>:null)}{caption?<text x={${width / 2}} y={${height - Math.round(height * 0.055)}} textAnchor="middle" fill="#202829" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="${Math.round(width * 0.042)}">{caption.text}</text>:null}<rect x="${margin}" y="${height - 24}" width={${width - margin * 2}*clamp(t/${duration.toFixed(2)})} height="6" rx="3" fill="#12aeaa"/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/>{${opts.hand}?GS.map((s,i)=>{if(t<s.start||t>=s.end)return null;const state=drawingState(s.g.strokes,s.timeline,t-s.start);return <HandMotion key={i} state={state} strokes={s.g.strokes} board={s.board} t={t-s.start} end={Math.max(.1,s.end-s.start-.3)}/>;}):null}</AbsoluteFill>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}{drawingAudio}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/>{${opts.hand}?GS.map((s,i)=>{if(t<s.start||t>=s.end)return null;const state=drawingState(s.g.strokes,s.timeline,t-s.start);return <HandMotion key={i} state={state} strokes={s.g.strokes} board={s.board} t={t-s.start} end={Math.max(.1,s.end-s.start-.3)}/>;}):null}</AbsoluteFill>;
 }
 `;
 }
@@ -195,8 +200,8 @@ Deno.serve(async (req) => {
     const width = vertical ? 1080 : 1920, height = vertical ? 1920 : 1080;
     const draw = Math.max(1.5, Math.min(30, Number(q.drawSeconds) || traced.strokes.reduce((a, s) => a + s.length, 0) / 900));
     const hold = Math.max(.3, Math.min(5, Number(q.holdSeconds) || 1));
-    const meta = { source: "whiteboard-animate", source_asset_id: q.assetId, strokes: traced.strokes.length, draw_seconds: Math.round(draw * 100) / 100, hold_seconds: hold, width, height };
-    return { code: buildCode({ strokes: traced.strokes, traceW: traced.width, traceH: traced.height, width, height, fps: 30, duration: draw + hold, hand: q.hand !== false, colorArt: q.finish === "lines" ? null : assetUrl(q.assetId), title: "clip", penWidth: traced.penWidth, hold }), meta, name: q.name, vertical };
+    const meta = { source: "whiteboard-animate", source_asset_id: q.assetId, strokes: traced.strokes.length, draw_seconds: Math.round(draw * 100) / 100, hold_seconds: hold, width, height, drawing_sound: q.sound !== false, drawing_sound_asset_id: q.sound !== false ? DRAWING_SOUND_ASSET_ID : null };
+    return { code: buildCode({ strokes: traced.strokes, traceW: traced.width, traceH: traced.height, width, height, fps: 30, duration: draw + hold, hand: q.hand !== false, colorArt: q.finish === "lines" ? null : assetUrl(q.assetId), title: "clip", penWidth: traced.penWidth, hold, sound: q.sound !== false }), meta, name: q.name, vertical };
   };
   if (p.action === "resume" && p.workerToken && p.workerToken === Deno.env.get("HUB_WRITE_TOKEN")) {
     EdgeRuntime.waitUntil(runSerialQueue(db, buildQueued, Math.max(0, Math.min(24, Number(p.budget) || 0))));
@@ -230,7 +235,7 @@ Deno.serve(async (req) => {
       const name = `${safeName(`whiteboard-${src.name.replace(/\.[a-z0-9]+$/i, "")}`)}.mp4`;
       const { data: row, error } = await db.from("assets").insert({ group_id: project.group_id, project_id: projectId, kind: "video", role: "clip", tags: ["whiteboard-clip"], name, mime_type: "video/mp4", meta: { creating: true, whiteboard_status: "queued", source: "whiteboard-animate", source_asset_id: c.assetId } }).select("id").single();
       if (error) { made.push({ sourceAssetId: c.assetId, error: error.message }); continue; }
-      const payload = { ...c, name, slug: group?.slug || "hub", format: p.format || "vertical", hand };
+      const payload = { ...c, name, slug: group?.slug || "hub", format: p.format || "vertical", hand, sound: p.sound !== false };
       const queued = await db.from("whiteboard_jobs").insert({ clip_id: row.id, project_id: projectId, payload });
       if (queued.error) { await db.from("assets").update({ meta: { creating: false, source_asset_id: c.assetId, error: queued.error.message } }).eq("id", row.id); made.push({ sourceAssetId: c.assetId, error: queued.error.message }); continue; }
       made.push({ id: row.id, name, sourceAssetId: c.assetId, status: "queued", url: assetUrl(row.id) });
@@ -295,7 +300,7 @@ Deno.serve(async (req) => {
     const height = vertical ? 1920 : 1080;
     const title = String(p.title || "Whiteboard short").slice(0, 120);
 
-    const code = buildScenesCode({ scenes, width, height, fps, duration, hand, voice: voice ? assetUrl(voice) : null, captions, title });
+    const code = buildScenesCode({ scenes, width, height, fps, duration, hand, voice: voice ? assetUrl(voice) : null, captions, title, sound: p.sound !== false });
     const { data: prev } = await db.from("assets").select("meta").eq("project_id", projectId).eq("kind", "code").order("created_at", { ascending: false }).limit(1);
     const version = (Number(prev?.[0]?.meta?.version) || 0) + 1;
     const name = `${safeName(title)}-v${version}.tsx`;
@@ -303,7 +308,7 @@ Deno.serve(async (req) => {
       group_id: project.group_id, project_id: projectId, kind: "code", role: "code",
       name, inline_content: code, mime_type: "text/plain", size_bytes: new TextEncoder().encode(code).byteLength,
       duration_seconds: Math.round(duration * 100) / 100,
-      meta: { version, source: "whiteboard-animate", scenes: scenes.length, strokes: tracedScenes.reduce((a, t) => a + t.strokes.length, 0), duration: Math.round(duration * 100) / 100, width, height, scene_asset_ids: sceneInputs.map((s: any) => String(s.assetId)), ...(voice ? { voiceover_asset_id: voice } : {}) },
+      meta: { version, drawing_sound: p.sound !== false, drawing_sound_asset_id: p.sound !== false ? DRAWING_SOUND_ASSET_ID : null, source: "whiteboard-animate", scenes: scenes.length, strokes: tracedScenes.reduce((a, t) => a + t.strokes.length, 0), duration: Math.round(duration * 100) / 100, width, height, scene_asset_ids: sceneInputs.map((s: any) => String(s.assetId)), ...(voice ? { voiceover_asset_id: voice } : {}) },
     }).select("id").single();
     if (error) return json({ error: `Could not save: ${error.message}` }, 500);
     return json({
@@ -355,7 +360,7 @@ Deno.serve(async (req) => {
 
   const code = buildCode({
     strokes: traced.strokes, traceW: traced.width, traceH: traced.height,
-    width, height, fps, duration, hand, voice: voice ? assetUrl(voice) : null, colorArt, title,
+    width, height, fps, duration, hand, voice: voice ? assetUrl(voice) : null, colorArt, title, sound: p.sound !== false,
   });
 
   const { data: prev } = await db.from("assets").select("meta").eq("project_id", projectId).eq("kind", "code").order("created_at", { ascending: false }).limit(1);
@@ -365,7 +370,7 @@ Deno.serve(async (req) => {
     name: `${safeName(title)}-v${version}.tsx`, inline_content: code,
     mime_type: "text/plain", size_bytes: new TextEncoder().encode(code).byteLength,
     duration_seconds: Math.round(duration * 100) / 100,
-    meta: { version, source: "whiteboard-animate", strokes: traced.strokes.length, duration, width, height, ...(sourceAssetId ? { source_asset_id: sourceAssetId } : {}) },
+    meta: { version, drawing_sound: p.sound !== false, drawing_sound_asset_id: p.sound !== false ? DRAWING_SOUND_ASSET_ID : null, source: "whiteboard-animate", strokes: traced.strokes.length, duration, width, height, ...(sourceAssetId ? { source_asset_id: sourceAssetId } : {}) },
   }).select("id").single();
   if (error) return json({ error: `Could not save: ${error.message}` }, 500);
 

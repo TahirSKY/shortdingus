@@ -1,5 +1,6 @@
 # Roadmap
-- [ ] Assemble test2 from its four ready drawing clips, sync to voiceover, render and inspect the full vertical MP4.
+- [x] Assemble test2 from four ready drawing clips; 15-second vertical AWS MP4 saved and inspected (original pencil hand retained; one blank frame at each scene start remains).
+- [x] Add quiet drawing sounds inside new clips, silent during lifts/holds; agent guides published, 12 tests passed, actual 3-second AWS export has audible audio. Existing clips and drawing glitches unchanged.
 - [x] Replace pencil with photographic female marker-hand rig: fixed screen-space size, intact off-screen forearm in both orientations, deterministic pen-lift travel and exit; nine tests passed, real scene plus portrait/landscape AWS proofs exported and saved in Whiteboard / Marker hand proof, project UI readback checked. This remains a rigid 2D photographic illusion; second hand deferred.
 - [x] Serialize drawing renders across manual/agent requests; project batch start/resume and manual agent handoff added; two real clips completed sequentially despite overlapping resume, five tests passed
 - [x] Add manual image-to-whiteboard MP4 button; test2 button produced a saved 7-second vertical clip in 29 seconds, settings/status checked and 3 tests passed
