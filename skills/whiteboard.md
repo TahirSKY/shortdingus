@@ -7,7 +7,7 @@ description: Make a hand-drawn whiteboard video (short or long) from a voiceover
 
 The drawing is done by the **whiteboard-animate engine**, like transcription or cut-outs: image in, finished
 MP4 drawing clip out. It traces the centre of every line (one pen pass per line), draws big shapes first then
-details, moves a realistic pencil hand along the pen tip, and settles into the exact original artwork at the end.
+details, moves a realistic female marker hand along the pen tip, and settles into the exact original artwork at the end.
 Your job is the creative part: what to draw, and how the clips flow with the voice. Never write stroke code.
 
 ## Flow
@@ -21,12 +21,15 @@ Your job is the creative part: what to draw, and how the clips flow with the voi
    a durable queue **one at a time across manual and agent requests**, not concurrently. An interrupted queue can be restarted with **Resume queue**. Existing ready/queued clips are reused, not duplicated; errors can be retried.
    **STOP after images are generated or clips are queued.** Tell the user what is ready/queued and that you are waiting for them to check completion and say "continue". Never poll in a loop, start a build using pending URLs, or automatically wake yourself; waiting uses no AI calls.
 6. Only when the user explicitly asks you to continue, call `list_files` once to read fresh clip metadata. `meta.creating=true` or `whiteboard_status=queued/rendering` means not ready. `meta.error` means failed; do not build with it. If any required clips are missing or unfinished, report them and stop again. Finished videos have `creating=false`, no error, and a working MP4 URL. Then build the video in Remotion with the clips as footage, the voiceover as `<Audio>`, plus captions/titles:
-   - Each scene = `<Sequence from={start*fps} durationInFrames={len*fps}>` with `<OffthreadVideo src={clipUrl} playbackRate={r} muted/>`.
+   - Each scene = `<Sequence from={start*fps} durationInFrames={len*fps}>` with `<OffthreadVideo src={clipUrl} playbackRate={r}/>`.
    - Fit the drawing to the line it illustrates: `r = drawSeconds / secondsYouWantTheDrawingToTake`
      (keep r between ~0.5 and 2.5 so the hand looks natural). If the scene lasts longer than the drawing,
      freeze on the finished picture (the clip's last frame) or add a slow push-in / highlight.
    - Use `startFrom` to skip into a drawing, cuts or crossfades between scenes, gentle camera moves — creative choices are yours.
 7. Re-timing = edit the Sequence/playbackRate numbers. Swapping a drawing = new image → `whiteboard_animate` for just that one.
+
+## Drawing audio
+New engine clips include quiet drawing sound automatically (`meta.drawing_sound=true`), synced to pen contact and silent during lifts and the finished-picture hold. Keep clip audio enabled: no `muted` and no duplicate scribble sound. The sound follows playbackRate with the drawing. Voiceover remains a separate Audio track. Older clips without this metadata may be silent. HTTP callers can opt out with `sound:false`; existing clips are unchanged.
 
 ## Line-art rules (the engine depends on them)
 - Thick dark outlines on pure white. No shading, gradients, hatching, gray, photos or dense detail.
