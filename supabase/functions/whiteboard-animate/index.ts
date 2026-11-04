@@ -29,6 +29,7 @@ import { MARKER_PNG_B64 } from "../_shared/whiteboard-marker-image.ts";
 import { markerRuntime } from "../_shared/whiteboard-pose.ts";
 import { DRAWING_SOUND_ASSET_ID, drawingAudioRuntime } from "../_shared/whiteboard-audio.ts";
 import { runSerialQueue } from "./queue.ts";
+import { whiteboardRasterRuntime } from "../_shared/whiteboard-raster.ts";
 
 const TRACE_MAX = 900; // longest side for tracing
 
@@ -88,8 +89,7 @@ const mix=(a,b,p)=>a+(b-a)*p;
 const enrich=s=>{let lengths=[0];for(let i=1;i<s.points.length;i++)lengths.push(lengths[i-1]+Math.hypot(s.points[i][0]-s.points[i-1][0],s.points[i][1]-s.points[i-1][1]));return {...s,length:lengths[lengths.length-1],lengths};};
 const geometry=ss=>{let total=0;return {strokes:ss.map(s=>{const p=enrich(s);const out={...p,offset:total};total+=p.length;return out;}),total};};
 const locate=(s,d)=>{const v=clamp(d,0,s.length);for(let i=1;i<s.points.length;i++){if(s.lengths[i]>=v){const p=(v-s.lengths[i-1])/Math.max(.0001,s.lengths[i]-s.lengths[i-1]);return [mix(s.points[i-1][0],s.points[i][0],p),mix(s.points[i-1][1],s.points[i][1],p)];}}return s.points[s.points.length-1];};
-const escapeXml=v=>String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-function svgMarkup(node){if(node==null||node===false)return '';if(Array.isArray(node))return node.map(svgMarkup).join('');if(typeof node!=='object')return escapeXml(node);if(node.type===React.Fragment)return svgMarkup(node.props.children);if(typeof node.type==='function')return svgMarkup(node.type(node.props));const attrs=Object.entries(node.props).filter(([k,v])=>k!=='children'&&k!=='key'&&v!=null).map(([k,v])=>\` \${k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase()).replace('view-box','viewBox').replace('path-length','pathLength')}="\${escapeXml(v)}"\`).join('');return \`<\${node.type}\${attrs}>\${svgMarkup(node.props.children)}</\${node.type}>\`;}
+
 `;
 
 function markerCode(width: number, height: number): string {
@@ -119,20 +119,18 @@ const COLOR_ART = ${opts.colorArt ? `"${opts.colorArt}"` : "null"};
 const TRACES = ${JSON.stringify(roundTraces(opts.strokes))};
 const BOARD = {x: ${ox}, y: ${oy}, scale: ${scale}};
 ${SHARED_HELPERS}
+${whiteboardRasterRuntime()}
 const G=geometry(TRACES);
 ${markerCode(width, height)}
 const DRAW_END=${Math.max(0.5, duration - hold - (opts.colorArt && !hold ? 1.2 : 0)).toFixed(2)};
 const TIMELINE=drawingTimeline(G.strokes,DRAW_END,BOARD.scale);
 ${drawingAudioRuntime(assetUrl(DRAWING_SOUND_ASSET_ID), opts.sound !== false)}
-function Draw({state}){
- return <g transform={\`translate(\${BOARD.x} \${BOARD.y}) scale(\${BOARD.scale})\`}>{G.strokes.map((s,i)=>{const amount=state.amounts[i];if(!amount)return null;return <polyline key={i} points={s.points.map(p=>p.join(',')).join(' ')} pathLength={s.length} fill="none" stroke="#202829" strokeWidth={${Math.max(2, (opts.penWidth ?? 3)).toFixed(2)}} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${s.length} \${s.length}\`} strokeDashoffset={s.length-amount}/>;})}</g>;}
 export default function WhiteboardClip(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
  const drawEnd=DRAW_END,state=drawingState(G.strokes,TIMELINE,t);
  const drawingAudio=DRAWING_SOUND?<Audio src={DRAWING_SOUND} loop volume={frame=>drawingSoundVolume(TIMELINE,frame/fps)}/>:null;
  // The finished artwork settles in over the traced lines so tiny details (dots, fills) end exact.
  const color=COLOR_ART?ease((t-drawEnd+.15)/.6):0;
- const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/><Draw state={state}/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}{drawingAudio}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%',opacity:1-color*.999}}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}{${opts.hand}?<HandMotion state={state} strokes={G.strokes} board={BOARD} t={t} end={DRAW_END}/>:null}</AbsoluteFill>;
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}{drawingAudio}<DrawingCanvas layers={[{strokes:G.strokes,amounts:state.amounts,board:BOARD,penWidth:${Math.max(2, (opts.penWidth ?? 3)).toFixed(2)}}]}/>{COLOR_ART&&color>0?<Img src={COLOR_ART} style={{position:'absolute',left:BOARD.x,top:BOARD.y,width:${Math.round(opts.traceW * scale)},height:${Math.round(opts.traceH * scale)},opacity:color}}/>:null}{${opts.hand}?<HandMotion state={state} strokes={G.strokes} board={BOARD} t={t} end={DRAW_END}/>:null}</AbsoluteFill>;
 }
 `;
 }
@@ -170,18 +168,15 @@ const VOICE = ${opts.voice ? `"${opts.voice}"` : "null"};
 const SCENES = ${JSON.stringify(scenes)};
 const CAPTIONS = ${JSON.stringify(opts.captions)};
 ${SHARED_HELPERS}
+${whiteboardRasterRuntime()}
 ${markerCode(width, height)}
 const GS=SCENES.map(s=>{const g=geometry(s.traces);return {...s,g,timeline:drawingTimeline(g.strokes,Math.max(.1,s.end-s.start-.3),s.board.scale)};});
 ${drawingAudioRuntime(assetUrl(DRAWING_SOUND_ASSET_ID), opts.sound !== false)}
-function Scene({s,t,hand}){const local=t-s.start,p=clamp(local/(s.end-s.start-.3)),dist=s.g.total*p;const active=s.g.strokes.find(st=>dist>=st.offset&&dist<st.offset+st.length);const pen=active?locate(active,dist-active.offset):null;
- const fadeIn=ease(local/.35),fadeOut=1-ease((t-(s.end-.25))/.25);
- const state=drawingState(s.g.strokes,s.timeline,local);
- return <g opacity={Math.min(fadeIn,fadeOut)}><g transform={\`translate(\${s.board.x} \${s.board.y}) scale(\${s.board.scale})\`}>{s.g.strokes.map((st,i)=>{const amount=state.amounts[i];if(!amount)return null;return <polyline key={i} points={st.points.map(p=>p.join(',')).join(' ')} pathLength={st.length} fill="none" stroke="#202829" strokeWidth={s.strokeWidth} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={\`\${st.length} \${st.length}\`} strokeDashoffset={st.length-amount}/>;})}</g></g>;}
 export default function WhiteboardShort(){const f=useCurrentFrame(),{fps}=useVideoConfig(),t=f/fps;
  const caption=CAPTIONS.find(c=>t>=c.start&&t<=c.end+.15);
  const drawingAudio=DRAWING_SOUND?<Audio src={DRAWING_SOUND} loop volume={frame=>{const now=frame/fps,s=GS.find(s=>now>=s.start&&now<s.end);return s?drawingSoundVolume(s.timeline,now-s.start):0;}}/>:null;
- const svg=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="#ffffff"/>{GS.map((s,i)=>t>=s.start-.01&&t<=s.end+.01?<Scene key={i} s={s} t={t} hand={${opts.hand}}/>:null)}{caption?<text x={${width / 2}} y={${height - Math.round(height * 0.055)}} textAnchor="middle" fill="#202829" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="${Math.round(width * 0.042)}">{caption.text}</text>:null}<rect x="${margin}" y="${height - 24}" width={${width - margin * 2}*clamp(t/${duration.toFixed(2)})} height="6" rx="3" fill="#12aeaa"/></svg>;
- return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}{drawingAudio}<Img src={'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgMarkup(svg))} style={{width:'100%',height:'100%'}}/>{${opts.hand}?GS.map((s,i)=>{if(t<s.start||t>=s.end)return null;const state=drawingState(s.g.strokes,s.timeline,t-s.start);return <HandMotion key={i} state={state} strokes={s.g.strokes} board={s.board} t={t-s.start} end={Math.max(.1,s.end-s.start-.3)}/>;}):null}</AbsoluteFill>;
+ const layers=GS.filter(s=>t>=s.start&&t<s.end).map(s=>({strokes:s.g.strokes,amounts:drawingState(s.g.strokes,s.timeline,t-s.start).amounts,board:s.board,penWidth:s.strokeWidth,opacity:Math.min(ease((t-s.start)/.35),1-ease((t-(s.end-.25))/.25))}));
+ return <AbsoluteFill style={{backgroundColor:'#ffffff'}}>{VOICE?<Audio src={VOICE}/>:null}{drawingAudio}<DrawingCanvas layers={layers} caption={caption?{text:caption.text,size:${Math.round(width * 0.042)},y:${height - Math.round(height * 0.055)}}:null} progress={{x:${margin},width:${width - margin * 2}*clamp(t/${duration.toFixed(2)})}}/>{${opts.hand}?GS.map((s,i)=>{if(t<s.start||t>=s.end)return null;const state=drawingState(s.g.strokes,s.timeline,t-s.start);return <HandMotion key={i} state={state} strokes={s.g.strokes} board={s.board} t={t-s.start} end={Math.max(.1,s.end-s.start-.3)}/>;}):null}</AbsoluteFill>;
 }
 `;
 }
@@ -200,7 +195,7 @@ Deno.serve(async (req) => {
     const width = vertical ? 1080 : 1920, height = vertical ? 1920 : 1080;
     const draw = Math.max(1.5, Math.min(30, Number(q.drawSeconds) || traced.strokes.reduce((a, s) => a + s.length, 0) / 900));
     const hold = Math.max(.3, Math.min(5, Number(q.holdSeconds) || 1));
-    const meta = { source: "whiteboard-animate", source_asset_id: q.assetId, strokes: traced.strokes.length, draw_seconds: Math.round(draw * 100) / 100, hold_seconds: hold, width, height, drawing_sound: q.sound !== false, drawing_sound_asset_id: q.sound !== false ? DRAWING_SOUND_ASSET_ID : null };
+    const meta = { source: "whiteboard-animate", drawing_renderer: "canvas-v1", source_asset_id: q.assetId, strokes: traced.strokes.length, draw_seconds: Math.round(draw * 100) / 100, hold_seconds: hold, width, height, drawing_sound: q.sound !== false, drawing_sound_asset_id: q.sound !== false ? DRAWING_SOUND_ASSET_ID : null };
     return { code: buildCode({ strokes: traced.strokes, traceW: traced.width, traceH: traced.height, width, height, fps: 30, duration: draw + hold, hand: q.hand !== false, colorArt: q.finish === "lines" ? null : assetUrl(q.assetId), title: "clip", penWidth: traced.penWidth, hold, sound: q.sound !== false }), meta, name: q.name, vertical };
   };
   if (p.action === "resume" && p.workerToken && p.workerToken === Deno.env.get("HUB_WRITE_TOKEN")) {
@@ -233,7 +228,7 @@ Deno.serve(async (req) => {
       const reuse = existing?.find(a => a.meta?.creating || (a.storage_path && !a.meta?.error));
       if (reuse) { made.push({ id: reuse.id, sourceAssetId: c.assetId, status: reuse.storage_path ? "ready" : "queued", url: assetUrl(reuse.id) }); continue; }
       const name = `${safeName(`whiteboard-${src.name.replace(/\.[a-z0-9]+$/i, "")}`)}.mp4`;
-      const { data: row, error } = await db.from("assets").insert({ group_id: project.group_id, project_id: projectId, kind: "video", role: "clip", tags: ["whiteboard-clip"], name, mime_type: "video/mp4", meta: { creating: true, whiteboard_status: "queued", source: "whiteboard-animate", source_asset_id: c.assetId } }).select("id").single();
+      const { data: row, error } = await db.from("assets").insert({ group_id: project.group_id, project_id: projectId, kind: "video", role: "clip", tags: ["whiteboard-clip"], name, mime_type: "video/mp4", meta: { creating: true, whiteboard_status: "queued", source: "whiteboard-animate", drawing_renderer: "canvas-v1", source_asset_id: c.assetId } }).select("id").single();
       if (error) { made.push({ sourceAssetId: c.assetId, error: error.message }); continue; }
       const payload = { ...c, name, slug: group?.slug || "hub", format: p.format || "vertical", hand, sound: p.sound !== false };
       const queued = await db.from("whiteboard_jobs").insert({ clip_id: row.id, project_id: projectId, payload });
@@ -308,7 +303,7 @@ Deno.serve(async (req) => {
       group_id: project.group_id, project_id: projectId, kind: "code", role: "code",
       name, inline_content: code, mime_type: "text/plain", size_bytes: new TextEncoder().encode(code).byteLength,
       duration_seconds: Math.round(duration * 100) / 100,
-      meta: { version, drawing_sound: p.sound !== false, drawing_sound_asset_id: p.sound !== false ? DRAWING_SOUND_ASSET_ID : null, source: "whiteboard-animate", scenes: scenes.length, strokes: tracedScenes.reduce((a, t) => a + t.strokes.length, 0), duration: Math.round(duration * 100) / 100, width, height, scene_asset_ids: sceneInputs.map((s: any) => String(s.assetId)), ...(voice ? { voiceover_asset_id: voice } : {}) },
+      meta: { version, drawing_sound: p.sound !== false, drawing_sound_asset_id: p.sound !== false ? DRAWING_SOUND_ASSET_ID : null, source: "whiteboard-animate", drawing_renderer: "canvas-v1", scenes: scenes.length, strokes: tracedScenes.reduce((a, t) => a + t.strokes.length, 0), duration: Math.round(duration * 100) / 100, width, height, scene_asset_ids: sceneInputs.map((s: any) => String(s.assetId)), ...(voice ? { voiceover_asset_id: voice } : {}) },
     }).select("id").single();
     if (error) return json({ error: `Could not save: ${error.message}` }, 500);
     return json({
@@ -370,7 +365,7 @@ Deno.serve(async (req) => {
     name: `${safeName(title)}-v${version}.tsx`, inline_content: code,
     mime_type: "text/plain", size_bytes: new TextEncoder().encode(code).byteLength,
     duration_seconds: Math.round(duration * 100) / 100,
-    meta: { version, drawing_sound: p.sound !== false, drawing_sound_asset_id: p.sound !== false ? DRAWING_SOUND_ASSET_ID : null, source: "whiteboard-animate", strokes: traced.strokes.length, duration, width, height, ...(sourceAssetId ? { source_asset_id: sourceAssetId } : {}) },
+    meta: { version, drawing_sound: p.sound !== false, drawing_sound_asset_id: p.sound !== false ? DRAWING_SOUND_ASSET_ID : null, source: "whiteboard-animate", drawing_renderer: "canvas-v1", strokes: traced.strokes.length, duration, width, height, ...(sourceAssetId ? { source_asset_id: sourceAssetId } : {}) },
   }).select("id").single();
   if (error) return json({ error: `Could not save: ${error.message}` }, 500);
 
