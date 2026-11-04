@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Diagnose repeated whiteboard drawing artifacts, fix shared engine output, and validate exported frames.
 - [x] Assemble test2 from four ready drawing clips; 15-second vertical AWS MP4 saved and inspected (original pencil hand retained; one blank frame at each scene start remains).
 - [x] Add quiet drawing sounds inside new clips, silent during lifts/holds; agent guides published, 12 tests passed, actual 3-second AWS export has audible audio. Existing clips and drawing glitches unchanged.
 - [x] Replace pencil with photographic female marker-hand rig: fixed screen-space size, intact off-screen forearm in both orientations, deterministic pen-lift travel and exit; nine tests passed, real scene plus portrait/landscape AWS proofs exported and saved in Whiteboard / Marker hand proof, project UI readback checked. This remains a rigid 2D photographic illusion; second hand deferred.
