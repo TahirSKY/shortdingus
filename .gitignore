@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+whiteboard/**/*.png
+whiteboard/**/*.jpg
+whiteboard/**/*.jpeg
+whiteboard/doodle/
+whiteboard/gala-glp-1/
+whiteboard/glp1/
+whiteboard/special/
