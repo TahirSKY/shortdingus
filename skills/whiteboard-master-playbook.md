@@ -108,16 +108,25 @@ Every matched UUID must exist in Supabase `assets` with a valid `storage_path` o
 - Never use `backdropFilter` / `-webkit-backdrop-filter` (GPU-less Chrome on AWS Lambda software-blurs every frame and times out).
 - Never use `useState`, `useEffect`, `setTimeout`, CSS `transition`/`animation`, or unseeded `Math.random()`. Drive everything from `useCurrentFrame()`, `interpolate(..., { extrapolateLeft: "clamp", extrapolateRight: "clamp" })` with **strictly monotonic** `inputRange` arrays, and `spring()`.
 
-### Rule 5 — Whiteboard Clip Timing, Natural Hand Speed & Zero-Blank-Frame Hold
-1. **Keep built-in drawing audio ON:** New `whiteboard-clip` MP4s include `meta.drawing_sound: true` (quiet marker foley synced to pen contact and silent during lifts/holds). **Do NOT add `muted`** to whiteboard `<OffthreadVideo>` clips and **do NOT layer duplicate scribble SFX** over them! (`render-video` automatically converts `<OffthreadVideo>` to streaming `<Video>` on Lambda.)
-2. **Natural `playbackRate`:** Fit drawing duration to the spoken beat using `r = clamp(drawSeconds / targetDrawWindow, 0.70, 2.10)` so the female marker hand moves naturally.
-3. **Prevent end-of-clip blanking on longer beats:** In Remotion, once a video clip reaches `clipDurationSeconds / playbackRate`, `<OffthreadVideo>` ends and unmounts! Whenever `sceneSeconds > (clipDurationSeconds / playbackRate) - 0.08`:
-   - Render the static source PNG (`<Img src={sourceImageUrl} />`) in the exact same board box that `whiteboard-animate` uses (`8%` margin on `1080×1920` → `padding: 86px`, centered `objectFit: "contain"`, white `#ffffff` background) and reveal/hold it seamlessly as the clip finishes its hold, optionally adding a gentle `1.0 → 1.035` slow push-in so the frame stays alive until the cut!
+### Rule 5 — Whiteboard MP4 Clips ONLY, Speed-to-Fit Pacing & Muted/Quiet Pencil Sound
+1. **Use ONLY the `.mp4` `whiteboard-clip` assets — NEVER `.png` stills:** Every rendered `whiteboard-clip` MP4 already contains both the realistic hand-drawing animation (`0 → draw_seconds`) AND the full-color artwork payoff settling in and holding (`draw_seconds → duration_seconds`, where `hold_seconds ≈ 1.0s`). Do not put the source `.png` images in the Remotion composition.
+2. **Never cut an MP4 clip short — speed up or slow down (`playbackRate`) to fit the beat:** If you cut a clip early, you lose the full-color payoff at the end! Instead, read each clip's exact `duration_seconds` from the manifest and stretch/compress it smoothly across `sceneDuration` (`end - start`):
+   ```ts
+   const playbackRate = Number(((clipDurationSeconds - 0.08) / sceneDurationSeconds).toFixed(4));
+   ```
+   - Stopping `0.08s` (~2 frames) shy of `clipDurationSeconds` lands right inside the clip's `1.0s` final colored hold, guaranteeing: (a) 100% of the drawing + full-color reveal plays before the cut, and (b) `<OffthreadVideo>` never hits EOF early or flashes blank on the last frame!
+3. **Mute or heavily reduce built-in pencil sound:** `whiteboard-clip` MP4s bake in pencil-scribble audio (`meta.drawing_sound: true`) that is too loud at `1.0` and interferes with voiceover and SFX. Always set `muted` or whisper-low `volume={0.03}` on every whiteboard `<OffthreadVideo>` so the voiceover and intentional SFX stay crystal clear.
 4. **Local vs. Global Frames:** Inside `<Sequence from={startFrame} durationInFrames={durFrames}>`, `useCurrentFrame()` starts at **`0`**. Keep word-timed `Captions` and `ProgressBar` mounted at the **root** `<AbsoluteFill>` so global word timestamps (`t = frame / fps`) stay frame-accurate without offset bugs.
 
-### Rule 6 — Word-Timed Captions & Shorts Safe Zones (`1080×1920`)
-- Place captions centered around **`top: 1490px–1540px`** (`bottom: ~340px`), keeping `≥ 60px` horizontal margin (and clear of the right-hand YouTube Shorts icon rail on wide elements).
-- Render crisp word-by-word active highlighting (e.g., clean dark charcoal/ink rounded pill or high-contrast card with the currently spoken word highlighted in vibrant brand indigo `#6366F1` or warm marker yellow `#FFD45E`, subtle `translateY(-2px)` pop on the active word, zero em-dashes).
+### Rule 6 — Word-Timed Captions, Cache-Busting & Shorts Safe Zones (`1080×1920`)
+- Place captions centered around **`bottom: ~295px`** (well above YouTube Shorts bottom UI and inside the clean bottom margin of our vertical illustrations), keeping `≥ 56px` horizontal margin.
+- **Zero-Overlap Caption Windows:** Never use a naive fixed `+ 0.16s` overhang on `.find()`, or Group A will stay onscreen while Group B's first word is already being spoken! Always cap each phrase's end against the next phrase's start:
+  ```ts
+  const winEnd = Math.min(g.end + 0.2, nextStart - 0.01);
+  ```
+  And compute a single `activeWordIdx` (latest word where `t >= word.s - 0.03`) so two adjacent words never highlight simultaneously.
+- **Top-of-File Quick Knobs:** Always expose `SHOW_CAPTIONS`, `PENCIL_CLIP_VOLUME` (`0.03` default, `0` to mute), and `MUSIC_BASE_VOLUME` (`0.065`) at the very top of the `.tsx` file for 1-second tweaking in `/playground`.
+- **`fetch_page` Manifest Cache-Busting Trap:** When re-fetching `project-manifest` later in a session to check `whiteboard-clip` readiness, append a query cache-buster (`&t=1`, `&t=2`, etc.) and verify `generated_at` at the bottom of the JSON so tool-level URL caching never returns a stale `"queued"`/`"rendering"` snapshot!
 
 ---
 
@@ -162,24 +171,24 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   - **Visual rule for CoreAge RX beats:** Always build a dedicated, high-polish coded UI animation in Remotion (browser/search bar typing `"CoreAge RX"` → animated cursor click → clean medical platform screen showing verified U.S. doctors online, status pills, and smooth spring entrances).
 - **Signature Character Look:** Established from `s01-big-meal.png` and perfected across `coreagerxshort2` (`scene-01-organ-wrap.png` through `scene-14-organ-fat-shrinks-cta.png` in `whiteboard/coreagerxshort2/scenes/`): cute round-headed white-bodied bald doodle cast, single clean black head outline, tiny black dot eyes, expressive body language, dressed in flat sky-blue, mint-green, lavender, warm-yellow, and soft-coral clothes.
 
-### Project Log — `coreagerxshort2` (In Progress)
+### Project Log — `coreagerxshort2` (Completed)
 - **Project ID:** `b0e15b2a-a73b-4d66-8d61-7f5e59879ef3`
 - **Voiceover Asset:** `fd103c47-1e02-40f8-9f8e-810686fe62c2` (`68.24s`, `2048` frames at `30fps`, speech `0.256s – 67.870s`)
+- **Final Composition File:** `whiteboard/coreagerxshort2/CoreAgeRxShort2.tsx` (also delivered directly in chat for copy-paste into `/playground`)
 - **Topic:** Visceral (organ-wrapping) belly fat — why crunches don't spot-target it, the 3 small repeatable habits that work (10-min post-meal walks, 6+ hrs sleep, protein at every meal), online U.S. doctor guidance via **CoreAge RX**, and the promised payoff ("you don't need to punish yourself — you need small habits you can repeat").
-- **Uploaded Scene Image Assets (14 PNGs pushed, awaiting `whiteboard-clip` MP4 renders):**
-  1. `0.00s – 4.40s` · `scene-01-organ-wrap.png` → `140fe5ac-afab-4222-97b1-52c53f9749b2`
-  2. `4.40s – 8.05s` · `scene-02-secret-last-line.png` → `0feadaaf-0a2e-4bbe-b44e-370eb87ac3c1`
-  3. `8.05s – 11.55s` · `scene-03-not-pinchable.png` → `42fe96df-a107-4670-ace6-2219d8ad1bb3`
-  4. `11.55s – 14.35s` · `scene-04-deep-danger.png` → `ab3d3a77-63e2-422d-a7c1-4aee01cb37dd`
-  5. `14.35s – 18.55s` · `scene-05-first-to-shrink.png` → `d5e4b63b-49c6-429e-8ad7-c17c176b55a2`
-  6. `18.55s – 24.65s` · `scene-06-three-choices.png` → `b6f1a717-c3c0-42fa-be2f-480d3f211d5a`
-  7. `24.65s – 28.10s` · `scene-07-crunches-myth.png` → `0bd5a871-9494-4e72-ae3d-b1ea8efa30dd`
-  8. `28.10s – 33.50s` · `scene-08-walk-after-meals.png` → `71aafcb6-a033-4cd3-9414-b644518bff30`
-  9. `33.50s – 39.10s` · `scene-09-muscles-soak-sugar.png` → `1cf384c2-97c7-44f2-ac45-94e3e38d25c2`
-  10. `39.10s – 45.00s` · `scene-10-sleep-under-six.png` → `71a207ce-db75-46f0-91c9-21cb5c5b70d4`
-  11. `45.00s – 50.70s` · `scene-11-protein-every-meal.png` → `3ca6d5ed-e118-4a63-a483-168acd0ce9c2`
-  - *(Code Beat)* `50.70s – 57.50s` · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
-  12. `57.50s – 60.95s` · `scene-12-no-punishment.png` → `eee3105d-def9-4325-bb71-9f24f01533ea`
-  13. `60.95s – 64.25s` · `scene-13-small-habits-loop.png` → `08510d48-c829-477a-a076-b718ddf6b82c`
-  14. `64.25s – 68.24s` · `scene-14-organ-fat-shrinks-cta.png` → `d8beb16e-d1c3-4cec-a254-56b851cb931d`
-- **Next Step:** Once MP4 `whiteboard-clip` renders finish in Hub and user says `"continue"`, fetch manifest once, build the full single-file Remotion `.tsx` composition (with word-synced captions, CoreAge RX search/platform UI animation, subtle camera motion, and library SFX/music), deliver in chat, and log any final Remotion patterns learned right back here.
+- **Rendered `whiteboard-clip` MP4 Assets Used in Video (ZERO `.png` files referenced in TSX!):**
+  1. `0.00s – 4.40s` (`4.40s`) · `whiteboard-scene-01-organ-wrap.mp4` → `19fc584d-e522-4ff5-ba7c-aee542b77f24` (`9.76s` clip, `2.20x` rate)
+  2. `4.40s – 8.05s` (`3.65s`) · `whiteboard-scene-02-secret-last-line.mp4` → `f26e2e88-a3b3-4032-9e3d-5fe7197abd0c` (`6.88s` clip, `1.86x` rate)
+  3. `8.05s – 11.55s` (`3.50s`) · `whiteboard-scene-03-not-pinchable.mp4` → `48d7d438-de62-43ed-8bc9-d9c6752cb459` (`7.07s` clip, `2.00x` rate)
+  4. `11.55s – 14.35s` (`2.80s`) · `whiteboard-scene-04-deep-danger.mp4` → `427d19bb-9fed-4956-8bc2-1528b11622f0` (`7.49s` clip, `2.65x` rate)
+  5. `14.35s – 18.55s` (`4.20s`) · `whiteboard-scene-05-first-to-shrink.mp4` → `95cb64a1-384f-45d0-9844-859dc2f684d3` (`6.58s` clip, `1.55x` rate)
+  6. `18.55s – 24.65s` (`6.10s`) · `whiteboard-scene-06-three-choices.mp4` → `c4a26bb9-10c6-4368-98b5-8719d9db192f` (`8.01s` clip, `1.30x` rate + live quiz pill overlay)
+  7. `24.65s – 28.10s` (`3.45s`) · `whiteboard-scene-07-crunches-myth.mp4` → `5978f9aa-8ddd-485b-96a6-55021c2d37a7` (`6.00s` clip, `1.72x` rate)
+  8. `28.10s – 33.50s` (`5.40s`) · `whiteboard-scene-08-walk-after-meals.mp4` → `1e52f02d-ef13-4938-bf5c-a02dd29e4afa` (`9.84s` clip, `1.81x` rate)
+  9. `33.50s – 39.10s` (`5.60s`) · `whiteboard-scene-09-muscles-soak-sugar.mp4` → `2ff21972-b673-4a62-820c-015c87dd6b30` (`7.80s` clip, `1.38x` rate)
+  10. `39.10s – 45.00s` (`5.90s`) · `whiteboard-scene-10-sleep-under-six.mp4` → `10d2148f-d1d8-4317-979d-bdfba9f2a93b` (`8.48s` clip, `1.42x` rate)
+  11. `45.00s – 50.70s` (`5.70s`) · `whiteboard-scene-11-protein-every-meal.mp4` → `31c85763-77f3-4e2d-b62c-5ad1ec6ab9d3` (`9.27s` clip, `1.61x` rate)
+  - *(Code Beat)* `50.70s – 57.50s` (`6.80s`) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX with character-matched inline-SVG doodle doctor avatars, search typing, click ripple, and verified online pills)
+  12. `57.50s – 60.95s` (`3.45s`) · `whiteboard-scene-12-no-punishment.mp4` → `b05d6042-9b89-4f84-8295-a8bdf0f63df8` (`6.69s` clip, `1.92x` rate)
+  13. `60.95s – 64.25s` (`3.30s`) · `whiteboard-scene-13-small-habits-loop.mp4` → `5908b3c7-6c21-4e24-9b1b-9946181d7769` (`6.56s` clip, `1.96x` rate)
+  14. `64.25s – 68.26s` (`4.01s`) · `whiteboard-scene-14-organ-fat-shrinks-cta.mp4` → `11853cf0-c19a-4636-ab34-f338f3546ba1` (`10.07s` clip, `2.50x` rate)
