@@ -18,7 +18,7 @@ Your job is the creative part: what to draw, and how the clips flow with the voi
 5. You may call `whiteboard_animate` with `clips: [{ assetId }]` (up to 12 scenes per call, `format` vertical/horizontal), or leave the images for the user to press **Render pending drawings** on the project page.
    The engine waits for images still uploading. It returns one **video asset per image** (role `clip`, tag
    `whiteboard-clip`) with `drawSeconds` (drawing time) and `holdSeconds` (finished picture held). They render in
-   a durable queue **one at a time across manual and agent requests**, not concurrently. An interrupted queue can be restarted with **Resume queue**. Existing ready/queued clips are reused, not duplicated; errors can be retried.
+   a durable queue **one at a time across manual and agent requests**, not concurrently. An interrupted queue can be restarted with **Resume queue**. Existing ready/queued clips with matching thickness/darkness are reused; changing these settings produces a new clip without replacing the old one; errors can be retried.
    **STOP after images are generated or clips are queued.** Tell the user what is ready/queued and that you are waiting for them to check completion and say "continue". Never poll in a loop, start a build using pending URLs, or automatically wake yourself; waiting uses no AI calls.
 6. Only when the user explicitly asks you to continue, call `list_files` once to read fresh clip metadata. `meta.creating=true` or `whiteboard_status=queued/rendering` means not ready. `meta.error` means failed; do not build with it. If any required clips are missing or unfinished, report them and stop again. Finished videos have `creating=false`, no error, and a working MP4 URL. Then build the video in Remotion with the clips as footage, the voiceover as `<Audio>`, plus captions/titles:
    - Each scene = `<Sequence from={start*fps} durationInFrames={len*fps}>` with `<OffthreadVideo src={clipUrl} playbackRate={r}/>`.
@@ -31,8 +31,11 @@ Your job is the creative part: what to draw, and how the clips flow with the voi
 ## Drawing audio
 New engine clips include quiet drawing sound automatically (`meta.drawing_sound=true`), synced to pen contact and silent during lifts and the finished-picture hold. Keep clip audio enabled: no `muted` and no duplicate scribble sound. The sound follows playbackRate with the drawing. Voiceover remains a separate Audio track. Older clips without this metadata may be silent. HTTP callers can opt out with `sound:false`; existing clips are unchanged.
 
+## Drawing thickness and darkness
+Users can adjust **Line thickness** (25–200%) and **Ink darkness** (20–100%) in the image's Make drawing video dialog. Agents pass `lineThickness` (0.25–2, multiplier) and `inkDarkness` (0.2–1) to `whiteboard_animate`; defaults are 1/1, preserving the current look. HTTP callers use the same top-level fields in all modes, with per-clip overrides supported in clips mode. For fine pencil-style artwork, start around `lineThickness: 0.45, inkDarkness: 0.7` and let the user judge. These control rendered strokes, not tracing thresholds. The engine still traces a binary centerline: this is softer ink, not reconstruction of pencil grain or tonal shading. Original-artwork finish stays untouched; choose `finish: "lines"` per clip to retain the adjusted strokes throughout. Clip metadata stores `line_thickness`/`ink_darkness`.
+
 ## Line-art rules (the engine depends on them)
-- Thick dark outlines on pure white. No shading, gradients, hatching, gray, photos or dense detail.
+- Clear dark lines on a clean light background. Bold simple art is most reliable; fine sketches are supported with thinner/softer drawing settings, but subtle tonal shading is not recreated. Avoid photographic paper shadows, gradients and dense shading for predictable tracing.
   Prompt: "Whiteboard line-art illustration of <subject>, thick black marker outlines on a pure white background,
   simple clean shapes, no shading, no hatching, no gray, no text, centered, generous white margin, <portrait 9:16 | landscape 16:9>".
 - One clear subject, 1–3 supporting objects. Text out of the image — captions carry words.
@@ -44,6 +47,6 @@ New engine clips include quiet drawing sound automatically (`meta.drawing_sound=
 fixed. Prefer `clips` — they can be sped, slowed and re-cut freely.
 
 ## External agents (HTTP)
-`POST {FUNCTIONS_URL}/whiteboard-animate` with `{ token, projectId, format, clips: [{ assetId, drawSeconds?, holdSeconds? }] }`
+`POST {FUNCTIONS_URL}/whiteboard-animate` with `{ token, projectId, format, lineThickness?, inkDarkness?, clips: [{ assetId, drawSeconds?, holdSeconds?, finish? }] }`
 → 202 `{ clips: [{ id, url, status: "queued" }] }`. Read drawing/hold duration metadata after completion; URL HTTP 409 means not ready. Return control to the user instead of polling. After their explicit "continue", fetch the manifest once to check readiness. `POST` with `{ token, projectId, action: "resume" }` restarts an interrupted drawing queue without re-generating images or spending AI credits.
 Create images first with `agent-create` (`kind: "image", prompt, role: "image"`).

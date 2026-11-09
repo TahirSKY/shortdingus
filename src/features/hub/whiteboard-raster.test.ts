@@ -4,13 +4,22 @@ import { paintWhiteboard } from '../../../supabase/functions/_shared/whiteboard-
 function recorder() {
   const lines: number[][] = [];
   const calls: string[] = [];
-  const ctx = new Proxy({}, { set: () => true, get: (_, key) => (...args: number[]) => { calls.push(String(key)); if (key === 'lineTo') lines.push(args); } }) as CanvasRenderingContext2D;
-  return { ctx, lines, calls };
+  const values: Record<string, unknown> = {};
+  const ctx = new Proxy({}, { set: (_, key, value) => { values[String(key)] = value; return true; }, get: (_, key) => (...args: number[]) => { calls.push(String(key)); if (key === 'lineTo') lines.push(args); } }) as CanvasRenderingContext2D;
+  return { ctx, lines, calls, values };
 }
 const stroke = { points: [[10, 20], [110, 20], [110, 120]], length: 200 };
 const layer = (amount: number) => ({ strokes: [stroke], amounts: [amount], board: { x: 0, y: 0, scale: 1 }, penWidth: 3 });
 
 describe('whiteboard raster frame isolation', () => {
+  it('renders thinner, lighter opaque ink without changing geometry', () => {
+    const r = recorder();
+    paintWhiteboard(r.ctx, 1080, 1920, [{ ...layer(50), penWidth: 0.75, inkDarkness: 0.5 }]);
+    expect(r.values.lineWidth).toBe(0.75);
+    expect(r.values.strokeStyle).toBe('rgb(144,148,148)');
+    expect(r.values.globalAlpha).toBe(1);
+    expect(r.lines).toEqual([[60, 20]]);
+  });
   it('only paints geometry up to the current nib position', () => {
     const r = recorder();
     paintWhiteboard(r.ctx, 1080, 1920, [layer(125)]);

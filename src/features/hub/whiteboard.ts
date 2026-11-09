@@ -1,4 +1,5 @@
 import type { Asset } from "./api";
+import { whiteboardStyle, type WhiteboardStyle } from "../../../supabase/functions/_shared/whiteboard-style";
 
 export function whiteboardClipState(asset: Pick<Asset, "meta" | "storage_path">) {
   if (typeof asset.meta?.error === "string") return "error";
@@ -11,8 +12,8 @@ export function pendingWhiteboardImages(assets: Asset[]) {
   return assets.filter(a => a.kind === "image" && a.storage_path && !a.meta?.creating && !a.tags?.includes("cutout") && !assets.some(c => c.tags?.includes("whiteboard-clip") && c.meta?.source_asset_id === a.id && ["ready", "queued", "rendering"].includes(whiteboardClipState(c))));
 }
 
-export function whiteboardRequest(assetId: string, projectId: string, drawSeconds: number, holdSeconds: number, format: string, hand: boolean, finish: string) {
+export function whiteboardRequest(assetId: string, projectId: string, drawSeconds: number, holdSeconds: number, format: string, hand: boolean, finish: string, style?: WhiteboardStyle) {
   if (!Number.isFinite(drawSeconds) || drawSeconds < 1.5 || drawSeconds > 30) throw new Error("Drawing time must be between 1.5 and 30 seconds.");
   if (!Number.isFinite(holdSeconds) || holdSeconds < 0.3 || holdSeconds > 5) throw new Error("Hold time must be between 0.3 and 5 seconds.");
-  return { projectId, format, hand, clips: [{ assetId, drawSeconds, holdSeconds, finish }] };
+  return { projectId, format, hand, ...(style ? whiteboardStyle(style) : {}), clips: [{ assetId, drawSeconds, holdSeconds, finish }] };
 }

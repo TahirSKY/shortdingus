@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import type { Asset } from "./api";
@@ -19,11 +20,13 @@ export default function WhiteboardButton({ asset, projectId, clips, onStarted }:
   const [format, setFormat] = useState("vertical");
   const [finish, setFinish] = useState("original");
   const [hand, setHand] = useState(true);
+  const [lineThickness, setLineThickness] = useState(1);
+  const [inkDarkness, setInkDarkness] = useState(1);
   const pending = clips.some((c) => c.meta?.source_asset_id === asset.id && ["queued", "rendering"].includes(whiteboardClipState(c)));
   async function create() {
     setSubmitting(true);
     try {
-      const body = whiteboardRequest(asset.id, projectId, draw, hold, format, hand, finish);
+      const body = whiteboardRequest(asset.id, projectId, draw, hold, format, hand, finish, { lineThickness, inkDarkness });
       const { data, error } = await supabase.functions.invoke("whiteboard-animate", { body });
       if (error) {
         const detail = await error.context?.json?.().catch(() => null);
@@ -51,7 +54,14 @@ export default function WhiteboardButton({ asset, projectId, clips, onStarted }:
           </div>
           <div className="space-y-2"><Label>Format</Label><Select value={format} onValueChange={setFormat}><SelectTrigger aria-label="Drawing video format"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="vertical">Vertical · 9:16</SelectItem><SelectItem value="horizontal">Horizontal · 16:9</SelectItem></SelectContent></Select></div>
           <div className="space-y-2"><Label>Finished picture</Label><Select value={finish} onValueChange={setFinish}><SelectTrigger aria-label="Finished picture"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="original">Original artwork</SelectItem><SelectItem value="lines">Drawn lines only</SelectItem></SelectContent></Select></div>
-          <div className="flex items-center justify-between"><Label htmlFor="wb-hand">Pencil hand</Label><Switch id="wb-hand" checked={hand} onCheckedChange={setHand} /></div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between"><Label id="wb-thickness-label">Line thickness</Label><span className="text-xs text-muted-foreground">{Math.round(lineThickness * 100)}%</span></div>
+            <Slider aria-labelledby="wb-thickness-label" min={0.25} max={2} step={0.05} value={[lineThickness]} onValueChange={([v]) => setLineThickness(v)} />
+            <div className="flex items-center justify-between"><Label id="wb-darkness-label">Ink darkness</Label><span className="text-xs text-muted-foreground">{Math.round(inkDarkness * 100)}%</span></div>
+            <Slider aria-labelledby="wb-darkness-label" min={0.2} max={1} step={0.05} value={[inkDarkness]} onValueChange={([v]) => setInkDarkness(v)} />
+            <svg viewBox="0 0 300 48" className="h-12 w-full text-foreground" role="img" aria-label="Stroke weight and darkness sample"><path d="M12 34 Q42 2 72 28 T132 24 T192 24 T252 24 L288 16" fill="none" stroke="currentColor" strokeWidth={3 * lineThickness} strokeOpacity={inkDarkness} strokeLinecap="round" /></svg>
+          </div>
+          <div className="flex items-center justify-between"><Label htmlFor="wb-hand">Marker hand</Label><Switch id="wb-hand" checked={hand} onCheckedChange={setHand} /></div>
           <Button className="w-full" type="submit" disabled={submitting}>{submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PencilLine className="mr-2 h-4 w-4" />}{submitting ? "Starting…" : "Create MP4"}</Button>
         </form>
       </DialogContent>

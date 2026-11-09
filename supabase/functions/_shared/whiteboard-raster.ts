@@ -10,7 +10,9 @@ export function paintWhiteboard(ctx: CanvasRenderingContext2D, width: number, he
     ctx.globalAlpha = layer.opacity ?? 1;
     ctx.translate(layer.board.x, layer.board.y);
     ctx.scale(layer.board.scale, layer.board.scale);
-    ctx.strokeStyle = '#202829';
+    const darkness = layer.inkDarkness ?? 1;
+    // Opaque ink avoids darker patches where translucent pencil strokes overlap.
+    ctx.strokeStyle = `rgb(${[32, 40, 41].map(c => Math.round(255 - (255 - c) * darkness)).join(',')})`;
     ctx.lineWidth = layer.penWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';

@@ -169,17 +169,20 @@ Deno.serve(async (req) => {
         voiceoverAssetId: z.string().nullable(),
         colorAssetId: z.string().nullable(),
         hand: z.boolean().nullable(),
+        lineThickness: z.number().min(0.25).max(2).nullable().describe("Stroke width multiplier; null/default 1. Try 0.4–0.6 for fine pencil sketches."),
+        inkDarkness: z.number().min(0.2).max(1).nullable().describe("Ink darkness; null/default 1. Try 0.6–0.8 for softer pencil lines; does not restore source shading."),
       }),
-      execute: async ({ clips, assetId, scenes, format, captions, title, duration, voiceoverAssetId, colorAssetId, hand }) => {
+      execute: async ({ clips, assetId, scenes, format, captions, title, duration, voiceoverAssetId, colorAssetId, hand, lineThickness, inkDarkness }) => {
+        const drawingStyle = { ...(lineThickness != null ? { lineThickness } : {}), ...(inkDarkness != null ? { inkDarkness } : {}) };
         if (clips?.length) {
-          const r = await callFn("whiteboard-animate", { projectId: project.id, clips: clips.map((c) => ({ assetId: c.assetId, ...(c.drawSeconds ? { drawSeconds: c.drawSeconds } : {}), ...(c.holdSeconds ? { holdSeconds: c.holdSeconds } : {}) })), ...(format ? { format } : {}), ...(hand === false ? { hand: false } : {}) });
+          const r = await callFn("whiteboard-animate", { projectId: project.id, ...drawingStyle, clips: clips.map((c) => ({ assetId: c.assetId, ...(c.drawSeconds ? { drawSeconds: c.drawSeconds } : {}), ...(c.holdSeconds ? { holdSeconds: c.holdSeconds } : {}) })), ...(format ? { format } : {}), ...(hand === false ? { hand: false } : {}) });
           return r.error ? r : { clips: r.clips, status: "Queued to render one at a time. STOP this turn: tell the user to check completion and ask you to continue. Do not poll or build until that later user request." };
         }
         if (!scenes?.length && !assetId) return { error: "Give clips, assetId or scenes." };
         const r = await callFn("whiteboard-animate", {
           ...(scenes?.length ? { scenes: scenes.map((s) => (s.start == null ? { assetId: s.assetId } : s)) } : { assetId }),
           ...(format ? { format } : {}), ...(captions === false ? { captions: false } : {}),
-          projectId: project.id, title,
+          projectId: project.id, title, ...drawingStyle,
           ...(duration ? { duration } : {}),
           ...(voiceoverAssetId ? { voiceoverAssetId } : {}),
           ...(colorAssetId ? { colorAssetId } : {}),
