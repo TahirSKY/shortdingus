@@ -169,6 +169,8 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
 - **Hub Slug:** `whiteboard`
 - **Primary Brand Partner:** **CoreAge RX** (`CoreAge RX` — online telehealth platform connecting patients with licensed U.S. doctors for modern weight management & medical guidance).
   - **Visual rule for CoreAge RX beats:** Always build a dedicated, high-polish coded UI animation in Remotion (browser/search bar typing `"CoreAge RX"` → animated cursor click → clean medical platform screen showing verified U.S. doctors online, status pills, and smooth spring entrances).
+  - **AssemblyAI Phonetic Trap:** AssemblyAI frequently transcribes `"CoreAge RX"` as `"Courage RX"` or `"Core Age RX"`. Always inspect the transcript and normalize the brand spelling to **`CoreAge RX`** in both captions and UI cards!
+- **Signature Quiz Participation Beat (`3 → 2 → 1` Countdown):** Whenever the script asks the viewer a question like *"Pick one in your head"*, add a tactile **`3 → 2 → 1`** countdown animation (pulsing numeral + draining SVG ring + synchronized `clock-tick-soft` / `ui-click-soft` ticks) before the reveal! If the natural voiceover silence gap is `< 1.5s`, cleanly split `<Audio src={VOICE_URL} />` inside AssemblyAI's natural silence cut (`<Sequence durationInFrames={splitFrame}><Audio src={VOICE_URL} /></Sequence>` + `<Sequence from={splitFrame + extraFrames}><Audio src={VOICE_URL} startFrom={splitFrame} /></Sequence>`) and shift post-pause timestamps by `PAUSE_SHIFT` seconds so the `3, 2, 1` countdown feels genuinely playable and unhurried!
 - **Signature Character Look:** Established from `s01-big-meal.png` and perfected across `coreagerxshort2` (`scene-01-organ-wrap.png` through `scene-14-organ-fat-shrinks-cta.png` in `whiteboard/coreagerxshort2/scenes/`): cute round-headed white-bodied bald doodle cast, single clean black head outline, tiny black dot eyes, expressive body language, dressed in flat sky-blue, mint-green, lavender, warm-yellow, and soft-coral clothes.
 
 ### Project Log — `coreagerxshort2` (Completed)
@@ -192,3 +194,20 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   12. `57.50s – 60.95s` (`3.45s`) · `whiteboard-scene-12-no-punishment.mp4` → `b05d6042-9b89-4f84-8295-a8bdf0f63df8` (`6.69s` clip, `1.92x` rate)
   13. `60.95s – 64.25s` (`3.30s`) · `whiteboard-scene-13-small-habits-loop.mp4` → `5908b3c7-6c21-4e24-9b1b-9946181d7769` (`6.56s` clip, `1.96x` rate)
   14. `64.25s – 68.26s` (`4.01s`) · `whiteboard-scene-14-organ-fat-shrinks-cta.mp4` → `11853cf0-c19a-4636-ab34-f338f3546ba1` (`10.07s` clip, `2.50x` rate)
+
+### Project Log — `coreagerx3` (In Progress)
+- **Voiceover Asset:** `76219d88-d891-441b-a022-40ffb23a05e7` (`36.76s` raw, 105 words, `0.192s – 36.326s`; note AssemblyAI transcribed `"CoreAge RX"` at `28.596s` as `"Courage RX"` — normalize to **`CoreAge RX`**!)
+- **Topic:** 10 everyday foods & drinks quietly feeding organ/visceral fat — the sneakiest one isn't even a food (**sugary drinks**, which hit fast and barely fill you up), **3 → 2 → 1** viewer countdown right after *"Now, which one's sneakiest? Pick one in your head."* (`21.55s`), custom **CoreAge RX** online U.S. doctors UI (`27.60s – 31.95s` raw), and practical swap + *"Now go open your fridge."* closer.
+- **10-Scene Vertical Storyboard (`whiteboard/coreagerx3/scenes/`):**
+  1. `0.00s – 4.45s` · `scene-01-sneaky-foods-feeding-organs.png` — Generated
+  2. `4.45s – 7.25s` · `scene-02-sneakiest-not-food.png` — Generated
+  3. `7.25s – 11.20s` · `scene-03-savory-culprits-part1.png` — Generated
+  4. `11.20s – 14.80s` · `scene-04-sweet-fastfood-culprits-part2.png` — Generated
+  5. `14.80s – 19.00s` · `scene-05-belly-link-and-daily-beer.png` — Generated
+  6. `19.00s – 21.85s` (+ `3, 2, 1` countdown hold) · `scene-06-pick-sneakiest-quiz.png` — Generated
+  7. `21.85s – 24.85s` (raw) · `scene-07-sugary-drinks-reveal.png` — Generated
+  8. `24.85s – 27.60s` (raw) · `scene-08-liquid-sugar-hits-fast.png` — Generated
+  - *(Code Beat)* `27.60s – 31.95s` (raw) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
+  9. `31.95s – 35.25s` (raw) · `scene-09-swap-one-thing.png` — Pending 1 retry on next turn (hit 10-call/turn tool cap after transient retry)
+  10. `35.25s – 36.76s` (+ end hold) · `scene-10-go-open-your-fridge.png` — Generated
+
