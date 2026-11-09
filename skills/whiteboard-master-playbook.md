@@ -195,20 +195,21 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   13. `60.95s – 64.25s` (`3.30s`) · `whiteboard-scene-13-small-habits-loop.mp4` → `5908b3c7-6c21-4e24-9b1b-9946181d7769` (`6.56s` clip, `1.96x` rate)
   14. `64.25s – 68.26s` (`4.01s`) · `whiteboard-scene-14-organ-fat-shrinks-cta.mp4` → `11853cf0-c19a-4636-ab34-f338f3546ba1` (`10.07s` clip, `2.50x` rate)
 
-### Project Log — `coreagerx3` (Images Pushed — Awaiting MP4 `whiteboard-clip` Renders)
+### Project Log — `coreagerx3` (Completed)
 - **Project ID:** `59cdcdcb-ed10-4f6c-99f9-7cb26af6a2df`
-- **Voiceover Asset:** `76219d88-d891-441b-a022-40ffb23a05e7` (`36.76s` raw, 105 words, `0.192s – 36.326s`; note AssemblyAI transcribed `"CoreAge RX"` at `28.596s` as `"Courage RX"` — normalize to **`CoreAge RX`**!)
-- **Topic:** 10 everyday foods & drinks quietly feeding organ/visceral fat — the sneakiest one isn't even a food (**sugary drinks**, which hit fast and barely fill you up), **3 → 2 → 1** viewer countdown right after *"Now, which one's sneakiest? Pick one in your head."* (`21.55s`), custom **CoreAge RX** online U.S. doctors UI (`27.60s – 31.95s` raw), and practical swap + *"Now go open your fridge."* closer.
-- **10 Uploaded Vertical PNG Source Assets in `coreagerx3` (awaiting `whiteboard-clip` MP4s — remember: NEVER reference these PNG UUIDs in TSX, ONLY the rendered MP4 UUIDs!):**
-  1. `0.00s – 4.45s` · `scene-01-sneaky-foods-feeding-organs.png` → `b4c176af-618f-4123-a238-95e7ccde9064`
-  2. `4.45s – 7.25s` · `scene-02-sneakiest-not-food.png` → `73359e1d-7d77-4227-9b93-a584a455db9b`
-  3. `7.25s – 11.20s` · `scene-03-savory-culprits-part1.png` → `54f1f680-114f-43bf-829c-19ce9cacc6ce`
-  4. `11.20s – 14.80s` · `scene-04-sweet-fastfood-culprits-part2.png` → `935b4bcf-2bc0-4147-b4b6-0f3e62ec5672`
-  5. `14.80s – 19.00s` · `scene-05-belly-link-and-daily-beer.png` → `2f7e385a-9b13-49f8-9769-17c7b7eff231`
-  6. `19.00s – 21.85s` (+ `3, 2, 1` countdown hold) · `scene-06-pick-sneakiest-quiz.png` → `1f4f7380-b822-489a-b3e0-ea5e86091e5b`
-  7. `21.85s – 24.85s` (raw) · `scene-07-sugary-drinks-reveal.png` → `c35a3662-0354-4846-b3d6-a5b789f7c614`
-  8. `24.85s – 27.60s` (raw) · `scene-08-liquid-sugar-hits-fast.png` → `06505534-b6af-456e-91a1-567f6f0db7bb`
-  - *(Code Beat)* `27.60s – 31.95s` (raw) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
-  9. `31.95s – 35.25s` (raw) · `scene-09-swap-one-thing.png` → `7a8e356a-d52c-4fae-92eb-f11932198c7c`
-  10. `35.25s – 36.76s` (+ end hold) · `scene-10-go-open-your-fridge.png` → `8759c045-8f62-4d01-a2af-800eccbf6224`
+- **Voiceover Asset:** `76219d88-d891-441b-a022-40ffb23a05e7` (`36.76s` raw, split cleanly in silence at `21.867s` with `+2.033s` `3-2-1` participation pause + crisp fridge outro hold → `41.50s` / `1245` frames at `30fps`; normalized `"Courage RX"` → **`CoreAge RX`**)
+- **Final Composition File:** `whiteboard/coreagerx3/CoreAgeRxShort3.tsx` (also delivered directly in chat for copy-paste into `/playground`)
+- **Topic:** 10 everyday foods & drinks quietly feeding organ/visceral fat — the sneakiest one isn't even a food (**sugary drinks**, which hit fast and barely fill you up), **3 → 2 → 1** viewer countdown medallion right after *"Now, which one's sneakiest? Pick one in your head."* (`21.68s – 24.14s`), custom **CoreAge RX** online U.S. doctors UI (`29.65s – 34.10s`), and practical swap + *"Now go open your fridge."* closer.
+- **Rendered `whiteboard-clip` MP4 Assets Used in Video (ZERO `.png` files referenced in TSX, all `playbackRate < 4.0x` for smooth browser + Lambda playback!):**
+  1. `0.00s – 4.45s` (`4.45s`) · `whiteboard-scene-01-sneaky-foods-feeding-organs.mp4` → `5832261f-ba4e-465b-94cf-2342fd54589c` (`10.53s` clip, `2.35x` rate)
+  2. `4.45s – 7.30s` (`2.85s`) · `whiteboard-scene-02-sneakiest-not-food.mp4` → `22cde04a-68fd-477c-aeaa-6fc5a0df6b71` (`6.29s` clip, `2.18x` rate)
+  3. `7.30s – 11.22s` (`3.92s`) · `whiteboard-scene-03-savory-culprits-part1.mp4` → `4232fdda-f244-45c0-befd-f102f1c00fff` (`9.28s` clip, `2.35x` rate)
+  4. `11.22s – 14.80s` (`3.58s`) · `whiteboard-scene-04-sweet-fastfood-culprits-part2.mp4` → `d34bc938-39d5-48f1-b927-ad56dee5914d` (`9.80s` clip, `2.72x` rate)
+  5. `14.80s – 18.90s` (`4.10s`) · `whiteboard-scene-05-belly-link-and-daily-beer.mp4` → `0e5bf1ac-0c98-4cae-af7e-56d858891712` (`12.59s` clip, `3.05x` rate)
+  6. `18.90s – 24.18s` (`5.28s`) · `whiteboard-scene-06-pick-sneakiest-quiz.mp4` → `54eeccfa-5c67-49cc-a03b-8e10d349430a` (`6.27s` clip, `1.17x` rate + `3 → 2 → 1` pulsing medallion & draining SVG ring!)
+  7. `24.18s – 26.95s` (`2.77s`) · `whiteboard-scene-07-sugary-drinks-reveal.mp4` → `bb2ec0f2-63ad-43ec-87f4-605c2a96d9a7` (`8.27s` clip, `2.96x` rate)
+  8. `26.95s – 29.65s` (`2.70s`) · `whiteboard-scene-08-liquid-sugar-hits-fast.mp4` → `9d2af250-a841-4d80-b43d-d9e2ff35f1c2` (`8.72s` clip, `3.20x` rate)
+  - *(Code Beat)* `29.65s – 34.10s` (`4.45s`) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
+  9. `34.10s – 37.30s` (`3.20s`) · `whiteboard-scene-09-swap-one-thing.mp4` → `4022f712-586d-4def-8942-d18e6d90d058` (`5.49s` clip, `1.69x` rate)
+  10. `37.30s – 41.50s` (`4.20s`) · `whiteboard-scene-10-go-open-your-fridge.mp4` → `f827f5fa-eec1-4933-b48c-96dbe74686d6` (`16.54s` clip, `3.92x` rate — kept `< 4.0x` with a crisp end hold so Chromium HTML5 `<video>` plays smoothly!)
 
