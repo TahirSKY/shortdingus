@@ -65,11 +65,13 @@ Inside `supabase/functions/whiteboard-animate/index.ts`, `traceBytes()` converts
 3. **Colors (Bright Flat Marker Pastels ONLY — Luminance `165–225`):**
    - Sky Blue (`#7CC8F8`), Mint / Soft Green (`#84E4B8`), Warm Golden Yellow (`#FFD45E`), Soft Coral / Salmon (`#FF8E7A`), Pastel Lavender (`#C9AEFF`), Soft Peach (`#FFC49B`).
    - **NEVER** use dark navy, charcoal, dark brown, black solid fills, gradients, drop shadows, gray shading, cross-hatching, or off-white paper textures — dark fills below luminance `140` get traced into hundreds of ugly scribble strokes!
-4. **Pure `#FFFFFF` Background & Vertical Safe Zones:**
+4. **Pure `#FFFFFF` Background, Nighttime Rule & Vertical Safe Zones:**
    - `9:16` portrait (`768×1376` / `1080×1920`).
-   - Keep **generous pure `#FFFFFF` white margin around all sides, especially the bottom `20%`** so dynamic Shorts captions (`y ≈ 1500`) never cover character action.
+   - **Nighttime / Dark Settings on `#FFFFFF`:** Even when the script takes place *"Tonight"* or at bedtime, **NEVER** draw a dark navy/black sky backdrop (any fill darker than `~140` gets traced into dense black marker scribbles!). Keep `100%` pure `#FFFFFF` white and signify night cleanly with a **warm golden-yellow crescent moon + pastel stars**.
+   - **Bold Low-Clutter Props & 2-Arm Anatomy Check:** Keep props chunky and uncluttered so `whiteboard-animate` renders clips in the `6s–10s` sweet spot (`playbackRate` `1.3x–3.3x`, always `< 4.0x` so HTML5 `<video>` stays silky smooth). Never ask one character to do 3 simultaneous hand gestures (e.g. *thumbs-up + pointing + holding a clipboard* causes 3-arm anatomy glitches — assign at most 2 hand actions per character or split across 2 characters, and always inspect hands via `read_file`).
+   - Keep **generous pure `#FFFFFF` white margin around all sides, especially the bottom `22%`** (`30%` on `3-2-1` quiz scenes) so dynamic Shorts captions (`y ≈ 1500`) and countdown medallions never cover character action.
 5. **NO Baked-In Text / Words / Numbers:**
-   - Never put English words, labels, or numbers inside generated images (letters trace poorly and clash with captions). Universal visual symbols (`?`, `!`, `✗`, `✓`, `★`, arrows, pie wedges on clocks, battery meters) read 10× faster and trace cleanly.
+   - Never put English words, labels, `"Zzz"`, or clock numbers inside generated images (letters trace poorly and clash with captions). Universal visual symbols (`?`, `!`, `✗`, `✓`, `★`, arrows, numberless clocks with colored pie wedges, scissors snipping a moon-cloud, battery meters) read 10× faster and trace cleanly.
 
 ### Copy-Paste Master Image Prompt Template
 ```text
@@ -212,4 +214,21 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   - *(Code Beat)* `29.65s – 34.10s` (`4.45s`) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
   9. `34.10s – 37.30s` (`3.20s`) · `whiteboard-scene-09-swap-one-thing.mp4` → `4022f712-586d-4def-8942-d18e6d90d058` (`5.49s` clip, `1.69x` rate)
   10. `37.30s – 41.50s` (`4.20s`) · `whiteboard-scene-10-go-open-your-fridge.mp4` → `f827f5fa-eec1-4933-b48c-96dbe74686d6` (`16.54s` clip, `3.92x` rate — kept `< 4.0x` with a crisp end hold so Chromium HTML5 `<video>` plays smoothly!)
+
+### Project Log — `coreagerx4` (In Progress — Batch 1 Generated, Ready for Quick Polish & Hub Push)
+- **Voiceover Asset:** `94618780-a6af-4758-8d8d-27d9ab967591` (`37.88s` raw WAV, 105 words, `0.176s – 37.460s`; AssemblyAI transcribed `"CoreAge RX"` at `32.173s` as `"CorageRx"` — normalize to **`CoreAge RX`**! Clean natural silence at `[22.342s, 22.927s]` right after *"How little is too little? Pick a number in your head."* before *"Under 6 hours..."* for our signature **`3 → 2 → 1`** countdown!)
+- **Topic:** 5 evening/nighttime habits quietly feeding visceral organ fat — (1) eating late makes people hungrier, (2) nightcaps/alcohol linked to belly fat, (3) scrolling in bed cuts into sleep, (4) short sleep quiz (`3 → 2 → 1` countdown → **under 6 hours**), (5) the easiest fix: **10-minute after-dinner walk** to ease blood sugar spikes, custom **CoreAge RX** U.S. doctors UI (`31.05s – 35.05s` raw), and *"Just pick one. So, what are you doing tonight?"* closer.
+- **10 Storyboard Scenes (`whiteboard/coreagerx4/scenes/`):**
+  - `scene-01-tonight-feeding-organ-fat.png` (`0.00s – 3.80s`) — Verified clean
+  - `scene-02-five-habits-easiest-fix.png` (`3.80s – 6.95s`) — Verified clean
+  - `scene-03-habit1-eating-late-hungrier.png` (`6.95s – 11.00s`) — Verified clean
+  - `scene-04-habit2-nightcaps-belly-fat.png` (`11.00s – 14.85s`) — Queued for crisp black outline around yellow belly pouch before Hub upload
+  - `scene-05-habit3-scrolling-cuts-sleep.png` (`14.85s – 18.20s`) — Verified clean
+  - `scene-06-habit4-short-sleep-quiz.png` (`18.20s – 22.55s` + `3-2-1` countdown) — Verified clean
+  - `scene-07-under-six-hours-belly-fat.png` (`22.55s – 25.25s` raw) — Verified clean
+  - `scene-08-habit5-skipping-dinner-walk.png` (`25.25s – 28.60s` raw) — Verified clean
+  - `scene-09-ten-min-walk-eases-spikes.png` (`28.60s – 31.05s` raw) — Verified clean
+  - *(Code Beat)* `31.05s – 35.05s` (raw) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
+  - `scene-10-pick-one-tonight-closer.png` (`35.05s – 39.20s` raw + hold) — Queued to fix 3-arm glitch -> clean 2-arm pose before Hub upload
+
 
