@@ -215,20 +215,21 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   9. `34.10s – 37.30s` (`3.20s`) · `whiteboard-scene-09-swap-one-thing.mp4` → `4022f712-586d-4def-8942-d18e6d90d058` (`5.49s` clip, `1.69x` rate)
   10. `37.30s – 41.50s` (`4.20s`) · `whiteboard-scene-10-go-open-your-fridge.mp4` → `f827f5fa-eec1-4933-b48c-96dbe74686d6` (`16.54s` clip, `3.92x` rate — kept `< 4.0x` with a crisp end hold so Chromium HTML5 `<video>` plays smoothly!)
 
-### Project Log — `coreagerx4` (In Progress — Batch 1 Generated, Ready for Quick Polish & Hub Push)
+### Project Log — `coreagerx4` (Images Pushed — Awaiting MP4 `whiteboard-clip` Renders)
+- **Project ID:** `172a5db3-c0e4-4f67-b783-aa9d9540214a`
 - **Voiceover Asset:** `94618780-a6af-4758-8d8d-27d9ab967591` (`37.88s` raw WAV, 105 words, `0.176s – 37.460s`; AssemblyAI transcribed `"CoreAge RX"` at `32.173s` as `"CorageRx"` — normalize to **`CoreAge RX`**! Clean natural silence at `[22.342s, 22.927s]` right after *"How little is too little? Pick a number in your head."* before *"Under 6 hours..."* for our signature **`3 → 2 → 1`** countdown!)
 - **Topic:** 5 evening/nighttime habits quietly feeding visceral organ fat — (1) eating late makes people hungrier, (2) nightcaps/alcohol linked to belly fat, (3) scrolling in bed cuts into sleep, (4) short sleep quiz (`3 → 2 → 1` countdown → **under 6 hours**), (5) the easiest fix: **10-minute after-dinner walk** to ease blood sugar spikes, custom **CoreAge RX** U.S. doctors UI (`31.05s – 35.05s` raw), and *"Just pick one. So, what are you doing tonight?"* closer.
-- **10 Storyboard Scenes (`whiteboard/coreagerx4/scenes/`):**
-  - `scene-01-tonight-feeding-organ-fat.png` (`0.00s – 3.80s`) — Verified clean
-  - `scene-02-five-habits-easiest-fix.png` (`3.80s – 6.95s`) — Verified clean
-  - `scene-03-habit1-eating-late-hungrier.png` (`6.95s – 11.00s`) — Verified clean
-  - `scene-04-habit2-nightcaps-belly-fat.png` (`11.00s – 14.85s`) — Queued for crisp black outline around yellow belly pouch before Hub upload
-  - `scene-05-habit3-scrolling-cuts-sleep.png` (`14.85s – 18.20s`) — Verified clean
-  - `scene-06-habit4-short-sleep-quiz.png` (`18.20s – 22.55s` + `3-2-1` countdown) — Verified clean
-  - `scene-07-under-six-hours-belly-fat.png` (`22.55s – 25.25s` raw) — Verified clean
-  - `scene-08-habit5-skipping-dinner-walk.png` (`25.25s – 28.60s` raw) — Verified clean
-  - `scene-09-ten-min-walk-eases-spikes.png` (`28.60s – 31.05s` raw) — Verified clean
+- **10 Uploaded Vertical PNG Source Assets in `coreagerx4` (awaiting `whiteboard-clip` MP4s — remember: NEVER reference these PNG UUIDs in TSX, ONLY the rendered MP4 UUIDs!):**
+  1. `0.00s – 3.80s` · `scene-01-tonight-feeding-organ-fat.png` → `e8b4b009-7931-4712-af74-2bd47cb9c1a5`
+  2. `3.80s – 6.95s` · `scene-02-five-habits-easiest-fix.png` → `a9f433a5-73e3-47bf-8510-e8c8c43bd57f`
+  3. `6.95s – 11.00s` · `scene-03-habit1-eating-late-hungrier.png` → `7d0eaf05-0282-432d-9ff5-b7cb25121405`
+  4. `11.00s – 14.85s` · `scene-04-habit2-nightcaps-belly-fat.png` → `1cb31fcd-71e4-4dd2-b83b-febb5d417af9`
+  5. `14.85s – 18.20s` · `scene-05-habit3-scrolling-cuts-sleep.png` → `be16e3be-1f7d-4c19-8f1b-6073193a6252`
+  6. `18.20s – 22.55s` (+ `3-2-1` countdown) · `scene-06-habit4-short-sleep-quiz.png` → `ea43be95-90b3-4ab6-9f89-317dd997657e`
+  7. `22.55s – 25.25s` (raw) · `scene-07-under-six-hours-belly-fat.png` → `c245de60-f304-4072-9e86-0d4d86db02e8`
+  8. `25.25s – 28.60s` (raw) · `scene-08-habit5-skipping-dinner-walk.png` → `304344fa-ee3d-4dc3-b0fd-50278d4c1d75`
+  9. `28.60s – 31.05s` (raw) · `scene-09-ten-min-walk-eases-spikes.png` → `10b8565b-ce96-475a-8d51-53cd34289819`
   - *(Code Beat)* `31.05s – 35.05s` (raw) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
-  - `scene-10-pick-one-tonight-closer.png` (`35.05s – 39.20s` raw + hold) — Queued to fix 3-arm glitch -> clean 2-arm pose before Hub upload
+  10. `35.05s – 39.20s` (raw + hold) · `scene-10-pick-one-tonight-closer.png` → `a5387130-49ef-44cf-94cf-74c9a57b5e11`
 
 
