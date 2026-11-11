@@ -233,4 +233,20 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   - *(Code Beat)* `33.02s – 37.02s` (`4.00s`) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
   10. `37.02s – 41.00s` (`3.98s`) · `whiteboard-scene-10-pick-one-tonight-closer.mp4` → `aceb17ad-622d-4bfb-a1e4-1b790046eb46` (`6.67s` clip, `1.66x` rate)
 
+### Project Log — `coreagerx5` (10/10 Images Verified & Pushed to GitHub — Ready for Hub Push)
+- **Voiceover Asset:** `93cd2853-f655-48a7-ae4f-4e92b7bec363` (`40.40s` raw WAV, 102 words, `0.256s – 40.029s`; split `"possible—stay"` into `"possible."` + `"Stay"` so zero em-dashes appear onscreen, normalize `"CoreageRx"` → **`CoreAge RX`**, and split cleanly inside silence `[17.827s, 18.381s]` right after *"Hard workouts or bad sleep? Pick one in your head."* before **`"Both can."`** for our **`3 → 2 → 1`** countdown!)
+- **Topic:** Cortisol & visceral organ fat — why zero cortisol isn't possible (you need it to live), how months of stress steer fat to organs, plot-twist quiz (*Hard workouts or bad sleep?* → **Both can!**), why rest days + full sleep + walking + lifting shrink visceral fat, custom **CoreAge RX** U.S. doctors UI (`25.90s – 30.90s` raw), promised payoff (*"No cortisol hack melts visceral fat. Small habits slowly shrink it."*), and *"So, how stressed are you right now?"* stress-meter closer.
+- **10 Verified Vertical PNG Scenes (`whiteboard/coreagerx5/scenes/` — all 10 passed 2-arm & single-head-outline QA on pass 1!):**
+  1. `0.00s – 3.80s` · `scene-01-stress-steering-organ-fat.png`
+  2. `3.80s – 7.00s` · `scene-02-zero-cortisol-impossible.png`
+  3. `7.00s – 9.12s` · `scene-03-need-cortisol-to-live.png`
+  4. `9.12s – 13.15s` · `scene-04-stressed-for-months-organs.png`
+  5. `13.15s – 18.10s` (+ `3-2-1` countdown) · `scene-05-workouts-or-sleep-quiz.png`
+  6. `18.10s – 22.60s` (raw) · `scene-06-both-can-rest-and-sleep.png`
+  7. `22.60s – 25.90s` (raw) · `scene-07-walking-and-lifting-shrink.png`
+  - *(Code Beat)* `25.90s – 30.90s` (raw) · **CoreAge RX Interactive Search → U.S. Doctors Online UI** (custom Remotion TSX)
+  8. `30.90s – 35.30s` (raw) · `scene-08-no-cortisol-hack-myth.png`
+  9. `35.30s – 37.95s` (raw) · `scene-09-small-habits-slowly-shrink.png`
+  10. `37.95s – 41.80s` (raw + hold) · `scene-10-how-stressed-right-now.png`
+
 
