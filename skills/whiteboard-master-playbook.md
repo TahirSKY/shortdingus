@@ -276,4 +276,25 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   - *(Code Beat 3)* `56.85s – 68.15s` (`11.30s`) · **`PricingPackagesScene`** (`$97` 5 Custom Shorts · `$147` 10-Min YouTube Explainer · `$497` 30 White-Label Shorts stacked comparison with word-synced price locks)
   - *(Code Beat 4)* `68.15s – 73.20s` (`5.05s`) · **`LaunchBatchCtaScene`** (`DoodleFounderMascot` + fanned 5-Shorts deck + Option 1 `"Reply to this message"` + Option 2 `"Click the link"` cursor click + `$97 / $147 / $497` freeze-frame summary strip)
 
+### Project Log — `new-coreagerx` (Images Pushed — Awaiting MP4 `whiteboard-clip` Renders)
+- **Project ID:** `5f4992a0-bc75-4ea1-ba34-cba444f3b47b`
+- **Voiceover Asset:** `"Generated Audio November 14, 2026 - 12_13AM.wav"` → `daefd336-4538-4048-ab67-6658c34b7b16` (`83.64s` WAV, 229 words `0.176s – 83.287s`, saved in `whiteboard/new-coreagerx/transcript-12_13AM.json`; normalized AssemblyAI `"Core" + "HRX"` → **`"CoreAge" + "RX"`** at `64.996s` and `82.469s`; compose to `84.80s` = `2544` frames @ `30fps`, `1080×1920`, with dual-act music crossfade so neither `63.03s` track hits a loop seam!)
+- **Topic & 14-Beat Hybrid Architecture:** Preserving lean muscle during weight loss & GLP-1 treatment — why losing weight isn't automatically fat-only, why muscle matters for daily strength & metabolic health, how GLP-1s affect appetite & stomach emptying, clinical research on lean body mass reductions, looking beyond the scale (`nutrition + protein + resistance training`), consulting a qualified healthcare provider, **CoreAge RX** online telehealth platform + licensed provider personalized evaluation (`not one-size-fits-all`), whole-health bookend payoff, and **CoreAge RX** end-card CTA.
+- **10 Uploaded Vertical PNG Source Assets in `new-coreagerx` (NEVER reference these PNG UUIDs in TSX — ONLY use the rendered `whiteboard-clip` MP4 UUIDs!):**
+  1. `0.00s – 4.15s` (`4.15s`) · `scene-01-weight-loss-deserves-attention.png` → `3a4f63a9-537f-402e-a5ee-eec8e3c283b2`
+  2. `4.15s – 8.60s` (`4.45s`) · `scene-02-not-just-fat-alone.png` → `ebb5f1fa-d25a-47af-af42-08c73bfd7873`
+  3. `8.60s – 12.20s` (`3.60s`) · `scene-03-can-lose-muscle-too.png` → `732ff856-ff04-4c27-91de-0843f197a776`
+  4. `12.20s – 16.98s` (`4.78s`) · `scene-04-beyond-looking-athletic-strength.png` → `92f9968f-9ce2-4fc5-b971-4d0f7a74f0e2`
+  5. `16.98s – 21.65s` (`4.67s`) · `scene-05-everyday-life-metabolic-engine.png` → `68e89796-75a8-4e65-8c0d-0f5cdffc6540`
+  - *(Code Beat 1)* `21.65s – 24.30s` (`2.65s`) · **`InterestingPivotScene`** (*"Now, here's where things get interesting."* — kinetic chapter turn + Fat vs. Muscle balance + `GLP-1` spotlight pill)
+  6. `24.30s – 31.80s` (`7.50s`) · `scene-06-glp1-appetite-and-stomach-pace.png` → `2fdd343e-9401-4760-b674-db103fdde09f`
+  7. `31.80s – 38.95s` (`7.15s`) · `scene-07-quality-and-amount-of-weight-lost.png` → `803f3aa4-0899-48ea-8a47-e1ad92dea35e`
+  - *(Code Beat 2)* `38.95s – 50.00s` (`11.05s`) · **`ResearchBeyondScaleScene`** (Stage A `38.95–45.35s`: Clinical Research Body-Composition Chart `Body Fat` + `Lean Body Mass` reductions & `NOT JUST BODY FAT` stamp; Stage B `45.35–50.00s`: `Beyond the Number on the Scale` 3-pillar health dashboard)
+  8. `50.00s – 57.35s` (`7.35s`) · `scene-08-nutrition-protein-resistance-shield.png` → `23eb165d-7b98-49a0-825d-d6d9d8c7ebf1`
+  9. `57.35s – 64.75s` (`7.40s`) · `scene-09-questions-with-healthcare-provider.png` → `cec1a4e1-6198-4022-878d-71ad3ca52ac5`
+  - *(Code Beat 3)* `64.75s – 76.10s` (`11.35s`) · **`CoreAgeRxTelehealthScene`** (Stage A `64.75–70.00s`: typing `"CoreAge RX"` → click → online weight management healthcare platform; Stage B `70.00–76.10s`: `NOT ONE-SIZE-FITS-ALL` + 1-on-1 Licensed Provider personalized appropriateness review)
+  10. `76.10s – 81.50s` (`5.40s`) · `scene-10-care-for-health-along-the-way.png` → `4460dfa7-2492-484a-9298-f67c0e71cd10`
+  - *(Code Beat 4)* `81.50s – 84.80s` (`3.30s`) · **`CoreAgeRxOutroCard`** (*"Learn more about CoreAge RX."* — authoritative **CoreAge RX** brand lockup + animated cursor CTA click + clinical clarity strip)
+
+
 
