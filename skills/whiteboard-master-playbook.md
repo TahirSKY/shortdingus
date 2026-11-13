@@ -276,7 +276,7 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   - *(Code Beat 3)* `56.85s – 68.15s` (`11.30s`) · **`PricingPackagesScene`** (`$97` 5 Custom Shorts · `$147` 10-Min YouTube Explainer · `$497` 30 White-Label Shorts stacked comparison with word-synced price locks)
   - *(Code Beat 4)* `68.15s – 73.20s` (`5.05s`) · **`LaunchBatchCtaScene`** (`DoodleFounderMascot` + fanned 5-Shorts deck + Option 1 `"Reply to this message"` + Option 2 `"Click the link"` cursor click + `$97 / $147 / $497` freeze-frame summary strip)
 
-### Project Log — `new-coreagerx` (Images Pushed — Awaiting MP4 `whiteboard-clip` Renders)
+### Project Log — `new-coreagerx` (COMPLETE — `CoreAgeRxMuscleShort.tsx`, `84.80s`, `2544` frames)
 - **Project ID:** `5f4992a0-bc75-4ea1-ba34-cba444f3b47b`
 - **Voiceover Asset:** `"Generated Audio November 14, 2026 - 12_13AM.wav"` → `daefd336-4538-4048-ab67-6658c34b7b16` (`83.64s` WAV, 229 words `0.176s – 83.287s`, saved in `whiteboard/new-coreagerx/transcript-12_13AM.json`; normalized AssemblyAI `"Core" + "HRX"` → **`"CoreAge" + "RX"`** at `64.996s` and `82.469s`; compose to `84.80s` = `2544` frames @ `30fps`, `1080×1920`, with dual-act music crossfade so neither `63.03s` track hits a loop seam!)
 - **Topic & 14-Beat Hybrid Architecture:** Preserving lean muscle during weight loss & GLP-1 treatment — why losing weight isn't automatically fat-only, why muscle matters for daily strength & metabolic health, how GLP-1s affect appetite & stomach emptying, clinical research on lean body mass reductions, looking beyond the scale (`nutrition + protein + resistance training`), consulting a qualified healthcare provider, **CoreAge RX** online telehealth platform + licensed provider personalized evaluation (`not one-size-fits-all`), whole-health bookend payoff, and **CoreAge RX** end-card CTA.
@@ -298,3 +298,15 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
 
 
 
+- **Phase 2 composition:** `whiteboard/new-coreagerx/CoreAgeRxMuscleShort.tsx`; esbuild bundle syntax check passed with React and Remotion externalized. Ten ready `whiteboard-clip` MP4s below are used in the composition; playback rates are approximately `(duration - 0.08) / scene duration`:
+  1. `e970164e-1b57-455d-abc2-4ee498f4c332` (8.23s, ~1.96x)
+  2. `f57e1b7b-ca8e-4595-b7bf-8ed3833b96ee` (7.55s, ~1.68x)
+  3. `15d45a0e-f1c1-4f5b-9b7e-a82d7b196cbf` (5.77s, ~1.58x)
+  4. `908dc58c-6a26-4599-a5bb-b3a46bbc0b54` (7.89s, ~1.63x)
+  5. `c45b611d-2c37-4e13-b882-670705a5c7e4` (8.34s, ~1.77x)
+  6. `9cc198f7-0e43-4633-b737-4e4b056a3ffc` (7.20s, ~0.95x)
+  7. `e7eaf133-968c-40d8-8529-130c91f78f4f` (8.59s, ~1.19x)
+  8. `01cd2172-eb22-4411-9325-cd9f59f276d0` (10.23s, ~1.38x)
+  9. `cfedf07e-4c28-4d8d-8a4d-68971485c0d7` (8.25s, ~1.10x)
+  10. `6e5df87c-d9ca-48bf-bbac-b9a3ac2f6035` (8.90s, ~1.63x)
+- **Audio and captions:** 229 timestamped words with highlighted keywords; original voiceover, 27 SFX cues, low-level pencil audio, and docu-pluck to tech-pulse music crossfade at 47–50s. The four coded scenes are detailed in the timeline above.
