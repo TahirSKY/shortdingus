@@ -251,24 +251,29 @@ Base prefix: `https://rfbrxohavioeaexhztxa.supabase.co/functions/v1/asset-url?id
   9. `37.25s – 39.95s` (`2.70s`) · `whiteboard-scene-09-small-habits-slowly-shrink.mp4` → `2e6ce90b-8846-48c4-9685-502d168da994` (`6.41s` clip, `2.34x` rate)
   10. `39.95s – 43.50s` (`3.55s`) · `whiteboard-scene-10-how-stressed-right-now.mp4` → `72e4a57c-7a59-4f66-ae57-c3e56684731d` (`5.49s` clip, `1.52x` rate)
 
-### Project Log — `impressive-videos-for-client-aquisition` (Images Pushed — Awaiting MP4 `whiteboard-clip` Renders)
+### Project Log — `impressive-videos-for-client-aquisition` (Completed)
 - **Project ID:** `a8b59d0d-5ba4-4848-abfb-181f82867405`
-- **Winning Voiceover Asset:** `"Generated Audio November 12, 2026 - 9_23PM.wav"` → `d5e75d69-66d8-4a0c-a811-e9efa578ec2d` (`71.96s` WAV, 186 words `0.272s – 71.750s`, saved in `whiteboard/impressive-videos-for-client-aquisition/transcript-9_23PM.json`; normalized `"147,"` → `"$147,"` and `"497."` → `"$497."`; compose to `73.00s` = `2190` frames @ `30fps`, `1080×1920`, with `loop` on background music!)
-- **Creative Direction (Flagship Agency Client-Acquisition Showcase):** Vertical `9:16` (`1080×1920`), clean/brand-neutral so it works across DMs, LinkedIn/X feeds, cold email, and ads. **14-Beat Hybrid Showcase** combining 10 expressive hand-drawn whiteboard storytelling scenes + micro-overlays/SVG annotations WITH 4 bespoke Remotion motion-graphic showcase scenes (`"This changes everything."` kinetic pattern interrupt, live `"Send a link → 4-step 48hr pipeline"` with embedded live whiteboard preview, stacked `"$97 / $147 / $497"` interactive pricing tiers, and interactive `"Reply or Click the Link"` freeze-frame CTA!).
-- **10 Uploaded Vertical PNG Source Assets in `impressive-videos-for-client-aquisition` (awaiting `whiteboard-clip` MP4s — NEVER reference these PNG UUIDs in TSX, ONLY the rendered MP4 UUIDs!):**
-  1. `0.00s – 4.55s` · `scene-01-automatic-brain-magnet.png` → `29c60d39-b4bf-49c2-a0e3-966fa671cb24`
-  2. `4.55s – 9.10s` · `scene-02-scrolling-past-talking-heads.png` → `65719758-14ef-42f0-b95e-be26ae94a663`
-  3. `9.10s – 13.55s` · `scene-03-stopped-step-by-step-idea.png` → `e9b9a27b-2957-41db-9d0d-99f47a3fc9d7`
-  4. `13.55s – 16.65s` · `scene-04-psychologist-open-loop.png` → `bed08ad2-e194-473b-8875-5f34b0583a9c`
-  5. `16.65s – 23.05s` · `scene-05-brain-sticks-until-finished.png` → `6584aab2-eede-4b31-913e-d98cd7288ad4`
-  6. `23.05s – 27.55s` · `scene-06-complex-offer-hard-to-explain.png` → `c66d6551-1584-46a2-b2b1-9f30149d216b`
-  - *(Code Beat 1)* `27.55s – 29.65s` · **`GameChangerPivotScene`** (*"This changes everything."* — tangled knot snapping into razor-sharp arrow + kinetic word-lock + riser/impact drop)
-  7. `29.65s – 34.55s` · `scene-07-begging-camera-bored-viewer.png` → `191d55a1-d81f-4d08-8221-ebf6f898fc02`
-  8. `34.55s – 38.85s` · `scene-08-visually-break-down-offers.png` → `e2f18e95-f097-4cd0-8eec-e210c32643c3`
-  9. `38.85s – 44.35s` · `scene-09-cold-prospect-ready-to-buy.png` → `2821029b-a847-406d-aa1b-6f8997f9ea3e`
-  10. `44.35s – 47.95s` · `scene-10-we-handle-entire-process.png` → `2435f5d9-f7c8-401f-bd29-36ff9991de6c`
-  - *(Code Beat 2)* `47.95s – 56.85s` · **`DoneForYouPipelineScene`** (URL/Topic brief submission → live 4-stage pipeline `Research → Scriptwriting → Voiceover → Whiteboard Animation` with embedded live whiteboard clip window + `48 HOURS` SLA stamp)
-  - *(Code Beat 3)* `56.85s – 68.15s` · **`PricingPackagesScene`** (`$97` 5 Custom Shorts · `$147` 10-Min YouTube Explainer · `$497` 30 White-Label Shorts stacked comparison with word-synced price reveals)
-  - *(Code Beat 4)* `68.15s – 73.00s` · **`LaunchBatchCtaScene`** (Interactive `"Reply to this message"` chat bubble + `"Click the link"` cursor click + fanned 5-Shorts showcase + full 3-tier freeze-frame summary)
+- **Winning Voiceover Asset:** `"Generated Audio November 12, 2026 - 9_23PM.wav"` → `d5e75d69-66d8-4a0c-a811-e9efa578ec2d` (`71.96s` WAV, 186 words `0.272s – 71.750s`, saved in `whiteboard/impressive-videos-for-client-aquisition/transcript-9_23PM.json`; normalized `"147,"` → `"$147,"` and `"497."` → `"$497."`; final composition `73.20s` = `2196` frames @ `30fps`, `1080×1920`)
+- **Final Composition File:** `whiteboard/impressive-videos-for-client-aquisition/ClientAcquisitionShowcase.tsx` (ingested into Hub via `agent-create` with `kind=code&role=composition`)
+- **Creative Direction & Reusable Flagship Techniques:**
+  - **14-Beat Hybrid Showcase (`1080×1920`, Brand-Neutral):** Combines 10 hand-drawn whiteboard scenes + SVG/pill micro-overlays (including a live Open-Loop progress bar in Scene 05 hitting `100%` on `"finished."`) with 4 bespoke Remotion motion-graphic showcase scenes (`GameChangerPivotScene`, `DoneForYouPipelineScene`, `PricingPackagesScene`, `LaunchBatchCtaScene`).
+  - **Live Whiteboard-Inside-UI Showcase:** `DoneForYouPipelineScene` embeds a live muted `OffthreadVideo` (`whiteboard-scene-03`, `2.8x`) inside Step 04 (`Whiteboard Animation`) so prospects literally watch the drawing engine render inside the 48-hour workflow card.
+  - **Dual-Act Music Crossfade (`>63s` Videos):** Because `shared-library` music tracks are `63.033s`, crossfading `docu-pluck` (`0.00s – 49.10s`) into `tech-pulse` (`47.40s – 73.20s`, `25.80s` played) elevates energy right at the Done-For-You service reveal AND avoids any `63.03s` audio loop seam.
+  - **Full-Frame Runtime Verification:** Bundling with `esbuild` in `/tmp` and executing all `2,196` frames (`0..2195`) against a lightweight `remotion` mock catches any dynamic `interpolate()` monotonicity or `NaN` bugs before upload.
+- **Rendered `whiteboard-clip` MP4 Assets Used in Video (ZERO `.png` files referenced in TSX, all `playbackRate` `1.39x – 2.94x`!):**
+  1. `0.00s – 4.55s` (`4.55s`) · `whiteboard-scene-01-automatic-brain-magnet.mp4` → `e5e0a43a-72b2-4c87-a99c-62109e622b82` (`7.28s` clip, `1.58x` rate)
+  2. `4.55s – 9.10s` (`4.55s`) · `whiteboard-scene-02-scrolling-past-talking-heads.mp4` → `943d1616-40e4-436e-81fd-16696d93a4b6` (`11.16s` clip, `2.44x` rate)
+  3. `9.10s – 13.55s` (`4.45s`) · `whiteboard-scene-03-stopped-step-by-step-idea.mp4` → `95fd92d4-dfd4-43db-b065-7041a9f656a1` (`9.37s` clip, `2.09x` rate; also reused muted at `2.80x` inside `DoneForYouPipelineScene` Step 04)
+  4. `13.55s – 16.65s` (`3.10s`) · `whiteboard-scene-04-psychologist-open-loop.mp4` → `006d967e-1ea8-4bba-aa63-5c92c9db0980` (`6.22s` clip, `1.98x` rate)
+  5. `16.65s – 23.05s` (`6.40s`) · `whiteboard-scene-05-brain-sticks-until-finished.mp4` → `a583227a-4ddf-4d8d-b6e0-4fa59d2a2816` (`9.78s` clip, `1.52x` rate + Open-Loop `100%` completion bar)
+  6. `23.05s – 27.55s` (`4.50s`) · `whiteboard-scene-06-complex-offer-hard-to-explain.mp4` → `40119bcf-c04f-4585-a369-2f6c7bba35e0` (`11.12s` clip, `2.45x` rate)
+  - *(Code Beat 1)* `27.55s – 29.65s` (`2.10s`) · **`GameChangerPivotScene`** (*"This changes everything."* — SVG knot → razor-sharp emerald clarity arrow + stacked kinetic hero typography; bottom captions suppressed during hero text)
+  7. `29.65s – 34.55s` (`4.90s`) · `whiteboard-scene-07-begging-camera-bored-viewer.mp4` → `e4c2b280-0d33-4893-9729-2cbb3d61330d` (`9.57s` clip, `1.94x` rate)
+  8. `34.55s – 38.85s` (`4.30s`) · `whiteboard-scene-08-visually-break-down-offers.mp4` → `be50a9ac-cf4a-4ddf-b8ed-ef2352aaf68a` (`9.95s` clip, `2.30x` rate)
+  9. `38.85s – 44.35s` (`5.50s`) · `whiteboard-scene-09-cold-prospect-ready-to-buy.mp4` → `df708bb7-f260-4a49-8969-add489240b16` (`7.74s` clip, `1.39x` rate)
+  10. `44.35s – 47.95s` (`3.60s`) · `whiteboard-scene-10-we-handle-entire-process.mp4` → `739ca1d8-b0fc-49e3-9481-87d879d17035` (`10.68s` clip, `2.94x` rate)
+  - *(Code Beat 2)* `47.95s – 56.85s` (`8.90s`) · **`DoneForYouPipelineScene`** (Stage A URL typing & click → Stage B 4-step pipeline `Research`, `Scriptwriting`, `Voiceover` waveform, `Whiteboard Animation` live embedded `OffthreadVideo` + `⚡ 48 HOURS` SLA banner)
+  - *(Code Beat 3)* `56.85s – 68.15s` (`11.30s`) · **`PricingPackagesScene`** (`$97` 5 Custom Shorts · `$147` 10-Min YouTube Explainer · `$497` 30 White-Label Shorts stacked comparison with word-synced price locks)
+  - *(Code Beat 4)* `68.15s – 73.20s` (`5.05s`) · **`LaunchBatchCtaScene`** (`DoodleFounderMascot` + fanned 5-Shorts deck + Option 1 `"Reply to this message"` + Option 2 `"Click the link"` cursor click + `$97 / $147 / $497` freeze-frame summary strip)
 
 
