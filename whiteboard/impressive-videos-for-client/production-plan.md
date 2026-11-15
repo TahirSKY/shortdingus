@@ -35,4 +35,14 @@ Eight source images are in `scenes/` and have been uploaded to Hub project `impr
 7. `ffff8b9f-9db3-44c0-b02e-2735efb9705d`
 8. `f0be0626-6529-4889-b363-bab018847610`
 
-Awaiting the user's whiteboard render. Generated art is a source for whiteboard-animate, not a substitute for rendered clips. Once ready, inspect the resulting clip manifest entries before making the final composition.
+## Composition
+All eight matching whiteboard clips are ready. `ClientShowcase.tsx` is a single-file 1080 x 1920, 30 fps composition (1620 frames / 54 seconds), with the original 52.96-second voiceover, 186 word-start-aligned captions, quiet pencil audio, documentary music, timed effects, a coded idea-to-video pipeline, process/48-hour offer and comment/DM outro. esbuild bundling passed; visual/audio playback and final render have not been verified here. Clip IDs and durations in scene order:
+
+1. `e9b1b26c-3f91-4915-b3dd-0f98b378f0c1` (8.33s)
+2. `ac3be313-ebfb-4150-bbaa-990341d7e42e` (8.98s)
+3. `b113b525-645f-4f24-890e-5efac1fe5788` (9.81s)
+4. `c79dbb29-406e-4917-85f2-48e2a0393ec4` (8.85s)
+5. `5fcedc2d-61b3-4714-865c-6d6e634161a5` (7.52s)
+6. `4cca8201-ea97-4998-a8be-72a94e19d408` (6.45s)
+7. `caae30aa-d9a4-45d9-8ac3-e4199f16fa90` (7.21s)
+8. `044bcb9a-1cc6-49a5-91e2-9472f8ba5403` (8.47s; matched by source image ID, not the duplicate scene 08 asset).
