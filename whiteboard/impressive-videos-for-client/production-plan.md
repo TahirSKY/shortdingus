@@ -24,4 +24,15 @@ A self-demonstrating whiteboard sales video: open on feed fatigue, make the view
 | 49.2–end | Comment/DM CTA, visual callback to the stopped-scroll hook. |
 
 ## State and next steps
-Eight source images are in `scenes/`. Scene 06's camera symbol was corrected to an X. Scene 04 was resized proportionally and padded with white to 768 x 1376; all eight files are 768 x 1376. The images have not been uploaded or rendered as whiteboard clips. Generated art is a source for whiteboard-animate, not a substitute for rendered clips. After the images are uploaded to this project, render pending drawings. Once ready, inspect their manifest entries before making the final composition. Hub write access is not available in this environment; do not store credentials in files.
+Eight source images are in `scenes/` and have been uploaded to Hub project `impressive-videos-for-client` (project ID `e56eb642-c7ab-429b-bd1c-a7d4a892b663`). Scene 06's camera symbol was corrected to an X. Scene 04 was resized proportionally and padded with white to 768 x 1376; all eight files are 768 x 1376. Their image asset IDs in scene order are:
+
+1. `41e2fee3-ed18-4376-8e72-92c2aa07ae88`
+2. `84dc8b19-345e-44c3-8b66-8b582ce2f83b`
+3. `1046322f-9a00-4d91-9e92-98363053638b`
+4. `db776f14-4e7b-489c-b002-36ddb7684bdd`
+5. `7ef5f8ad-7de4-4110-a9a6-bc68c3434228`
+6. `278b7f1c-e4ed-4a69-b98b-8730bd04d595`
+7. `ffff8b9f-9db3-44c0-b02e-2735efb9705d`
+8. `f0be0626-6529-4889-b363-bab018847610`
+
+Awaiting the user's whiteboard render. Generated art is a source for whiteboard-animate, not a substitute for rendered clips. Once ready, inspect the resulting clip manifest entries before making the final composition.
