@@ -30,7 +30,7 @@ Project ID `a09237fe-caf8-45d5-ad8e-168b179f0aaf`. Eight uploaded image assets, 
 1. `605cd269-a56e-4146-a51b-6a06e8a4376a`
 2. `2c040581-a472-4946-a823-8fea81f6e4e4`
 3. `2796da9b-4dc8-4453-8ea4-2068a1ee0da0`
-4. `fb5052a3-d11a-497d-89cb-5287f3cb821f`
+4. **Use replacement v2:** `8c261a85-3de2-4931-b934-6f4fc428f7a7` (`scene-04-camera-editing-barrier-v2.png`); old `fb5052a3-d11a-497d-89cb-5287f3cb821f` remains in Hub but is superseded.
 5. `21dc444f-927a-4b39-86b2-9df85441db17`
 6. `67e5fcb5-27c4-4439-9e3a-52f7691491a3`
 7. `f45b91ed-f879-4ed2-88a1-e72dd714843d`
