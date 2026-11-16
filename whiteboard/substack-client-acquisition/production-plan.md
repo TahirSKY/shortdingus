@@ -37,3 +37,14 @@ Project ID `a09237fe-caf8-45d5-ad8e-168b179f0aaf`. Eight uploaded image assets, 
 8. `8266826d-a210-4ede-a4a2-e06e398f7a15`
 
 Awaiting user to render pending drawings, then verify each clip and assemble.
+
+## Phase 2 composition
+The eight matching whiteboard clips are ready, including the v2 scene 04. `SubstackShowcase.tsx` is 46 seconds / 1380 frames at 30 fps, 1080 x 1920. It includes the supplied voiceover, 165 transcript word starts, low-level drawing sound, music, timed effects, platform labels, an animated same-day service process and reply CTA. Bundling passed; visual playback and final render have not been checked here. Scene 08 runs to 34.65s so its clip playback rate remains under 4x. The approved clip IDs and durations in scene order:
+1. `4c2d3d49-ee84-4983-adaa-c3a96d7eeaab` (8.72s)
+2. `e7d5bc4f-278c-4ca8-a858-f4a29b49e903` (6.02s)
+3. `211bbd7f-7c26-43ae-bf58-67896c7d075d` (8.11s)
+4. `b74990b3-f8ba-4e16-a380-bddc7d749658` (8.01s, v2)
+5. `fc94e9e7-e154-4780-84cc-c4aefabd9d54` (6.62s)
+6. `a9836c89-82f2-46df-a0da-ab4ddadd58e1` (6.60s)
+7. `07095559-52de-481a-9551-50c1de8e455c` (9.54s)
+8. `1d6c119c-616d-4471-8d84-a22ce178787d` (9.18s)
