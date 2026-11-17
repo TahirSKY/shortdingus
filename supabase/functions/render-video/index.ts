@@ -22,6 +22,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { renderMediaOnLambda } from "npm:@remotion/lambda-client@4.0.438";
 import { CLIP_CAMERA_CODE } from "../_shared/clip-camera.ts";
 import { admin } from "../_shared/hub.ts";
+import { resolveRenderTiming } from "../_shared/render-timing.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -129,40 +130,6 @@ function ensureDefaultExport(code: string): string {
   const m = code.match(/export\s+(?:const|function|class)\s+([A-Z]\w*)/);
   if (m) return code + `\n\nexport default ${m[1]};`;
   return code;
-}
-
-/** Evaluates plain arithmetic like `2015 / 30`; anything else → NaN. */
-function num(expr: string | undefined): number {
-  if (!expr) return NaN;
-  const e = expr.trim();
-  if (!/^[\d\s.+\-*/()]+$/.test(e)) return NaN;
-  try { return Number(new Function(`return (${e});`)()); } catch { return NaN; }
-}
-
-function readKey(block: string, key: string): number {
-  const m = block.match(new RegExp(`["']?${key}["']?\\s*[:=]\\s*([^,\\n}]+)`));
-  return num(m?.[1]);
-}
-
-/**
- * Work out the real fps and frame count, same order as the app preview:
- * REMOTION_CONFIG header → compositionConfig → values sent by the app.
- */
-function resolveTiming(code: string, bodyFps: number, bodySeconds: number) {
-  const header = code.match(/\/\*\s*(?:__)?REMOTION_CONFIG(?:__)?\s*([\s\S]*?)\*\//i)?.[1];
-  const cfg = code.match(/compositionConfig\s*=\s*\{([^}]+)\}/)?.[1];
-  const ok = (n: number) => isFinite(n) && n > 0;
-  let fps = NaN, frames = NaN, seconds = NaN;
-  for (const block of [header, cfg]) {
-    if (!block) continue;
-    if (!ok(fps)) fps = readKey(block, "fps");
-    if (!ok(frames)) frames = readKey(block, "durationInFrames");
-    if (!ok(seconds)) seconds = readKey(block, "durationInSeconds");
-  }
-  if (!ok(fps)) fps = ok(bodyFps) ? bodyFps : 30;
-  fps = clamp(Math.round(fps), 1, 60);
-  if (!ok(frames)) frames = Math.ceil((ok(seconds) ? seconds : ok(bodySeconds) ? bodySeconds : 10) * fps);
-  return { fps, durationInFrames: clamp(Math.floor(frames), 1, 300 * fps) };
 }
 
 /**
@@ -279,7 +246,7 @@ Deno.serve(async (req) => {
     const codec: string = String(body.codec ?? "h264");
     const debug: boolean = Boolean(body.debug);
     const dims = FORMAT_DIMENSIONS[format] ?? FORMAT_DIMENSIONS.youtube;
-    const timing = resolveTiming(rawCode, Number(body.fps), Number(body.durationInSeconds));
+    const timing = resolveRenderTiming(rawCode, Number(body.fps), Number(body.durationInSeconds));
     const { fps, durationInFrames } = timing;
     const durationInSeconds = durationInFrames / fps;
 

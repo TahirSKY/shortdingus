@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Diagnose the five-minute cutoff in the shared renderer and raise the app/render limit to 15 minutes; preserve 5:48 timing with regression coverage. Full AWS re-render of the user's video not performed.
 - [ ] Add adjustable whiteboard thickness/darkness for manual and agent drawing requests; preserve tracing and existing clips, verify controls and engine output.
 - [x] Diagnose repeated whiteboard drawing artifacts: Lambda exports introduced ghost tiles absent from SVG data. New single/scene/queued drawings use frame-cleared Canvas geometry; 15 tests passed, portrait/landscape AWS exports inspected, lower blank band had artifacts in 15 old frames versus zero of 190 corrected frames. Landscape proof saved in Marker hand proof and normal project readback checked. Existing MP4s unchanged.
 - [x] Assemble test2 from four ready drawing clips; 15-second vertical AWS MP4 saved and inspected (original pencil hand retained; one blank frame at each scene start remains).

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Monitor, Smartphone, Square, Sparkles, Image, RectangleVertical, RectangleHorizontal } from "lucide-react";
 import type { DetectedConfig } from "@/lib/detect-config";
+import { clampRenderDurationSeconds, MAX_RENDER_DURATION_SECONDS } from "../../supabase/functions/_shared/render-timing";
 
 export type RenderMode = "video" | "poster";
 
@@ -174,7 +175,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
                 id="duration"
                 type="number"
                 min="1"
-                max="300"
+                max={MAX_RENDER_DURATION_SECONDS}
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 className="h-9"
@@ -263,7 +264,7 @@ const FormatSelector = ({ open, onClose, onSelect, detectedConfig, defaultMode =
             onClick={() => onSelect({
               mode,
               format: formats[selected],
-              durationInSeconds: Math.max(1, Math.min(300, Number(duration) || 10)),
+              durationInSeconds: clampRenderDurationSeconds(Number(duration) || 10),
               fps: Math.max(1, Math.min(120, Number(fps) || 30)),
               imageFormat: mode === "poster" ? imageFormat : undefined,
               frame: mode === "poster" ? Math.max(0, Number(frame) || 0) : undefined,
