@@ -39,3 +39,17 @@ Project ID `901a49b5-3ebe-4033-bdcc-8969bea51ca3`. Source image asset IDs, in sc
 9. `557440ed-9b04-44c8-88a5-495562db20f4`
 
 Awaiting user rendering. Continue with verified ready MP4 clips only, identified by source asset ID, then assemble the final single-file composition.
+
+## Phase 2 composition
+All nine matched whiteboard MP4s are ready, with `creating: false`. `YouTubeAutomators.tsx` uses those clips and the original narration in a 51.8-second, 1554-frame, 1080 x 1920 composition at 30 fps. It adds 160 word-start-timed captions, quiet drawing sound, documentary music, restrained effects, an animated offer and a comment/DM CTA. Video playback rates are calculated to reach the finished color hold and are below 4x. Bundling passed; no final render or audiovisual playback QA has been performed here.
+
+Verified MP4 assets in scene order (source image IDs matched against the handoff list above):
+1. `b20d8352-5581-44a5-a4ed-9fc0894a8403` (7.60s)
+2. `2951215d-ede9-466e-98b8-b6ba7a6a74f1` (8.08s)
+3. `4f557618-14a4-4498-b8fe-6aa27210a8af` (9.74s)
+4. `fb35e6bc-c36f-41bf-8c7c-52be7783dbbb` (5.05s)
+5. `42d30725-51f5-46f7-8184-a81b7f7f169a` (6.75s)
+6. `44e22b7c-fd93-440d-a3d1-9ef55406dde1` (9.15s)
+7. `601d8ab4-71de-4bae-9d9b-4bdedb2cd683` (7.33s)
+8. `f8cb0c2d-266a-436d-9997-ba3636e2dbb3` (6.92s)
+9. `3ab81db9-b1d5-4539-b7bf-61da66edd497` (7.05s)
