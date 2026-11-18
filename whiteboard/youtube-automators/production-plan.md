@@ -25,3 +25,17 @@ Visual storytelling is the star. Follow the user's two reference images: clean e
 | 47.10–51.8 | Code-only comment/DM CTA and bookend | No |
 
 Timing is provisional; adjust to real clip durations after rendering, never cut the drawing payoff. Confirm source IDs and ready status before composition. User to render pending drawings in Hub once uploads are complete.
+
+## Hub handoff
+Project ID `901a49b5-3ebe-4033-bdcc-8969bea51ca3`. Source image asset IDs, in scene order:
+1. `e262311e-57af-498c-9524-7e2a2f604c87`
+2. `13ad181b-1459-4cc2-bd26-a97cebbb233b`
+3. `c8eae402-5d3d-47f3-8a67-295a4ccdebc6`
+4. `e33063ca-9a94-41d7-b474-dd7e2b53c6a8`
+5. `f35c8f75-2d33-40d6-9c4d-1fb2a9884a85`
+6. `bdd37e6c-56b5-4073-a5a5-b692f18f386b`
+7. `d0100fd7-2476-4692-8298-8ef0d8667d8e`
+8. `cbbc6028-c328-4127-9487-5d2be49d57f6`
+9. `557440ed-9b04-44c8-88a5-495562db20f4`
+
+Awaiting user rendering. Continue with verified ready MP4 clips only, identified by source asset ID, then assemble the final single-file composition.
