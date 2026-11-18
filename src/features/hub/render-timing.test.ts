@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampRenderDurationSeconds, MAX_RENDER_DURATION_SECONDS, resolveRenderTiming } from './render-timing';
+import { clampRenderDurationSeconds, MAX_RENDER_DURATION_SECONDS, resolveRenderTiming } from '../../../supabase/functions/_shared/render-timing';
 
 describe('long video render timing', () => {
   it('preserves the 5:48 composition duration instead of truncating at five minutes', () => {
